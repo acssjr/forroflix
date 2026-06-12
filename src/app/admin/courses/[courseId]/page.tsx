@@ -3,7 +3,12 @@ import { getDB } from '@/lib/db';
 import { verifyJWT } from '@/lib/auth';
 import { cookies } from 'next/headers';
 import { MOCK_COURSES_DATA } from '@/lib/mock-data';
-import { CourseEditor } from '@/components/admin/course-editor';
+import dynamic from 'next/dynamic';
+
+const CourseEditor = dynamic(
+  () => import('@/components/admin/course-editor').then((mod) => mod.CourseEditor),
+  { ssr: false }
+);
 
 export const runtime = 'edge';
 

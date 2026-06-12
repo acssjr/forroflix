@@ -3,7 +3,12 @@ import { getDB } from '@/lib/db';
 import { verifyJWT } from '@/lib/auth';
 import { cookies } from 'next/headers';
 import { MOCK_COURSES_DATA } from '@/lib/mock-data';
-import { AdminDashboard } from '@/components/admin/admin-dashboard';
+import dynamic from 'next/dynamic';
+
+const AdminDashboard = dynamic(
+  () => import('@/components/admin/admin-dashboard').then((mod) => mod.AdminDashboard),
+  { ssr: false }
+);
 
 export const runtime = 'edge';
 
