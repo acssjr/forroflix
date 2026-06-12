@@ -2,8 +2,6 @@ import { redirect } from 'next/navigation';
 import { getDB } from '@/lib/db';
 import { MOCK_COURSES_DATA } from '@/lib/mock-data';
 
-export const runtime = 'edge';
-
 interface PageProps {
   params: Promise<{ courseSlug: string }>;
 }

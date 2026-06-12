@@ -3,14 +3,7 @@ import { getDB } from '@/lib/db';
 import { verifyJWT } from '@/lib/auth';
 import { cookies } from 'next/headers';
 import { MOCK_COURSES_DATA } from '@/lib/mock-data';
-import dynamic from 'next/dynamic';
-
-const LessonViewer = dynamic(
-  () => import('@/components/lesson-viewer').then((mod) => mod.LessonViewer),
-  { ssr: false }
-);
-
-export const runtime = 'edge';
+import { LessonViewer } from '@/components/lesson-viewer';
 
 interface PageProps {
   params: Promise<{ courseSlug: string; lessonId: string }>;

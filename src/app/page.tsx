@@ -3,15 +3,8 @@ import { getDB } from '@/lib/db';
 import { verifyJWT } from '@/lib/auth';
 import { cookies } from 'next/headers';
 import { Button } from '@/components/ui/button';
+import { LoginForm } from '@/components/login-form';
 import { Music, LogOut, Settings, Play, ShieldAlert } from 'lucide-react';
-import dynamic from 'next/dynamic';
-
-const LoginForm = dynamic(
-  () => import('@/components/login-form').then((mod) => mod.LoginForm),
-  { ssr: false }
-);
-
-export const runtime = 'edge';
 
 const MOCK_COURSES = [
   {

@@ -23,32 +23,121 @@ export interface D1ExecResult {
   duration: number;
 }
 
-// Obter a instância do banco D1
-export function getDB(): D1Database {
-  // Em produção ou local dev rodando com wrangler pages dev / next-on-pages:
-  // process.env.DB é injetado pelo Cloudflare
-  const db = (process.env as any).DB as D1Database;
+// Implementação do D1 via REST API para a Vercel
+class D1RESTPreparedStatement implements D1PreparedStatement {
+  private params: any[] = [];
+  constructor(private db: D1RESTDatabase, private query: string) {}
 
-  if (!db) {
-    console.warn(
-      "[D1] Banco de dados D1 não detectado na variável process.env.DB. " +
-      "Certifique-se de executar com 'npx wrangler pages dev' ou configurar o binding no wrangler.json."
-    );
-    
-    // Retornar um mock para evitar travamento imediato em build estático
-    return {
-      prepare(query: string) {
-        return {
-          bind() { return this; },
-          async first() { return null; },
-          async run() { return { results: [], success: true, meta: {} }; },
-          async all() { return { results: [], success: true, meta: {} }; }
-        } as any;
-      },
-      async batch() { return []; },
-      async exec() { return { count: 0, duration: 0 }; }
-    };
+  bind(...values: any[]): D1PreparedStatement {
+    this.params.push(...values);
+    return this;
   }
 
-  return db;
+  async first<T = any>(colName?: string): Promise<T | null> {
+    const res = await this.db.executeQuery<T>(this.query, this.params);
+    if (res.results && res.results.length > 0) {
+      return colName ? (res.results[0] as any)[colName] : res.results[0];
+    }
+    return null;
+  }
+
+  async run<T = any>(): Promise<D1Result<T>> {
+    return this.db.executeQuery<T>(this.query, this.params);
+  }
+
+  async all<T = any>(): Promise<D1Result<T>> {
+    return this.db.executeQuery<T>(this.query, this.params);
+  }
+}
+
+class D1RESTDatabase implements D1Database {
+  private accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+  private apiToken = process.env.CLOUDFLARE_API_TOKEN;
+  private databaseId = process.env.CLOUDFLARE_DATABASE_ID || '21bc1280-e5b2-4c71-824a-714ef977f166';
+
+  prepare(query: string): D1PreparedStatement {
+    return new D1RESTPreparedStatement(this, query);
+  }
+
+  async batch<T = any>(statements: D1PreparedStatement[]): Promise<D1Result<T>[]> {
+    const results: D1Result<T>[] = [];
+    for (const stmt of statements) {
+      results.push(await stmt.all<T>());
+    }
+    return results;
+  }
+
+  async exec(query: string): Promise<D1ExecResult> {
+    const res = await this.executeQuery(query, []);
+    return { count: res.results.length, duration: 0 };
+  }
+
+  async executeQuery<T = any>(sql: string, params: any[]): Promise<D1Result<T>> {
+    if (!this.accountId || !this.apiToken) {
+      throw new Error(
+        "Faltam as variáveis de ambiente CLOUDFLARE_ACCOUNT_ID ou CLOUDFLARE_API_TOKEN para acessar o D1."
+      );
+    }
+    const url = `https://api.cloudflare.com/client/v4/accounts/${this.accountId}/d1/database/${this.databaseId}/query`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.apiToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ sql, params }),
+      cache: 'no-store'
+    });
+
+    const data = await response.json() as any;
+
+    if (!data.success) {
+      throw new Error(
+        data.errors?.[0]?.message || 'Erro de comunicação com a REST API do Cloudflare D1.'
+      );
+    }
+
+    const resultObj = data.result?.[0];
+    if (!resultObj || !resultObj.success) {
+      throw new Error(resultObj?.error || 'Erro ao executar query no D1.');
+    }
+
+    return {
+      results: resultObj.results || [],
+      success: resultObj.success,
+      meta: resultObj.meta || {}
+    };
+  }
+}
+
+// Obter a instância do banco D1 (Binding nativo ou REST API fallback)
+export function getDB(): D1Database {
+  // Se estiver rodando na Cloudflare (Pages/Workers) ou no dev local com wrangler:
+  const db = (process.env as any).DB as D1Database;
+  if (db) {
+    return db;
+  }
+
+  // Se estiver rodando na Vercel (onde process.env.DB não existe):
+  if (process.env.CLOUDFLARE_API_TOKEN) {
+    return new D1RESTDatabase();
+  }
+
+  // Fallback para desenvolvimento estático local básico caso nenhuma env esteja setada
+  console.warn(
+    "[D1] D1 não detectado via process.env.DB ou REST API. Usando mock local temporário."
+  );
+  
+  return {
+    prepare(query: string) {
+      return {
+        bind() { return this; },
+        async first() { return null; },
+        async run() { return { results: [], success: true, meta: {} }; },
+        async all() { return { results: [], success: true, meta: {} }; }
+      } as any;
+    },
+    async batch() { return []; },
+    async exec() { return { count: 0, duration: 0 }; }
+  };
 }

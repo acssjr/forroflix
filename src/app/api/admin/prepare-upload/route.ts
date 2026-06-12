@@ -3,8 +3,6 @@ import { verifyJWT } from '@/lib/auth';
 import { cookies } from 'next/headers';
 import crypto from 'crypto';
 
-export const runtime = 'edge';
-
 export async function POST(request: Request) {
   try {
     const { title } = await request.json();

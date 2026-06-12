@@ -2,7 +2,12 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { VideoPlayer } from '@/components/video-player';
+import dynamic from 'next/dynamic';
+
+const VideoPlayer = dynamic(
+  () => import('@/components/video-player').then((mod) => mod.VideoPlayer),
+  { ssr: false }
+);
 import {
   Accordion,
   AccordionContent,
