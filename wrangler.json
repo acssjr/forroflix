@@ -1,0 +1,11 @@
+{
+  "name": "forroflix",
+  "compatibility_date": "2026-06-12",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "forroflix-db",
+      "database_id": "forroflix-local-db"
+    }
+  ]
+}
