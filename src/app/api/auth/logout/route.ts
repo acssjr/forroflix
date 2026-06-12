@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
+export const runtime = 'edge';
+
 export async function POST(request: Request) {
   try {
     const cookieStore = await cookies();

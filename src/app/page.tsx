@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { LoginForm } from '@/components/login-form';
 import { Music, LogOut, Settings, Play, ShieldAlert } from 'lucide-react';
 
+export const runtime = 'edge';
+
 const MOCK_COURSES = [
   {
     id: 'course-1',

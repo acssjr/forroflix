@@ -5,6 +5,8 @@ import { cookies } from 'next/headers';
 import { MOCK_COURSES_DATA } from '@/lib/mock-data';
 import { CourseEditor } from '@/components/admin/course-editor';
 
+export const runtime = 'edge';
+
 interface PageProps {
   params: Promise<{ courseId: string }>;
 }

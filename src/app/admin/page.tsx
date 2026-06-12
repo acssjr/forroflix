@@ -5,6 +5,8 @@ import { cookies } from 'next/headers';
 import { MOCK_COURSES_DATA } from '@/lib/mock-data';
 import { AdminDashboard } from '@/components/admin/admin-dashboard';
 
+export const runtime = 'edge';
+
 export default async function AdminPage() {
   // 1. Validar autenticação e se o usuário é administrador
   const cookieStore = await cookies();

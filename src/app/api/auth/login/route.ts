@@ -3,6 +3,8 @@ import { getDB } from '@/lib/db';
 import { verifyPassword, signJWT } from '@/lib/auth';
 import { cookies } from 'next/headers';
 
+export const runtime = 'edge';
+
 export async function POST(request: Request) {
   try {
     const { email, password } = await request.json();
