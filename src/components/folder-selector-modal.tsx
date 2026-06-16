@@ -202,12 +202,28 @@ export function FolderSelectorModal({
               <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
               <span>Carregando pastas...</span>
             </div>
-          ) : folders.length === 0 ? (
-            <div className="h-24 flex items-center justify-center text-slate-500 text-sm">
-              Nenhuma pasta encontrada.
-            </div>
-          ) : (
-            folders.map((folder) => {
+          ) : (() => {
+            // Filtra as pastas exibidas baseado na seleção do toggle "Tipo de nova pasta" (Geral vs Deste Curso)
+            const filteredFolders = folders.filter((f) => {
+              if (newFolderIsGlobal) {
+                // Modo Geral: Mostra apenas pastas globais (is_global === 1)
+                return f.is_global === 1;
+              } else {
+                // Modo Deste Curso: Mostra apenas pastas com escopo deste curso (is_global === 0 e course_id === courseId)
+                return f.is_global === 0 && f.course_id === courseId;
+              }
+            });
+
+            if (filteredFolders.length === 0) {
+              return (
+                <div className="h-24 flex flex-col items-center justify-center text-slate-500 text-xs text-center p-4">
+                  <span>Nenhuma pasta pré-criada ou personalizada encontrada neste escopo.</span>
+                  <span className="text-[10px] mt-1 text-slate-600">Crie uma nova no campo abaixo para este tipo.</span>
+                </div>
+              );
+            }
+
+            return filteredFolders.map((folder) => {
               const scopeLabel = folder.is_global === 1 ? 'Global' : 'Este Curso';
               const ScopeIcon = folder.is_global === 1 ? Globe : GraduationCap;
               
@@ -215,7 +231,7 @@ export function FolderSelectorModal({
                 <button
                   key={folder.id + '_' + folder.is_global}
                   onClick={() => handleToggleFolder(folder)}
-                  className={`w-full flex items-center justify-between p-3 rounded-2xl border transition-all text-left group ${
+                  className={`w-full flex items-center justify-between p-3 rounded-2xl border transition-all text-left group cursor-pointer ${
                     folder.active
                       ? 'bg-yellow-500/5 border-yellow-500/30 text-yellow-500'
                       : 'bg-slate-900/30 border-slate-900 text-slate-300 hover:bg-slate-900/60 hover:text-white'
@@ -241,8 +257,8 @@ export function FolderSelectorModal({
                   </div>
                 </button>
               );
-            })
-          )}
+            });
+          })()}
         </div>
 
         {/* Botão de Salvar/Concluir explicitamente */}

@@ -75,7 +75,7 @@ export default async function Home() {
     const [coursesRes, favoritesRes] = await Promise.all([
       db.prepare('SELECT * FROM courses ORDER BY created_at DESC').all<any>(),
       db.prepare(`
-        SELECT 
+        SELECT DISTINCT
           l.id, 
           l.title, 
           l.video_id, 
@@ -84,12 +84,13 @@ export default async function Home() {
           c.slug as course_slug, 
           c.title as course_title,
           m.title as module_title
-        FROM favorites f
-        JOIN lessons l ON f.lesson_id = l.id
+        FROM favorite_folder_lessons ffl
+        JOIN favorite_folders ff ON ffl.folder_id = ff.id
+        JOIN lessons l ON ffl.lesson_id = l.id
         JOIN modules m ON l.module_id = m.id
         JOIN courses c ON m.course_id = c.id
-        WHERE f.user_id = ?
-        ORDER BY f.created_at DESC
+        WHERE ffl.user_id = ? AND ff.is_global = 1
+        ORDER BY ffl.created_at DESC
       `).bind(user.id).all<any>()
     ]);
 

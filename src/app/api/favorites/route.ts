@@ -19,13 +19,16 @@ export async function GET(request: Request) {
 
     const db = getDB();
 
-    // 1. Buscar pastas existentes do usuário no banco
+    // 1. Buscar pastas existentes do usuário no banco (globais ou daquele curso específico)
     const { results: dbFolders } = await db
-      .prepare('SELECT * FROM favorite_folders WHERE user_id = ?')
-      .bind(sessionUser.id)
+      .prepare('SELECT * FROM favorite_folders WHERE user_id = ? AND (is_global = 1 OR course_id = ?)')
+      .bind(sessionUser.id, courseId)
       .all<any>();
 
     // 2. Definir as pastas padrão
+    // Como as pastas padrão são inicialmente geradas sob demanda e depois salvas no banco de dados com um escopo,
+    // nós as fornecemos como globais (is_global = 1). Caso o usuário já as tenha salvo como específicas de um curso no banco,
+    // a etapa seguinte mesclará a versão real do banco de dados (que terá is_global = 0 e o course_id correto).
     const defaultFolders = [
       { name: 'Revisar Passo', is_global: 1, course_id: null },
       { name: 'Aprender Depois', is_global: 1, course_id: null },
@@ -35,19 +38,31 @@ export async function GET(request: Request) {
     // Mesclar pastas padrão com as do banco
     const allFoldersMap = new Map<string, any>();
     
-    // Adicionar padrões primeiro
+    // Adicionar padrões no escopo global primeiro
     defaultFolders.forEach((def, index) => {
       allFoldersMap.set(`${def.name}_global`, {
-        id: `default-${index}`,
+        id: `default-global-${index}`,
         name: def.name,
         is_global: 1,
         course_id: null,
         active: false
       });
+
+      // Se um courseId foi fornecido, também pré-cria os padrões no escopo deste curso
+      if (courseId) {
+        allFoldersMap.set(`${def.name}_course_${courseId}`, {
+          id: `default-course-${index}`,
+          name: def.name,
+          is_global: 0,
+          course_id: courseId,
+          active: false
+        });
+      }
     });
 
     // Sobrescrever ou complementar com as pastas reais do banco
     dbFolders?.forEach((folder: any) => {
+      // Cria chaves separadas para a pasta global e a específica do curso
       const key = folder.is_global === 1 ? `${folder.name}_global` : `${folder.name}_course_${folder.course_id}`;
       allFoldersMap.set(key, {
         id: folder.id,
