@@ -23,10 +23,8 @@ export function VideoPlayer({ videoId, userEmail, userIp = '127.0.0.1', courseTi
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Estado da marca d'água flutuante (posições x, y em %)
-  const [watermarkPos, setWatermarkPos] = useState({ top: '20%', left: '20%' });
   const playerRef = useRef<any>(null);
-
+ 
   // 1. Efeito para carregar a URL assinada da API do Next.js
   const fetchVideoToken = async () => {
     setLoading(true);
@@ -47,26 +45,13 @@ export function VideoPlayer({ videoId, userEmail, userIp = '127.0.0.1', courseTi
       setLoading(false);
     }
   };
-
+ 
   useEffect(() => {
     if (videoId) {
       fetchVideoToken();
     }
   }, [videoId]);
-
-  // 2. Mover a marca d'água flutuante aleatoriamente a cada 30 segundos
-  useEffect(() => {
-    const moveWatermark = () => {
-      // Gera porcentagens seguras entre 10% e 80% para evitar sair totalmente da tela
-      const top = `${Math.floor(Math.random() * 70) + 10}%`;
-      const left = `${Math.floor(Math.random() * 70) + 10}%`;
-      setWatermarkPos({ top, left });
-    };
-
-    const interval = setInterval(moveWatermark, 30000); // 30s
-    return () => clearInterval(interval);
-  }, []);
-
+ 
   // Bloquear clique direito sobre o player
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -137,26 +122,6 @@ export function VideoPlayer({ videoId, userEmail, userIp = '127.0.0.1', courseTi
           />
         )
       )}
-
-      {/* Marca D'água Dinâmica Anti-Pirataria */}
-      <div
-        className="absolute pointer-events-none select-none text-slate-500/25 font-mono text-[10px] md:text-xs z-50 transition-all duration-1000 ease-in-out whitespace-nowrap bg-black/10 px-2 py-0.5 rounded shadow-sm"
-        style={{
-          top: watermarkPos.top,
-          left: watermarkPos.left,
-          textShadow: '1px 1px 0px rgba(0,0,0,0.8)'
-        }}
-      >
-        <span>{userEmail}</span>
-        <span className="mx-1.5">|</span>
-        <span>IP: {userIp}</span>
-        {courseTitle && (
-          <>
-            <span className="mx-1.5">|</span>
-            <span className="hidden sm:inline">Exclusivo Forroflix</span>
-          </>
-        )}
-      </div>
     </div>
   );
 }
