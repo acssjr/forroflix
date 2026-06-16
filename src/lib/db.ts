@@ -200,7 +200,7 @@ export function getDB(): D1Database {
   );
   
   return {
-    prepare(query: string) {
+    prepare(_query: string) {
       return {
         bind() { return this; },
         async first() { return null; },

@@ -25,8 +25,8 @@ interface VideoPlayerProps {
 
 export function VideoPlayer({ 
   videoId, 
-  userEmail, 
-  userIp = '127.0.0.1', 
+  userEmail: _userEmail, 
+  userIp: _userIp = '127.0.0.1', 
   courseTitle, 
   moduleTitle,
   lessonTitle,
@@ -44,34 +44,50 @@ export function VideoPlayer({
   const playerJsRef = useRef<any>(null);
  
   // 1. Efeito para carregar a URL assinada da API do Next.js
-  const fetchVideoToken = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`/api/video-token?videoId=${videoId}`);
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Erro ao carregar vídeo.');
-      }
-      
-      setPlayUrl(data.playUrl);
-      if (data.duration && onDurationLoaded) {
-        onDurationLoaded(data.duration);
-      }
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'Falha ao autenticar o vídeo.');
-    } finally {
-      setLoading(false);
-    }
-  };
- 
   useEffect(() => {
-    if (videoId) {
-      fetchVideoToken();
-    }
-  }, [videoId]);
+    if (!videoId) return;
+
+    const controller = new AbortController();
+    let cancelled = false;
+
+    const loadToken = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch(`/api/video-token?videoId=${videoId}`, {
+          signal: controller.signal,
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Erro ao carregar vídeo.');
+        }
+
+        if (!cancelled) {
+          setPlayUrl(data.playUrl);
+          if (data.duration && onDurationLoaded) {
+            onDurationLoaded(data.duration);
+          }
+        }
+      } catch (err: any) {
+        if (!cancelled) {
+          console.error(err);
+          setError(err.message || 'Falha ao autenticar o vídeo.');
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadToken();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [videoId, onDurationLoaded]);
 
   // Carregar player.js da Bunny CDN para iframes e ouvir eventos
   useEffect(() => {
