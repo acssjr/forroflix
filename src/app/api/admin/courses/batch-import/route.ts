@@ -10,6 +10,35 @@ interface ImportStructure {
   files: { title: string; tempId: string }[];
 }
 
+interface BunnySuccessResult {
+  tempId: string;
+  title: string;
+  folderName: string;
+  modIdx: number;
+  fileIdx: number;
+  videoId: string;
+  expirationTime: number;
+  signature: string;
+  success: true;
+}
+
+interface BunnyErrorResult {
+  tempId: string;
+  title: string;
+  folderName: string;
+  modIdx: number;
+  fileIdx: number;
+  videoId: null;
+  success: false;
+  error: string;
+}
+
+type BunnyResult = BunnySuccessResult | BunnyErrorResult;
+
+function isBunnySuccess(r: BunnyResult): r is BunnySuccessResult {
+  return r.success === true && r.videoId !== null;
+}
+
 export async function POST(request: Request) {
   try {
     const { courseId, structure } = await request.json() as { courseId: string; structure: ImportStructure[] };
@@ -51,7 +80,7 @@ export async function POST(request: Request) {
       }))
     );
 
-    const bunnyCreationPromises = flatFilesToCreate.map(async (f) => {
+    const bunnyCreationPromises = flatFilesToCreate.map(async (f): Promise<BunnyResult> => {
       try {
         const res = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos`, {
           method: 'POST',
@@ -90,7 +119,7 @@ export async function POST(request: Request) {
     });
 
     const bunnyResults = await Promise.all(bunnyCreationPromises);
-    const validBunnyResults = bunnyResults.filter(r => r.success && r.videoId);
+    const validBunnyResults = bunnyResults.filter(isBunnySuccess);
 
     // 4. Obter posições máximas das aulas para módulos existentes
     const existingModuleIds = structure.map(m => m.moduleId).filter(Boolean) as string[];
