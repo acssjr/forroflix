@@ -109,8 +109,9 @@ export function AdminDashboard({ initialCourses }: AdminDashboardProps) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {courses.map(course => (
-            <div 
+            <Link 
               key={course.id} 
+              href={`/admin/courses/${course.id}`}
               className="flex flex-col bg-slate-950 border border-slate-900 rounded-2xl overflow-hidden shadow-2xl hover:border-orange-500/30 hover:shadow-[0_0_30px_rgba(249,115,22,0.02)] hover:scale-[1.01] transition-all duration-300 group cursor-pointer"
             >
               <div className={`aspect-video bg-gradient-to-br ${course.thumbnail_gradient} p-6 flex flex-col justify-end relative overflow-hidden`}>
@@ -121,15 +122,13 @@ export function AdminDashboard({ initialCourses }: AdminDashboardProps) {
                 <p className="text-sm text-slate-400 line-clamp-2 leading-relaxed">{course.description || 'Sem descrição cadastrada.'}</p>
                 
                 <div className="flex gap-3">
-                  <Link href={`/admin/courses/${course.id}`} className="flex-1">
-                    <Button className="w-full bg-slate-900 hover:bg-orange-500/10 hover:text-orange-400 hover:border-orange-500/20 active:scale-[0.98] text-orange-400 font-bold border border-orange-500/10 gap-2 transition-all duration-200">
-                      <Settings className="w-4 h-4" />
-                      Gerenciar Conteúdo
-                    </Button>
-                  </Link>
+                  <Button className="w-full bg-slate-900 hover:bg-orange-500/10 hover:text-orange-400 hover:border-orange-500/20 active:scale-[0.98] text-orange-400 font-bold border border-orange-500/10 gap-2 transition-all duration-200">
+                    <Settings className="w-4 h-4" />
+                    Gerenciar Conteúdo
+                  </Button>
                 </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </main>

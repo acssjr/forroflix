@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS lessons (
     position INTEGER DEFAULT 0,
     video_id TEXT, -- ID do vídeo no Bunny Stream
     duration_seconds INTEGER DEFAULT 0,
+    upload_status TEXT DEFAULT 'pending', -- 'pending', 'uploading', 'completed', 'failed'
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -51,3 +52,8 @@ CREATE TABLE IF NOT EXISTS progress (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id, lesson_id)
 );
+
+-- Criar Índices de Desempenho
+CREATE INDEX IF NOT EXISTS idx_lessons_module_position ON lessons(module_id, position);
+CREATE INDEX IF NOT EXISTS idx_modules_course_position ON modules(course_id, position);
+

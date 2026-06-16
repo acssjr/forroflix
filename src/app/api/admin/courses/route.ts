@@ -100,11 +100,47 @@ export async function PATCH(request: Request) {
 
     const db = getDB();
 
-    if (!id) {
+    // Permite pular a verificação de 'id' somente para a operação de reordenação estrutural global
+    if (type !== 'reorder' && !id) {
       return NextResponse.json({ error: 'ID é obrigatório' }, { status: 400 });
     }
 
-    // 2. Renomear Módulo
+    // 2. Reordenação em lote (Drag & Drop de módulos/aulas)
+    if (type === 'reorder') {
+      const { modules } = body;
+
+      if (!modules || !Array.isArray(modules)) {
+        return NextResponse.json({ error: 'Lista de módulos inválida' }, { status: 400 });
+      }
+
+      const statements: any[] = [];
+
+      modules.forEach((mod: any, modIdx: number) => {
+        // Atualizar a posição do módulo
+        statements.push(
+          db.prepare('UPDATE modules SET position = ? WHERE id = ?')
+            .bind(modIdx + 1, mod.id)
+        );
+
+        // Atualizar a posição e a associação com o módulo pai de todas as aulas
+        if (mod.lessons && Array.isArray(mod.lessons)) {
+          mod.lessons.forEach((les: any, lesIdx: number) => {
+            statements.push(
+              db.prepare('UPDATE lessons SET position = ?, module_id = ? WHERE id = ?')
+                .bind(lesIdx + 1, mod.id, les.id)
+            );
+          });
+        }
+      });
+
+      if (statements.length > 0) {
+        await db.batch(statements);
+      }
+
+      return NextResponse.json({ success: true });
+    }
+
+    // 3. Renomear Módulo
     if (type === 'module') {
       if (!title) {
         return NextResponse.json({ error: 'Título é obrigatório' }, { status: 400 });
@@ -117,29 +153,36 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: true });
     }
 
-    // 3. Editar Aula (Título e/ou Descrição)
+    // 4. Editar Aula (Título, Descrição e/ou uploadStatus)
     if (type === 'lesson') {
-      const { description } = body;
-      if (!title && description === undefined) {
-        return NextResponse.json({ error: 'Título ou descrição devem ser informados' }, { status: 400 });
+      const { description, uploadStatus } = body;
+      if (title === undefined && description === undefined && uploadStatus === undefined) {
+        return NextResponse.json({ error: 'Nenhum campo para atualizar informado' }, { status: 400 });
       }
 
-      if (title !== undefined && description !== undefined) {
-        await db
-          .prepare('UPDATE lessons SET title = ?, description = ? WHERE id = ?')
-          .bind(title.trim(), description.trim(), id)
-          .run();
-      } else if (title !== undefined) {
-        await db
-          .prepare('UPDATE lessons SET title = ? WHERE id = ?')
-          .bind(title.trim(), id)
-          .run();
-      } else if (description !== undefined) {
-        await db
-          .prepare('UPDATE lessons SET description = ? WHERE id = ?')
-          .bind(description.trim(), id)
-          .run();
+      const updates: string[] = [];
+      const params: any[] = [];
+
+      if (title !== undefined) {
+        updates.push('title = ?');
+        params.push(title.trim());
       }
+      if (description !== undefined) {
+        updates.push('description = ?');
+        params.push(description.trim());
+      }
+      if (uploadStatus !== undefined) {
+        updates.push('upload_status = ?');
+        params.push(uploadStatus);
+      }
+
+      // Adicionar id no fim
+      params.push(id);
+
+      await db
+        .prepare(`UPDATE lessons SET ${updates.join(', ')} WHERE id = ?`)
+        .bind(...params)
+        .run();
 
       return NextResponse.json({ success: true });
     }
@@ -147,6 +190,54 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'Tipo de operação inválido' }, { status: 400 });
   } catch (error: any) {
     console.error('Erro na rota admin courses PATCH:', error);
+    return NextResponse.json({ error: error.message || 'Erro interno no servidor' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const body = await request.json();
+    const { type, id, ids } = body;
+
+    // 1. Validar autenticação e se o usuário é administrador
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get('session')?.value;
+    const sessionUser = sessionToken ? await verifyJWT(sessionToken) : null;
+
+    if (!sessionUser || sessionUser.role !== 'admin') {
+      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
+    }
+
+    const db = getDB();
+
+    // 2. Excluir Aulas (Lote ou Individual)
+    if (type === 'lesson' || type === 'lessons') {
+      const targetIds = ids || (id ? [id] : []);
+      if (!Array.isArray(targetIds) || targetIds.length === 0) {
+        return NextResponse.json({ error: 'Nenhum ID de aula informado' }, { status: 400 });
+      }
+
+      const statements = targetIds.map((lessonId: string) => 
+        db.prepare('DELETE FROM lessons WHERE id = ?').bind(lessonId)
+      );
+
+      await db.batch(statements);
+      return NextResponse.json({ success: true });
+    }
+
+    // 3. Excluir Módulo
+    if (type === 'module') {
+      if (!id) {
+        return NextResponse.json({ error: 'ID do módulo é obrigatório' }, { status: 400 });
+      }
+
+      await db.prepare('DELETE FROM modules WHERE id = ?').bind(id).run();
+      return NextResponse.json({ success: true });
+    }
+
+    return NextResponse.json({ error: 'Tipo de operação inválido' }, { status: 400 });
+  } catch (error: any) {
+    console.error('Erro na rota admin courses DELETE:', error);
     return NextResponse.json({ error: error.message || 'Erro interno no servidor' }, { status: 500 });
   }
 }
