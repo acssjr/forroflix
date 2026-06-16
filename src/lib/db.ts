@@ -110,12 +110,83 @@ class D1RESTDatabase implements D1Database {
   }
 }
 
+let localDbInstance: any = null;
+
 // Obter a instância do banco D1 (Binding nativo ou REST API fallback)
 export function getDB(): D1Database {
   // Se estiver rodando na Cloudflare (Pages/Workers) ou no dev local com wrangler:
   const db = (process.env as any).DB as D1Database;
   if (db) {
     return db;
+  }
+
+  // Se estiver rodando localmente com SQLite (E2E ou Dev Local Offline)
+  if (process.env.USE_LOCAL_SQLITE === 'true') {
+    if (!localDbInstance) {
+      try {
+        const Database = require('better-sqlite3');
+        const path = require('path');
+        const dbPath = path.resolve(process.cwd(), 'db/local.db');
+        const sqliteDb = new Database(dbPath);
+        
+        localDbInstance = {
+          prepare(sql: string) {
+            const stmt = sqliteDb.prepare(sql);
+            let boundParams: any[] = [];
+            const prepared = {
+              bind(...params: any[]) {
+                boundParams = params.map((v: any) => typeof v === 'boolean' ? (v ? 1 : 0) : v);
+                return prepared;
+              },
+              async run() {
+                const res = stmt.run(...boundParams);
+                return { success: true, results: [], meta: { changes: res.changes, last_row_id: res.lastInsertRowid } };
+              },
+              async all() {
+                const res = stmt.all(...boundParams);
+                return { success: true, results: res || [], meta: {} };
+              },
+              async first(colName?: string) {
+                const row = stmt.get(...boundParams) as any;
+                if (!row) return null;
+                return colName ? row[colName] : row;
+              },
+              _internal: {
+                stmt,
+                getParams: () => boundParams
+              }
+            };
+            return prepared;
+          },
+          async batch(statements: any[]) {
+            const results: any[] = [];
+            const executeInTransaction = sqliteDb.transaction((stmts: any[]) => {
+              for (const s of stmts) {
+                const internal = s._internal || s;
+                const info = internal.stmt.run(...internal.getParams());
+                results.push({
+                  success: true,
+                  meta: { changes: info.changes, last_row_id: info.lastInsertRowid }
+                });
+              }
+              return results;
+            });
+            try {
+              return executeInTransaction(statements);
+            } catch (error) {
+              throw new Error(`D1_BATCH_ROLLBACK_EMULATED: Transação de lote abortada. Erro: ${error}`);
+            }
+          },
+          async exec(sql: string) {
+            sqliteDb.exec(sql);
+            return { count: 0, duration: 0 };
+          }
+        };
+      } catch (err) {
+        console.error('[D1] Erro ao carregar better-sqlite3 local:', err);
+      }
+    }
+    if (localDbInstance) return localDbInstance;
   }
 
   // Se estiver rodando na Vercel (onde process.env.DB não existe):

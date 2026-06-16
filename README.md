@@ -1,5 +1,14 @@
 # 🕺 Forroflix — Plataforma de Streaming e Ensino de Forró
 
+<p align="left">
+  <img src="https://img.shields.io/badge/Next.js-16.2-black?style=for-the-badge&logo=nextdotjs" alt="Next.js 16" />
+  <img src="https://img.shields.io/badge/React-19.0-00D8FF?style=for-the-badge&logo=react" alt="React 19" />
+  <img src="https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS-v4.0-38BDF8?style=for-the-badge&logo=tailwindcss" alt="Tailwind CSS v4" />
+  <img src="https://img.shields.io/badge/Cloudflare_D1-F38020?style=for-the-badge&logo=cloudflare" alt="Cloudflare D1" />
+  <img src="https://img.shields.io/badge/Bunny_Stream-FF6600?style=for-the-badge&logo=bunnycdn" alt="Bunny Stream" />
+</p>
+
 > Uma plataforma moderna e premium no estilo "Netflix" voltada para o aprendizado e streaming de vídeoaulas de Forró, equipada com um construtor de grade curricular interativo e uploads diretos de vídeo de alta performance.
 
 ---

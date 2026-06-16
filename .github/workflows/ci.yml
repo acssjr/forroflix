@@ -1,0 +1,119 @@
+name: Verificação e Integração Contínua (CI)
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  static-analysis:
+    name: Code Quality & Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do Repositório
+        uses: actions/checkout@v4
+
+      - name: Setup do Ambiente Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Instalação das Dependências do Projeto
+        run: npm ci
+
+      - name: Validação de Estilo e Sintaxe (Lint)
+        run: npm run lint
+
+  database-and-integration-tests:
+    name: Banco de Dados & Serviços (Vitest)
+    runs-on: ubuntu-latest
+    needs: static-analysis
+    steps:
+      - name: Checkout do Repositório
+        uses: actions/checkout@v4
+
+      - name: Setup do Ambiente Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Cache de Dependências Node.js
+        uses: actions/cache@v4
+        id: node-cache
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Instalação das Dependências
+        run: npm ci
+
+      - name: Execução dos Testes Unitários e Integração (Vitest)
+        run: npm run test
+
+  end-to-end-validation:
+    name: Resiliência de Rede & UI (Playwright)
+    runs-on: ubuntu-latest
+    needs: database-and-integration-tests
+    steps:
+      - name: Checkout do Repositório
+        uses: actions/checkout@v4
+
+      - name: Setup do Ambiente Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Cache de Dependências Node.js
+        uses: actions/cache@v4
+        id: node-cache
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Instalação das Dependências do Projeto
+        run: npm ci
+
+      - name: Cache de Navegadores do Playwright
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Instalação dos Binários de Navegadores do Playwright (Cache Miss)
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps
+
+      - name: Instalação Exclusiva de Dependências do Sistema (Cache Hit)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps
+
+      - name: Compilar Aplicação Next.js
+        run: npm run build
+        env:
+          JWT_SECRET: forroflix-secret-key-2026-auth-token-129847
+          BUNNY_STREAM_LIBRARY_ID: 684595
+          BUNNY_STREAM_API_KEY: mocked-key
+
+      - name: Inicializar Servidor Next.js em Segundo Plano
+        run: |
+          npm run start &
+          npx wait-on http://127.0.0.1:3000 --timeout 60000
+
+      - name: Executar Suíte E2E do Playwright
+        run: npm run test:e2e
+        env:
+          NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+          JWT_SECRET: forroflix-secret-key-2026-auth-token-129847
+          BUNNY_STREAM_LIBRARY_ID: 684595
+          BUNNY_STREAM_API_KEY: mocked-key
+
+      - name: Salvaguarda de Relatórios de Falhas (Artifacts)
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: relatorios-erros-playwright
+          path: playwright-report/
+          retention-days: 14

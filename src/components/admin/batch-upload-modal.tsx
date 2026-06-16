@@ -415,12 +415,23 @@ export function BatchUploadModal({
         });
         onFinished();
       },
+      onShouldRetry: (error, retryAttempt) => {
+        console.warn(`TUS retry attempt ${retryAttempt} due to error:`, error);
+        updateItemStatus(item.folderName, item.id, {
+          status: 'uploading',
+          error: 'Conexão instável. Retomando upload...'
+        });
+        return true;
+      },
       onProgress: (bytesSent, bytesTotal) => {
         const percentage = Math.round((bytesSent / bytesTotal) * 100);
-        updateItemStatus(item.folderName, item.id, { progress: percentage });
+        updateItemStatus(item.folderName, item.id, { 
+          progress: percentage,
+          error: undefined
+        });
       },
       onSuccess: () => {
-        updateItemStatus(item.folderName, item.id, { status: 'completed', progress: 100 });
+        updateItemStatus(item.folderName, item.id, { status: 'completed', progress: 100, error: undefined });
         
         // Atualizar status no banco de dados para 'completed'
         fetch('/api/admin/courses', {
@@ -531,7 +542,7 @@ export function BatchUploadModal({
 
           <div className="space-y-2">
             <h3 className="font-extrabold text-white text-xl">
-              {errorCount === 0 ? 'Upload em Lote Concluído!' : 'Importação com Pendências'}
+              {errorCount === 0 ? 'Upload concluído com sucesso!' : 'Importação com Pendências'}
             </h3>
             <p className="text-slate-400 text-sm">
               {errorCount === 0 
@@ -638,6 +649,7 @@ export function BatchUploadModal({
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
+              data-testid="tus-upload-input-trigger"
               className={`flex-grow border-2 border-dashed rounded-2xl flex flex-col items-center justify-center p-8 text-center gap-3 transition-all cursor-pointer ${
                 isDragOver 
                   ? 'border-orange-500 bg-orange-500/5' 
@@ -722,6 +734,11 @@ export function BatchUploadModal({
                                     className="h-full bg-gradient-to-r from-orange-500 to-red-500 transition-all duration-300"
                                     style={{ width: `${item.progress}%` }}
                                   />
+                                </div>
+                              )}
+                              {item.error && (
+                                <div className="text-[10px] text-amber-500 font-semibold animate-pulse mt-1 px-1">
+                                  {item.error}
                                 </div>
                               )}
                             </div>

@@ -23,6 +23,7 @@ import {
   FolderInput,
   Trash2
 } from 'lucide-react';
+import { BatchUploadModal } from './batch-upload-modal';
 
 interface Lesson {
   id: string;
