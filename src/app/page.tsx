@@ -155,11 +155,8 @@ export default async function Home() {
                 {/* Ícone de Ação no Rodapé do Card */}
                 <div className="flex justify-between items-center relative z-10">
                   <span className="text-[10px] font-bold text-white/60 tracking-wider uppercase">
-                    Vídeoaula
+                    Curso Online
                   </span>
-                  <div className="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                    <Play className="w-4 h-4 fill-black ml-0.5" />
-                  </div>
                 </div>
               </Link>
 
