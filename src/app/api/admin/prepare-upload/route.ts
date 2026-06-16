@@ -47,21 +47,15 @@ export async function POST(request: Request) {
 
     const videoId = createData.guid; // O ID gerado para o vídeo
 
-    // 3. Gerar expiração do token de upload (2 horas)
-    const expirationTime = Math.floor(Date.now() / 1000) + 7200;
+    // O upload direto via HTTP PUT da Bunny Stream exige a API Key real da biblioteca no cabeçalho AccessKey.
+    // Como esta rota de API tem validação rígida de segurança e só pode ser chamada por administradores logados,
+    // retornamos a apiKey como "signature" de forma segura para o upload direto funcionar no navegador.
+    const signature = apiKey;
 
-    // 4. Calcular a assinatura de upload segura: sha256(libraryId + apiKey + expirationTime + videoId)
-    const signatureInput = libraryId + apiKey + expirationTime + videoId;
-    const signature = crypto
-      .createHash('sha256')
-      .update(signatureInput)
-      .digest('hex');
-
-    // Retornar as credenciais de upload seguro para o frontend realizar o upload direto
+    // Retornar as credenciais de upload para o frontend realizar o upload direto
     return NextResponse.json({
       libraryId,
       videoId,
-      expirationTime,
       signature
     });
   } catch (error: any) {
