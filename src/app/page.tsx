@@ -5,6 +5,7 @@ import { cookies } from 'next/headers';
 import { Button } from '@/components/ui/button';
 import { LoginForm } from '@/components/login-form';
 import { Music, LogOut, Settings, Play, ShieldAlert } from 'lucide-react';
+import { GlobalFavorites } from '@/components/global-favorites';
 
 const MOCK_COURSES = [
   {
@@ -62,9 +63,38 @@ export default async function Home() {
 
   // 2. Se ESTIVER logado, busca os cursos do D1 ou usa os mocks
   let coursesList = MOCK_COURSES;
+  let favoritesList: any[] = [];
+  
+  const rawPullZone = process.env.BUNNY_STREAM_PULL_ZONE || process.env.BUNNY_STREAM_LIBRARY_ID || '';
+  const pullZone = rawPullZone.startsWith('vz-') ? rawPullZone.substring(3) : rawPullZone;
+
   try {
     const db = getDB();
-    const { results } = await db.prepare('SELECT * FROM courses ORDER BY created_at DESC').all<any>();
+    
+    // Buscar cursos e favoritos em paralelo
+    const [coursesRes, favoritesRes] = await Promise.all([
+      db.prepare('SELECT * FROM courses ORDER BY created_at DESC').all<any>(),
+      db.prepare(`
+        SELECT 
+          l.id, 
+          l.title, 
+          l.video_id, 
+          l.duration_seconds, 
+          c.id as course_id, 
+          c.slug as course_slug, 
+          c.title as course_title,
+          m.title as module_title
+        FROM favorites f
+        JOIN lessons l ON f.lesson_id = l.id
+        JOIN modules m ON l.module_id = m.id
+        JOIN courses c ON m.course_id = c.id
+        WHERE f.user_id = ?
+        ORDER BY f.created_at DESC
+      `).bind(user.id).all<any>()
+    ]);
+
+    const results = coursesRes.results;
+    favoritesList = favoritesRes.results || [];
     
     if (results && results.length > 0) {
       coursesList = results.map((c, i) => {
@@ -82,13 +112,13 @@ export default async function Home() {
       });
     }
   } catch (err) {
-    console.warn('[D1] Erro na home, exibindo catálogo simulado.');
+    console.warn('[D1] Erro na home, exibindo catálogo simulado.', err);
   }
 
   const isAdmin = user.role === 'admin';
 
   return (
-    <div className="min-h-screen bg-[#060609] text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#060609] text-slate-100 flex flex-col font-sans animate-page-enter">
       {/* Header Premium do Catálogo */}
       <header className="border-b border-slate-900 bg-[#060609]/90 backdrop-blur sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
@@ -126,7 +156,7 @@ export default async function Home() {
         <div className="space-y-2">
           <h2 className="text-2xl font-black text-white flex items-center gap-2">
             <span className="w-1.5 h-6 bg-orange-500 rounded-full"></span>
-            Qual universidade quer dançar hoje?
+            O que você quer aprender a dançar hoje?
           </h2>
           <p className="text-xs text-slate-400">Escolha um dos cursos abaixo e inicie sua jornada no Forró.</p>
         </div>
@@ -172,6 +202,13 @@ export default async function Home() {
             </div>
           ))}
         </div>
+
+        {/* Global Saved Lessons for Review */}
+        {favoritesList.length > 0 && (
+          <div className="border-t border-slate-900/60 pt-12">
+            <GlobalFavorites initialFavorites={favoritesList} libraryId={pullZone} />
+          </div>
+        )}
       </main>
 
       {/* Rodapé */}

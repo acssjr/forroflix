@@ -77,7 +77,7 @@ export function AdminDashboard({ initialCourses }: AdminDashboardProps) {
   };
 
   return (
-    <div className="min-h-screen bg-[#07070a] text-slate-100 flex flex-col">
+    <div className="min-h-screen bg-[#07070a] text-slate-100 flex flex-col animate-page-enter">
       {/* Admin Header */}
       <header className="border-b border-slate-900 bg-[#07070a]/90 backdrop-blur sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
@@ -111,10 +111,10 @@ export function AdminDashboard({ initialCourses }: AdminDashboardProps) {
           {courses.map(course => (
             <div 
               key={course.id} 
-              className="flex flex-col bg-slate-950 border border-slate-900 rounded-2xl overflow-hidden shadow-2xl hover:border-slate-800 transition-all duration-300 group"
+              className="flex flex-col bg-slate-950 border border-slate-900 rounded-2xl overflow-hidden shadow-2xl hover:border-orange-500/30 hover:shadow-[0_0_30px_rgba(249,115,22,0.02)] hover:scale-[1.01] transition-all duration-300 group cursor-pointer"
             >
-              <div className={`aspect-video bg-gradient-to-br ${course.thumbnail_gradient} p-6 flex flex-col justify-end relative`}>
-                <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors" />
+              <div className={`aspect-video bg-gradient-to-br ${course.thumbnail_gradient} p-6 flex flex-col justify-end relative overflow-hidden`}>
+                <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 group-hover:scale-105 transition-all duration-500" />
                 <h3 className="text-xl font-black text-white relative z-10 drop-shadow-md">{course.title}</h3>
               </div>
               <div className="p-6 flex flex-col flex-grow justify-between gap-6">
@@ -122,7 +122,7 @@ export function AdminDashboard({ initialCourses }: AdminDashboardProps) {
                 
                 <div className="flex gap-3">
                   <Link href={`/admin/courses/${course.id}`} className="flex-1">
-                    <Button className="w-full bg-slate-900 hover:bg-slate-800 text-orange-400 font-bold border border-orange-500/10 gap-2">
+                    <Button className="w-full bg-slate-900 hover:bg-orange-500/10 hover:text-orange-400 hover:border-orange-500/20 active:scale-[0.98] text-orange-400 font-bold border border-orange-500/10 gap-2 transition-all duration-200">
                       <Settings className="w-4 h-4" />
                       Gerenciar Conteúdo
                     </Button>
@@ -145,7 +145,7 @@ export function AdminDashboard({ initialCourses }: AdminDashboardProps) {
               </h3>
               <button 
                 onClick={() => setShowModal(false)}
-                className="text-slate-500 hover:text-slate-300 text-sm font-semibold"
+                className="text-slate-500 hover:text-slate-300 text-sm font-semibold cursor-pointer"
               >
                 Fechar
               </button>
@@ -191,7 +191,7 @@ export function AdminDashboard({ initialCourses }: AdminDashboardProps) {
                   <select 
                     value={gradient}
                     onChange={(e) => setGradient(e.target.value)}
-                    className="w-full bg-[#0d0d14] border border-slate-900 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 text-sm"
+                    className="w-full bg-[#0d0d14] border border-slate-900 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 text-sm cursor-pointer"
                   >
                     <option value="from-orange-500 to-red-600">Laranja a Vermelho (Quente)</option>
                     <option value="from-violet-600 to-pink-500">Violeta a Rosa (Charmoso)</option>

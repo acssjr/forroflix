@@ -3,7 +3,7 @@ import { getDB } from '@/lib/db';
 import { verifyJWT } from '@/lib/auth';
 import { cookies } from 'next/headers';
 import { MOCK_COURSES_DATA } from '@/lib/mock-data';
-import { LessonViewer } from '@/components/lesson-viewer';
+import { CourseViewer } from '@/components/course-viewer';
 
 interface PageProps {
   params: Promise<{ courseSlug: string; lessonId: string }>;
@@ -25,84 +25,87 @@ export default async function LessonPage({ params }: PageProps) {
   let isSubscribed = false;
   let courseTitle = '';
   let courseDescription = '';
+  let courseId = '';
+  let thumbnailGradient = 'from-orange-500 to-red-600';
   let activeLesson = null;
   let modules: any[] = [];
   let completedLessonIds: string[] = [];
+  let favoriteLessonIds: string[] = [];
 
   try {
-    // 2. Buscar o status de assinatura atualizado na D1
-    const { results: dbUsers } = await db
-      .prepare('SELECT role, subscription_active FROM users WHERE id = ?')
-      .bind(sessionUser.id)
-      .all<any>();
+    // 1. Buscar status de assinatura do usuário e detalhes do curso em paralelo
+    const [usersRes, coursesRes] = await Promise.all([
+      db.prepare('SELECT role, subscription_active FROM users WHERE id = ?').bind(sessionUser.id).all<any>(),
+      db.prepare('SELECT * FROM courses WHERE slug = ?').bind(courseSlug).all<any>()
+    ]);
 
-    const userProfile = dbUsers[0];
+    const userProfile = usersRes.results[0];
     if (userProfile) {
       isSubscribed = userProfile.subscription_active === 1 || userProfile.role === 'admin';
     }
 
-    // 3. Tentar carregar o curso do banco de dados D1
-    const { results: dbCourses } = await db
-      .prepare('SELECT * FROM courses WHERE slug = ?')
-      .bind(courseSlug)
-      .all<any>();
-
-    const dbCourse = dbCourses[0];
+    const dbCourse = coursesRes.results[0];
 
     if (dbCourse) {
       courseTitle = dbCourse.title;
       courseDescription = dbCourse.description || '';
+      courseId = dbCourse.id;
+      thumbnailGradient = dbCourse.thumbnail_gradient || 'from-orange-500 to-red-600';
 
-      // Obter módulos do curso
-      const { results: dbModules } = await db
-        .prepare('SELECT * FROM modules WHERE course_id = ? ORDER BY position ASC')
-        .bind(dbCourse.id)
-        .all<any>();
+      // 2. Buscar módulos, progresso e favoritos em paralelo
+      const [modulesRes, progressRes, favoritesRes] = await Promise.all([
+        db.prepare('SELECT * FROM modules WHERE course_id = ? ORDER BY position ASC').bind(dbCourse.id).all<any>(),
+        db.prepare('SELECT lesson_id FROM progress WHERE user_id = ? AND completed = 1').bind(sessionUser.id).all<any>(),
+        db.prepare('SELECT lesson_id FROM favorites WHERE user_id = ?').bind(sessionUser.id).all<any>()
+      ]);
 
-      if (dbModules) {
-        for (const mod of dbModules) {
-          // Obter aulas do módulo
-          const { results: dbLessons } = await db
-            .prepare('SELECT * FROM lessons WHERE module_id = ? ORDER BY position ASC')
-            .bind(mod.id)
-            .all<any>();
+      const dbModules = modulesRes.results || [];
+      completedLessonIds = progressRes.results ? progressRes.results.map((p) => p.lesson_id) : [];
+      favoriteLessonIds = favoritesRes.results ? favoritesRes.results.map((f) => f.lesson_id) : [];
 
-          const lessons = dbLessons || [];
-          modules.push({
+      if (dbModules && dbModules.length > 0) {
+        // Obter todas as aulas do curso de uma vez só (Sem N+1)
+        const { results: dbLessons } = await db
+          .prepare(`
+            SELECT id, title, video_id, duration_seconds, position, module_id, description
+            FROM lessons
+            WHERE module_id IN (${dbModules.map(() => '?').join(',')})
+            ORDER BY position ASC
+          `)
+          .bind(...dbModules.map(m => m.id))
+          .all<any>();
+
+        const lessonsList = dbLessons || [];
+
+        // Agrupar aulas nos módulos correspondentes e procurar a ativa
+        modules = dbModules.map(mod => {
+          const modLessons = lessonsList.filter((l: any) => l.module_id === mod.id);
+          
+          return {
             id: mod.id,
             title: mod.title,
             position: mod.position,
-            lessons: lessons.map((l) => ({
+            lessons: modLessons.map((l: any) => ({
               id: l.id,
               title: l.title,
               duration_seconds: l.duration_seconds || 0,
               video_id: l.video_id || '',
               position: l.position,
             })),
-          });
+          };
+        });
 
-          // Encontrar a aula ativa
-          const currentActive = lessons.find((l) => l.id === lessonId);
-          if (currentActive) {
-            activeLesson = {
-              id: currentActive.id,
-              title: currentActive.title,
-              description: currentActive.description || '',
-              video_id: currentActive.video_id || '',
-              duration_seconds: currentActive.duration_seconds || 0,
-            };
-          }
+        // Encontrar a aula ativa
+        const currentActive = lessonsList.find((l: any) => l.id === lessonId);
+        if (currentActive) {
+          activeLesson = {
+            id: currentActive.id,
+            title: currentActive.title,
+            description: currentActive.description || '',
+            video_id: currentActive.video_id || '',
+            duration_seconds: currentActive.duration_seconds || 0,
+          };
         }
-      }
-
-      // Buscar progresso de conclusão do aluno
-      const { results: dbProgress } = await db
-        .prepare('SELECT lesson_id FROM progress WHERE user_id = ? AND completed = 1')
-        .bind(sessionUser.id)
-        .all<any>();
-
-      if (dbProgress) {
-        completedLessonIds = dbProgress.map((p) => p.lesson_id);
       }
     }
   } catch (err) {
@@ -115,6 +118,8 @@ export default async function LessonPage({ params }: PageProps) {
     if (mockCourse) {
       courseTitle = mockCourse.title;
       courseDescription = mockCourse.description;
+      courseId = mockCourse.id;
+      thumbnailGradient = mockCourse.thumbnail_gradient;
       modules = mockCourse.modules;
 
       // Se logado localmente em modo teste/demo, fingir assinatura ativa nos mocks
@@ -141,16 +146,26 @@ export default async function LessonPage({ params }: PageProps) {
     redirect('/');
   }
 
+  const rawPullZone = process.env.BUNNY_STREAM_PULL_ZONE || process.env.BUNNY_STREAM_LIBRARY_ID || '';
+  const pullZone = rawPullZone.startsWith('vz-') ? rawPullZone.substring(3) : rawPullZone;
+
   return (
-    <LessonViewer
-      courseTitle={courseTitle}
-      courseDescription={courseDescription}
-      courseSlug={courseSlug}
-      activeLesson={activeLesson}
+    <CourseViewer
+      course={{
+        id: courseId,
+        title: courseTitle,
+        description: courseDescription,
+        slug: courseSlug,
+        thumbnail_gradient: thumbnailGradient,
+      }}
       modules={modules}
       completedLessonIds={completedLessonIds}
+      favoriteLessonIds={favoriteLessonIds}
+      initialLessonId={activeLesson.id}
       userEmail={sessionUser.email || ''}
+      isAdmin={sessionUser.role === 'admin'}
       isSubscribed={isSubscribed}
+      libraryId={pullZone}
     />
   );
 }

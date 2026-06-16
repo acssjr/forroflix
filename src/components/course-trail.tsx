@@ -1,9 +1,10 @@
 'use client';
  
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, BookOpen, Clock, Play, GraduationCap, Layers } from 'lucide-react';
+import { ArrowLeft, BookOpen, Clock, Play, GraduationCap, Layers, Star, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { FolderSelectorModal } from '@/components/folder-selector-modal';
  
 interface Lesson {
   id: string;
@@ -31,9 +32,13 @@ interface CourseTrailProps {
   course: Course;
   modules: Module[];
   completedLessonIds: string[];
+  favoriteLessonIds: string[];
+  setFavoriteIds?: React.Dispatch<React.SetStateAction<string[]>>;
   continueLessonId: string | null;
   userEmail: string;
   isAdmin: boolean;
+  onSelectLesson: (lessonId: string) => void;
+  libraryId: string;
 }
  
 // Cores de gradientes para os cartões de módulos (Trilhas)
@@ -54,11 +59,37 @@ export function CourseTrail({
   course,
   modules,
   completedLessonIds,
+  favoriteLessonIds = [],
+  setFavoriteIds,
   continueLessonId,
   userEmail,
   isAdmin,
+  onSelectLesson,
+  libraryId,
 }: CourseTrailProps) {
-  const [activeTab, setActiveTab] = useState<'conteudos' | 'sobre'>('conteudos');
+  const [activeTab, setActiveTab] = useState<'conteudos' | 'salvas' | 'sobre'>('conteudos');
+  const [folderModalOpen, setFolderModalOpen] = useState(false);
+  const [selectedLessonIdForFolder, setSelectedLessonIdForFolder] = useState<string | null>(null);
+ 
+  // Toast notification state
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'warning' | 'error'; visible: boolean }>({
+    message: '',
+    type: 'success',
+    visible: false,
+  });
+
+  const showToast = (message: string, type: 'success' | 'info' | 'warning' | 'error' = 'success') => {
+    setToast({ message, type, visible: true });
+  };
+
+  useEffect(() => {
+    if (toast.visible) {
+      const timer = setTimeout(() => {
+        setToast((prev) => ({ ...prev, visible: false }));
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast.visible]);
  
   // Cálculos de Aulas e Progresso
   const allLessons = modules.flatMap((m) => m.lessons);
@@ -71,7 +102,7 @@ export function CourseTrail({
   const percentage = totalLessonsCount > 0 ? Math.round((completedCount / totalLessonsCount) * 100) : 0;
  
   return (
-    <div className="min-h-screen bg-[#060609] text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#060609] text-slate-100 flex flex-col font-sans animate-page-enter">
       {/* Header Premium do Topo */}
       <header className="border-b border-slate-900 bg-[#060609]/90 backdrop-blur sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
@@ -139,8 +170,15 @@ export function CourseTrail({
             {/* Botão de Continuar Assistindo */}
             {continueLessonId && (
               <div className="pt-2">
-                <Link href={`/courses/${course.slug}/${continueLessonId}`}>
-                  <Button className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-bold py-6 px-8 rounded-2xl shadow-lg shadow-orange-500/10 hover:shadow-orange-500/20 hover:scale-[1.02] transition-all duration-200 text-sm md:text-base flex items-center gap-2.5">
+                <Link 
+                  href={`/courses/${course.slug}/${continueLessonId}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onSelectLesson(continueLessonId);
+                  }}
+                  className="cursor-pointer"
+                >
+                  <Button className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-bold py-6 px-8 rounded-2xl shadow-lg shadow-orange-500/10 hover:shadow-orange-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 text-sm md:text-base flex items-center gap-2.5 cursor-pointer">
                     <Play className="w-4 h-4 fill-white" />
                     {completedCount === 0 ? 'Começar Curso' : 'Continuar Assistindo'}
                   </Button>
@@ -181,6 +219,16 @@ export function CourseTrail({
             }`}
           >
             Conteúdos
+          </button>
+          <button
+            onClick={() => setActiveTab('salvas')}
+            className={`pb-4 text-sm font-bold tracking-tight border-b-2 transition-all ${
+              activeTab === 'salvas'
+                ? 'border-orange-500 text-orange-400'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Aulas Salvas
           </button>
           <button
             onClick={() => setActiveTab('sobre')}
@@ -224,17 +272,22 @@ export function CourseTrail({
                     const cardContent = (
                       <div className="flex flex-col gap-3 group cursor-pointer text-left">
                         {/* Poster Vertical do Módulo */}
-                        <div className={`relative aspect-[3/4.2] w-full rounded-2xl overflow-hidden bg-gradient-to-b ${gradient} p-4 flex flex-col justify-between border border-transparent group-hover:border-white/20 transition-all duration-300 group-hover:scale-[1.03] shadow-lg shadow-black/30`}>
+                        <div className={`relative aspect-[3/4.2] w-full rounded-2xl overflow-hidden bg-gradient-to-b ${gradient} p-4 flex flex-col justify-between border border-transparent group-hover:border-orange-500/30 transition-all duration-300 group-hover:scale-[1.03] shadow-lg shadow-black/30 group-hover:shadow-[0_0_25px_rgba(249,115,22,0.12)]`}>
                           <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors" />
                           
+                          {/* Indicador Numérico do Módulo (Hotmart Style) */}
+                          <div className="absolute top-4 left-4 w-6 h-6 rounded-full bg-slate-950/80 border border-slate-800 text-slate-300 flex items-center justify-center text-xs font-mono font-bold select-none z-20">
+                            {index + 1}
+                          </div>
+
                           {/* Indicador de Concluído */}
                           {isModCompleted ? (
-                            <div className="absolute top-4 right-4 bg-green-500 text-white p-1 rounded-full shadow-lg">
+                            <div className="absolute top-4 right-4 bg-green-500 text-white p-1 rounded-full shadow-lg z-20">
                               <Play className="w-3 h-3 fill-white rotate-90" />
                             </div>
                           ) : (
-                            <div className="absolute top-4 right-4 bg-black/40 border border-white/10 px-2 py-0.5 rounded text-[8px] font-bold text-slate-300">
-                              {modCompletedCount}/{mod.lessons.length} aulas
+                            <div className="absolute top-4 right-4 bg-black/40 border border-white/10 px-2 py-0.5 rounded text-[8px] font-bold text-slate-300 z-20">
+                              {modCompletedCount}/{mod.lessons.length}
                             </div>
                           )}
                           
@@ -246,7 +299,7 @@ export function CourseTrail({
                           </div>
  
                           <span className="text-[8px] font-bold text-white/50 tracking-wider uppercase z-10">
-                            TRILHA {index + 1}
+                            MÓDULO {index + 1}
                           </span>
                         </div>
  
@@ -263,7 +316,14 @@ export function CourseTrail({
                     );
  
                     return firstLessonId ? (
-                      <Link href={`/courses/${course.slug}/${firstLessonId}`} key={mod.id}>
+                      <Link 
+                        href={`/courses/${course.slug}/${firstLessonId}`} 
+                        key={mod.id}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          onSelectLesson(firstLessonId);
+                        }}
+                      >
                         {cardContent}
                       </Link>
                     ) : (
@@ -274,6 +334,146 @@ export function CourseTrail({
                   })}
                 </div>
               )}
+            </div>
+          ) : activeTab === 'salvas' ? (
+            <div className="space-y-6">
+              <div className="space-y-1">
+                <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
+                  <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                  Aulas Salvas para Revisão
+                </h2>
+                <p className="text-xs text-slate-400">Aulas que você marcou com estrela neste curso para revisar e praticar depois.</p>
+              </div>
+ 
+              {(() => {
+                const favoritedLessons = modules.flatMap((m, mIdx) => 
+                  m.lessons
+                    .filter((l) => favoriteLessonIds.includes(l.id))
+                    .map((l) => ({
+                      ...l,
+                      moduleTitle: `${mIdx + 1}. ${m.title}`,
+                    }))
+                );
+ 
+                const formatDuration = (seconds: number) => {
+                  if (!seconds || isNaN(seconds) || seconds < 0) return '00:00';
+                  const mins = Math.floor(seconds / 60);
+                  const secs = Math.floor(seconds % 60);
+                  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                };
+ 
+                if (favoritedLessons.length === 0) {
+                  return (
+                    <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-12 text-center text-slate-500 text-sm">
+                      Nenhuma aula salva neste curso ainda. Clique no ícone de estrela dentro das aulas para salvá-las aqui.
+                    </div>
+                  );
+                }
+ 
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    {favoritedLessons.map((les) => {
+                      const isCompleted = completedLessonIds.includes(les.id);
+                      return (
+                        <div key={les.id} className="bg-slate-950/40 border border-slate-900 rounded-2xl overflow-hidden hover:border-orange-500/20 transition-all duration-300 flex flex-col group relative">
+                          {/* Miniatura com hover play e badges */}
+                          <div 
+                            className="relative aspect-video w-full bg-slate-900 border-b border-slate-900 overflow-hidden cursor-pointer"
+                            onClick={() => onSelectLesson(les.id)}
+                          >
+                            {libraryId && les.video_id ? (
+                              <img
+                                src={`https://vz-${libraryId}.b-cdn.net/${les.video_id}/thumbnail.jpg`}
+                                alt=""
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                loading="lazy"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                              />
+                            ) : null}
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-black/20 transition-colors">
+                              <div className="bg-orange-500 text-white p-2.5 rounded-full scale-90 group-hover:scale-100 opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-lg shadow-orange-500/20">
+                                <Play className="w-4 h-4 fill-current ml-0.5" />
+                              </div>
+                            </div>
+                            
+                            {/* Duração */}
+                            <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-0.5 rounded text-[10px] font-mono text-slate-300">
+                              {formatDuration(les.duration_seconds)}
+                            </div>
+ 
+                            {/* Indicador Concluído */}
+                            {isCompleted && (
+                              <div className="absolute top-2 left-2 bg-green-500/90 text-white px-2 py-0.5 rounded text-[9px] font-bold tracking-wider uppercase flex items-center gap-1 shadow-md">
+                                <CheckCircle2 className="w-3 h-3 text-white fill-white/10" />
+                                Concluída
+                              </div>
+                            )}
+                          </div>
+ 
+                          {/* Infos e botão favorito */}
+                          <div className="p-4 flex-grow flex flex-col justify-between gap-3">
+                            <div className="space-y-1">
+                              <span className="text-[10px] font-bold text-slate-500 tracking-wider uppercase block">
+                                {les.moduleTitle}
+                              </span>
+                              <h4 
+                                onClick={() => onSelectLesson(les.id)}
+                                className="text-sm font-extrabold text-slate-200 hover:text-orange-400 cursor-pointer transition-colors line-clamp-2 leading-tight"
+                              >
+                                {les.title}
+                              </h4>
+                            </div>
+ 
+                            <div className="flex justify-between items-center pt-1 border-t border-slate-900/50">
+                              <button
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  e.preventDefault();
+                                  
+                                  // Remover dos favoritos imediatamente com 1 clique
+                                  if (setFavoriteIds) {
+                                    setFavoriteIds((prev) => prev.filter((id) => id !== les.id));
+                                  }
+                                  showToast('Removido das aulas salvas', 'warning');
+                                  
+                                  try {
+                                    await fetch('/api/favorites', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({
+                                        lessonId: les.id,
+                                        favorited: false,
+                                      }),
+                                    });
+                                  } catch (err) {
+                                    console.error('Erro ao desfavoritar:', err);
+                                    if (setFavoriteIds) {
+                                      setFavoriteIds((prev) => [...prev, les.id]);
+                                    }
+                                  }
+                                }}
+                                className="text-xs font-bold text-yellow-500 flex items-center gap-1 hover:text-yellow-400 transition-colors"
+                              >
+                                <Star className="w-3.5 h-3.5 fill-yellow-500 text-yellow-500" />
+                                Salva
+                              </button>
+ 
+                              <button
+                                onClick={() => onSelectLesson(les.id)}
+                                className="text-[10px] font-bold text-orange-400 hover:text-orange-300 uppercase tracking-wider transition-colors"
+                              >
+                                Assistir Aula
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
           ) : (
             <div className="max-w-3xl space-y-6">
@@ -309,6 +509,51 @@ export function CourseTrail({
           )}
         </div>
       </section>
+
+      {/* Folder Selector Modal */}
+      {folderModalOpen && selectedLessonIdForFolder && (
+        <FolderSelectorModal
+          lessonId={selectedLessonIdForFolder}
+          courseId={course.id}
+          isOpen={folderModalOpen}
+          onClose={() => setFolderModalOpen(false)}
+          onFavoritesUpdated={(lessonId, isFavorited) => {
+            if (setFavoriteIds) {
+              setFavoriteIds((prev) => {
+                if (isFavorited) {
+                  return prev.includes(lessonId) ? prev : [...prev, lessonId];
+                } else {
+                  return prev.filter((id) => id !== lessonId);
+                }
+              });
+            }
+          }}
+        />
+      )}
+
+      {/* Toast Notification */}
+      {toast.visible && (
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 border backdrop-blur-md font-semibold text-xs py-3 px-6 rounded-2xl shadow-2xl flex items-center gap-2.5 animate-page-enter select-none ${
+          toast.type === 'success'
+            ? 'bg-green-500/10 border-green-500/20 text-green-400'
+            : toast.type === 'warning'
+              ? 'bg-red-500/10 border-red-500/20 text-red-400'
+              : toast.type === 'info'
+                ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400'
+                : 'bg-slate-950/95 border-slate-900 text-slate-300'
+        }`}>
+          <div className={`w-2 h-2 rounded-full animate-pulse ${
+            toast.type === 'success'
+              ? 'bg-green-500'
+              : toast.type === 'warning'
+                ? 'bg-red-500'
+                : toast.type === 'info'
+                  ? 'bg-yellow-500'
+                  : 'bg-slate-400'
+          }`} />
+          <span>{toast.message}</span>
+        </div>
+      )}
     </div>
   );
 }

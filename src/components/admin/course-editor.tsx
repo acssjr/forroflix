@@ -12,7 +12,10 @@ import {
   Loader2, 
   CheckCircle, 
   AlertCircle,
-  FolderOpen 
+  FolderOpen,
+  Pencil,
+  Check,
+  X
 } from 'lucide-react';
 
 interface Lesson {
@@ -21,6 +24,7 @@ interface Lesson {
   duration_seconds: number;
   video_id: string;
   position: number;
+  description?: string;
 }
 
 interface Module {
@@ -57,6 +61,92 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState<string>('');
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // Estados para Edição Inline (Rename)
+  const [editingModuleId, setEditingModuleId] = useState<string | null>(null);
+  const [editingModuleTitle, setEditingModuleTitle] = useState('');
+  const [editingLessonId, setEditingLessonId] = useState<string | null>(null);
+  const [editingLessonTitle, setEditingLessonTitle] = useState('');
+  const [editingLessonDescription, setEditingLessonDescription] = useState('');
+
+  // Renomear Módulo via PATCH API
+  const handleRenameModule = async (e: React.FormEvent, moduleId: string) => {
+    e.preventDefault();
+    if (!editingModuleTitle.trim()) return;
+
+    try {
+      const res = await fetch('/api/admin/courses', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'module',
+          id: moduleId,
+          title: editingModuleTitle
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Falha ao renomear módulo');
+
+      // Atualizar estado local
+      setModules(prev => prev.map(m => {
+        if (m.id === moduleId) {
+          return { ...m, title: editingModuleTitle };
+        }
+        return m;
+      }));
+
+      setEditingModuleId(null);
+    } catch (err: any) {
+      alert(err.message || 'Erro ao renomear módulo.');
+    }
+  };
+
+  // Renomear Aula e Alterar Descrição via PATCH API
+  const handleRenameLesson = async (e: React.FormEvent, moduleId: string, lessonId: string) => {
+    e.preventDefault();
+    if (!editingLessonTitle.trim()) return;
+
+    try {
+      const res = await fetch('/api/admin/courses', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'lesson',
+          id: lessonId,
+          title: editingLessonTitle,
+          description: editingLessonDescription
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Falha ao salvar aula');
+
+      // Atualizar estado local
+      setModules(prev => prev.map(m => {
+        if (m.id === moduleId) {
+          return {
+            ...m,
+            lessons: m.lessons.map(l => {
+              if (l.id === lessonId) {
+                return { 
+                  ...l, 
+                  title: editingLessonTitle,
+                  description: editingLessonDescription
+                };
+              }
+              return l;
+            })
+          };
+        }
+        return m;
+      }));
+
+      setEditingLessonId(null);
+    } catch (err: any) {
+      alert(err.message || 'Erro ao salvar alterações da aula.');
+    }
+  };
 
   // Criar Módulo
   const handleCreateModule = async (e: React.FormEvent) => {
@@ -188,7 +278,8 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
         title: lessonTitle,
         duration_seconds: 0, // Bunny transcodifica e atualiza a duração em background
         video_id: videoId,
-        position
+        position,
+        description: lessonDescription
       };
 
       setModules(prev => prev.map(m => {
@@ -215,7 +306,7 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
   };
 
   return (
-    <div className="min-h-screen bg-[#07070a] text-slate-100 flex flex-col">
+    <div className="min-h-screen bg-[#07070a] text-slate-100 flex flex-col animate-page-enter">
       {/* Top Header */}
       <header className="border-b border-slate-900 bg-[#07070a]/90 backdrop-blur sticky top-0 z-40">
         <div className="max-w-5xl mx-auto px-4 md:px-8 h-20 flex items-center justify-between">
@@ -263,20 +354,51 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
             </div>
           ) : (
             modules.map(mod => (
-              <div key={mod.id} className="bg-slate-950 border border-slate-900 rounded-2xl overflow-hidden shadow-xl">
+              <div key={mod.id} className="bg-slate-950 border border-slate-900 rounded-2xl overflow-hidden shadow-xl hover:border-orange-500/20 transition-all duration-300 hover:shadow-[0_0_20px_rgba(249,115,22,0.02)]">
                 {/* Módulo Header */}
                 <div className="p-5 bg-slate-950/80 border-b border-slate-900/60 flex items-center justify-between">
-                  <h3 className="font-bold text-slate-200 text-base flex items-center gap-2">
-                    <span className="w-1.5 h-5 bg-orange-500 rounded-full"></span>
-                    {mod.title}
-                  </h3>
+                  {editingModuleId === mod.id ? (
+                    <form onSubmit={(e) => handleRenameModule(e, mod.id)} className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={editingModuleTitle}
+                        onChange={(e) => setEditingModuleTitle(e.target.value)}
+                        className="bg-[#0c0c14] border border-orange-500/30 rounded-xl px-3 py-1.5 text-slate-200 focus:outline-none focus:ring-1 focus:ring-orange-500 text-sm font-semibold max-w-xs"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Escape') setEditingModuleId(null);
+                        }}
+                      />
+                      <Button size="sm" variant="ghost" type="submit" className="h-8 w-8 p-0 text-green-500 hover:text-green-400 hover:bg-slate-900 rounded-lg">
+                        <Check className="w-4 h-4" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setEditingModuleId(null)} className="h-8 w-8 p-0 text-slate-500 hover:text-slate-400 hover:bg-slate-900 rounded-lg">
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </form>
+                  ) : (
+                    <h3 className="font-bold text-slate-200 text-base flex items-center gap-2 group">
+                      <span className="w-1.5 h-5 bg-orange-500 rounded-full"></span>
+                      {mod.title}
+                      <button
+                        onClick={() => {
+                          setEditingModuleId(mod.id);
+                          setEditingModuleTitle(mod.title);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-500 hover:text-orange-400 rounded-lg cursor-pointer"
+                        title="Renomear Módulo"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                    </h3>
+                  )}
                   <Button 
                     size="sm"
                     onClick={() => {
                       setActiveModuleId(mod.id);
                       setShowLessonModal(true);
                     }}
-                    className="bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 font-bold border border-orange-500/20 gap-1.5"
+                    className="bg-orange-500/10 hover:bg-orange-500/20 active:scale-[0.96] text-orange-400 font-bold border border-orange-500/20 gap-1.5 transition-all duration-200"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     Enviar Vídeoaula
@@ -289,13 +411,66 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                     <p className="text-slate-600 text-xs italic py-2 px-1">Este módulo não possui nenhuma aula ativa ainda.</p>
                   ) : (
                     mod.lessons.map(les => (
-                      <div key={les.id} className="flex items-center justify-between p-3.5 rounded-xl bg-[#0b0b11]/50 border border-slate-900/40 hover:bg-[#0b0b11] transition-colors">
-                        <div className="flex items-center gap-3">
-                          <div className="bg-slate-900 p-2 rounded-lg text-orange-500">
-                            <Play className="w-3.5 h-3.5 fill-orange-500" />
+                      <div key={les.id} className="flex flex-col md:flex-row md:items-center justify-between p-3.5 rounded-xl bg-[#0b0b11]/50 border border-slate-900/40 hover:bg-[#0b0b11] hover:border-orange-500/10 hover:shadow-[0_0_15px_rgba(249,115,22,0.01)] transition-all duration-200 gap-4 group">
+                        {editingLessonId === les.id ? (
+                          <form onSubmit={(e) => handleRenameLesson(e, mod.id, les.id)} className="flex flex-col gap-3 flex-grow bg-[#0a0a0f] p-4 rounded-xl border border-slate-900 w-full">
+                            <div>
+                              <label className="block text-[10px] font-semibold text-slate-500 mb-1">Título da Aula</label>
+                              <input
+                                type="text"
+                                value={editingLessonTitle}
+                                onChange={(e) => setEditingLessonTitle(e.target.value)}
+                                className="w-full bg-[#0c0c14] border border-slate-900 rounded-lg px-3 py-1.5 text-slate-200 focus:outline-none focus:ring-1 focus:ring-orange-500 text-xs font-semibold"
+                                autoFocus
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-semibold text-slate-500 mb-1">Descrição da Aula</label>
+                              <textarea
+                                value={editingLessonDescription}
+                                onChange={(e) => setEditingLessonDescription(e.target.value)}
+                                placeholder="Adicione instruções práticas..."
+                                rows={2}
+                                className="w-full bg-[#0c0c14] border border-slate-900 rounded-lg px-3 py-1.5 text-slate-200 focus:outline-none focus:ring-1 focus:ring-orange-500 text-xs resize-none"
+                              />
+                            </div>
+                            <div className="flex justify-end gap-2">
+                              <Button size="sm" variant="ghost" onClick={() => setEditingLessonId(null)} type="button" className="text-slate-500 hover:text-slate-400 hover:bg-slate-900 text-xs px-3.5 h-8">
+                                Cancelar
+                              </Button>
+                              <Button size="sm" type="submit" className="bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs px-3.5 h-8">
+                                Salvar
+                              </Button>
+                            </div>
+                          </form>
+                        ) : (
+                          <div className="flex items-center gap-3 flex-grow">
+                            <div className="bg-slate-900 p-2 rounded-lg text-orange-500 self-start">
+                              <Play className="w-3.5 h-3.5 fill-orange-500" />
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-slate-300 text-xs font-semibold">{les.title}</span>
+                              {les.description ? (
+                                <span className="text-slate-500 text-[10px] font-medium mt-0.5 line-clamp-1">
+                                  {les.description}
+                                </span>
+                              ) : (
+                                <span className="text-slate-600 text-[9px] italic mt-0.5">Sem descrição</span>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => {
+                                setEditingLessonId(les.id);
+                                setEditingLessonTitle(les.title);
+                                setEditingLessonDescription(les.description || '');
+                              }}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-500 hover:text-orange-400 rounded cursor-pointer self-start mt-0.5"
+                              title="Editar Aula"
+                            >
+                              <Pencil className="w-3 h-3" />
+                            </button>
                           </div>
-                          <span className="text-slate-300 text-xs font-semibold">{les.title}</span>
-                        </div>
+                        )}
                         <div className="flex items-center gap-4 text-[10px] text-slate-500 font-semibold font-mono">
                           {les.video_id ? (
                             <span className="text-green-500 bg-green-950/20 px-2 py-0.5 rounded border border-green-500/10 flex items-center gap-1">
@@ -325,7 +500,7 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
               <h3 className="text-lg font-bold text-slate-200">Novo Módulo</h3>
               <button 
                 onClick={() => setShowModuleModal(false)}
-                className="text-slate-500 hover:text-slate-300 text-sm font-semibold"
+                className="text-slate-500 hover:text-slate-300 text-sm font-semibold cursor-pointer"
               >
                 Fechar
               </button>
@@ -378,7 +553,7 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
               <button 
                 onClick={() => !uploading && setShowLessonModal(false)}
                 disabled={uploading}
-                className="text-slate-500 hover:text-slate-300 text-sm font-semibold disabled:opacity-30"
+                className="text-slate-500 hover:text-slate-300 text-sm font-semibold disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
               >
                 Fechar
               </button>

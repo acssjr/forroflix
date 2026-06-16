@@ -65,11 +65,49 @@ export async function GET(request: Request) {
     // URL segura de reprodução via Iframe
     const playUrl = `https://iframe.mediadelivery.net/embed/${libraryId}/${videoId}?token=${token}&expires=${expires}`;
 
+    // 5. Sincronizar duração da aula no banco se estiver zerada
+    let duration = 0;
+    try {
+      const lessonRes = await db
+        .prepare('SELECT id, duration_seconds FROM lessons WHERE video_id = ?')
+        .bind(videoId)
+        .all<any>();
+      
+      const lesson = lessonRes.results[0];
+      if (lesson) {
+        duration = lesson.duration_seconds || 0;
+
+        if (duration === 0) {
+          const apiKey = process.env.BUNNY_STREAM_API_KEY;
+          if (apiKey) {
+            const bunnyRes = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos/${videoId}`, {
+              headers: { 'AccessKey': apiKey, 'accept': 'application/json' }
+            });
+            if (bunnyRes.ok) {
+              const bunnyData = await bunnyRes.json() as any;
+              const length = bunnyData.length || 0;
+              if (length > 0) {
+                duration = length;
+                await db
+                  .prepare('UPDATE lessons SET duration_seconds = ? WHERE id = ?')
+                  .bind(length, lesson.id)
+                  .run();
+                console.log(`[BUNNY SYNC] Duração da aula ${lesson.id} sincronizada: ${length}s.`);
+              }
+            }
+          }
+        }
+      }
+    } catch (dbErr) {
+      console.warn('[BUNNY SYNC] Falha ao sincronizar duração:', dbErr);
+    }
+
     return NextResponse.json({
       playUrl,
       token,
       expires,
-      libraryId
+      libraryId,
+      duration
     });
   } catch (error: any) {
     console.error('Erro na rota de token do vídeo:', error);

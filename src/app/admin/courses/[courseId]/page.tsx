@@ -66,7 +66,8 @@ export default async function AdminCoursePage({ params }: PageProps) {
               title: l.title,
               duration_seconds: l.duration_seconds || 0,
               video_id: l.video_id || '',
-              position: l.position
+              position: l.position,
+              description: l.description || ''
             }))
           });
         }

@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { getDB } from '@/lib/db';
 import { verifyJWT } from '@/lib/auth';
 import { MOCK_COURSES_DATA } from '@/lib/mock-data';
-import { CourseTrail } from '@/components/course-trail';
+import { CourseViewer } from '@/components/course-viewer';
  
 interface PageProps {
   params: Promise<{ courseSlug: string }>;
@@ -24,53 +24,50 @@ export default async function CoursePage({ params }: PageProps) {
   try {
     const db = getDB();
     
-    // 2. Buscar o curso na D1
-    const { results: dbCourses } = await db
-      .prepare('SELECT * FROM courses WHERE slug = ?')
-      .bind(courseSlug)
-      .all<any>();
- 
-    const dbCourse = dbCourses[0];
+    // 1. Buscar status de assinatura do usuário e detalhes do curso em paralelo
+    const [usersRes, coursesRes] = await Promise.all([
+      db.prepare('SELECT role, subscription_active FROM users WHERE id = ?').bind(sessionUser.id).all<any>(),
+      db.prepare('SELECT * FROM courses WHERE slug = ?').bind(courseSlug).all<any>()
+    ]);
+
+    const userProfile = usersRes.results[0];
+    const isSubscribed = userProfile ? (userProfile.subscription_active === 1 || userProfile.role === 'admin') : false;
+
+    const dbCourse = coursesRes.results[0];
  
     if (dbCourse) {
-      // 3. Buscar módulos do curso
-      const { results: dbModules } = await db
-        .prepare('SELECT * FROM modules WHERE course_id = ? ORDER BY position ASC')
-        .bind(dbCourse.id)
-        .all<any>();
+      // 2. Buscar módulos, aulas, progresso de conclusão e favoritos do aluno em paralelo
+      const [modulesRes, lessonsRes, progressRes, favoritesRes] = await Promise.all([
+        db.prepare('SELECT * FROM modules WHERE course_id = ? ORDER BY position ASC').bind(dbCourse.id).all<any>(),
+        db.prepare(`
+          SELECT l.id, l.title, l.video_id, l.duration_seconds, l.position, l.module_id 
+          FROM lessons l
+          JOIN modules m ON l.module_id = m.id
+          WHERE m.course_id = ?
+          ORDER BY l.position ASC
+        `).bind(dbCourse.id).all<any>(),
+        db.prepare('SELECT lesson_id FROM progress WHERE user_id = ? AND completed = 1').bind(sessionUser.id).all<any>(),
+        db.prepare('SELECT lesson_id FROM favorites WHERE user_id = ?').bind(sessionUser.id).all<any>()
+      ]);
+
+      const dbModules = modulesRes.results || [];
+      const lessonsList = lessonsRes.results || [];
+      const completedLessonIds = progressRes.results ? progressRes.results.map((p) => p.lesson_id) : [];
+      const favoriteLessonIds = favoritesRes.results ? favoritesRes.results.map((f) => f.lesson_id) : [];
+
+      // Agrupar aulas nos módulos correspondentes
+      const modulesWithLessons = dbModules.map(mod => ({
+        id: mod.id,
+        title: mod.title,
+        position: mod.position,
+        lessons: lessonsList.filter((les: any) => les.module_id === mod.id)
+      }));
  
-      const modulesWithLessons = [];
-      
-      // 4. Buscar aulas para cada módulo
-      for (const mod of dbModules) {
-        const { results: dbLessons } = await db
-          .prepare('SELECT id, title, video_id, duration_seconds, position FROM lessons WHERE module_id = ? ORDER BY position ASC')
-          .bind(mod.id)
-          .all<any>();
- 
-        modulesWithLessons.push({
-          id: mod.id,
-          title: mod.title,
-          position: mod.position,
-          lessons: dbLessons || [],
-        });
-      }
- 
-      // 5. Buscar progresso concluído do aluno
-      const { results: dbProgress } = await db
-        .prepare('SELECT lesson_id FROM progress WHERE user_id = ? AND completed = 1')
-        .bind(sessionUser.id)
-        .all<any>();
- 
-      const completedLessonIds = dbProgress ? dbProgress.map((p) => p.lesson_id) : [];
- 
-      // 6. Encontrar próxima aula não assistida (Continuar Assistindo)
-      const allLessons = modulesWithLessons.flatMap((m) => m.lessons);
-      const firstUncompleted = allLessons.find((l) => !completedLessonIds.includes(l.id));
-      const continueLessonId = firstUncompleted ? firstUncompleted.id : (allLessons[0]?.id || null);
- 
+      const rawPullZone = process.env.BUNNY_STREAM_PULL_ZONE || process.env.BUNNY_STREAM_LIBRARY_ID || '';
+      const pullZone = rawPullZone.startsWith('vz-') ? rawPullZone.substring(3) : rawPullZone;
+
       return (
-        <CourseTrail
+        <CourseViewer
           course={{
             id: dbCourse.id,
             title: dbCourse.title,
@@ -80,9 +77,12 @@ export default async function CoursePage({ params }: PageProps) {
           }}
           modules={modulesWithLessons}
           completedLessonIds={completedLessonIds}
-          continueLessonId={continueLessonId}
+          favoriteLessonIds={favoriteLessonIds}
+          initialLessonId={null}
           userEmail={sessionUser.email || ''}
           isAdmin={sessionUser.role === 'admin'}
+          isSubscribed={isSubscribed}
+          libraryId={pullZone}
         />
       );
     }
@@ -94,11 +94,11 @@ export default async function CoursePage({ params }: PageProps) {
   const mockCourse = MOCK_COURSES_DATA.find((c) => c.slug === courseSlug);
   if (mockCourse) {
     const modulesWithLessons = mockCourse.modules;
-    const allLessons = modulesWithLessons.flatMap((m) => m.lessons);
-    const continueLessonId = allLessons[0]?.id || null;
+    const rawPullZone = process.env.BUNNY_STREAM_PULL_ZONE || process.env.BUNNY_STREAM_LIBRARY_ID || '';
+    const pullZone = rawPullZone.startsWith('vz-') ? rawPullZone.substring(3) : rawPullZone;
  
     return (
-      <CourseTrail
+      <CourseViewer
         course={{
           id: mockCourse.id,
           title: mockCourse.title,
@@ -108,9 +108,12 @@ export default async function CoursePage({ params }: PageProps) {
         }}
         modules={modulesWithLessons}
         completedLessonIds={[]}
-        continueLessonId={continueLessonId}
+        favoriteLessonIds={[]}
+        initialLessonId={null}
         userEmail={sessionUser.email || ''}
         isAdmin={sessionUser.role === 'admin'}
+        isSubscribed={true}
+        libraryId={pullZone}
       />
     );
   }

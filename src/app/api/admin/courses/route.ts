@@ -83,3 +83,70 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message || 'Erro interno no servidor' }, { status: 500 });
   }
 }
+
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json();
+    const { type, id, title } = body;
+
+    // 1. Validar autenticação e se o usuário é administrador
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get('session')?.value;
+    const sessionUser = sessionToken ? await verifyJWT(sessionToken) : null;
+
+    if (!sessionUser || sessionUser.role !== 'admin') {
+      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
+    }
+
+    const db = getDB();
+
+    if (!id) {
+      return NextResponse.json({ error: 'ID é obrigatório' }, { status: 400 });
+    }
+
+    // 2. Renomear Módulo
+    if (type === 'module') {
+      if (!title) {
+        return NextResponse.json({ error: 'Título é obrigatório' }, { status: 400 });
+      }
+      await db
+        .prepare('UPDATE modules SET title = ? WHERE id = ?')
+        .bind(title.trim(), id)
+        .run();
+
+      return NextResponse.json({ success: true });
+    }
+
+    // 3. Editar Aula (Título e/ou Descrição)
+    if (type === 'lesson') {
+      const { description } = body;
+      if (!title && description === undefined) {
+        return NextResponse.json({ error: 'Título ou descrição devem ser informados' }, { status: 400 });
+      }
+
+      if (title !== undefined && description !== undefined) {
+        await db
+          .prepare('UPDATE lessons SET title = ?, description = ? WHERE id = ?')
+          .bind(title.trim(), description.trim(), id)
+          .run();
+      } else if (title !== undefined) {
+        await db
+          .prepare('UPDATE lessons SET title = ? WHERE id = ?')
+          .bind(title.trim(), id)
+          .run();
+      } else if (description !== undefined) {
+        await db
+          .prepare('UPDATE lessons SET description = ? WHERE id = ?')
+          .bind(description.trim(), id)
+          .run();
+      }
+
+      return NextResponse.json({ success: true });
+    }
+
+    return NextResponse.json({ error: 'Tipo de operação inválido' }, { status: 400 });
+  } catch (error: any) {
+    console.error('Erro na rota admin courses PATCH:', error);
+    return NextResponse.json({ error: error.message || 'Erro interno no servidor' }, { status: 500 });
+  }
+}
