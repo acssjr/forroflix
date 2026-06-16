@@ -9,6 +9,8 @@ interface PageProps {
 export default async function CoursePage({ params }: PageProps) {
   const { courseSlug } = await params;
 
+  let targetRedirectUrl: string | null = null;
+
   try {
     // 1. Tentar buscar no banco do Cloudflare D1
     const db = getDB();
@@ -34,12 +36,16 @@ export default async function CoursePage({ params }: PageProps) {
           .all<any>();
 
         if (dbLessons && dbLessons.length > 0) {
-          redirect(`/courses/${courseSlug}/${dbLessons[0].id}`);
+          targetRedirectUrl = `/courses/${courseSlug}/${dbLessons[0].id}`;
         }
       }
     }
   } catch (err) {
     console.warn('[D1] Erro ao buscar curso na D1, tentando dados simulados.');
+  }
+
+  if (targetRedirectUrl) {
+    redirect(targetRedirectUrl);
   }
 
   // 2. Fallback para os dados simulados
