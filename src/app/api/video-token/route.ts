@@ -54,15 +54,16 @@ export async function GET(request: Request) {
       });
     }
 
-    // 4. Gerar expiração do token (1 hora a partir de agora)
-    const expires = Math.floor(Date.now() / 1000) + 3600;
-    const path = `/play/${libraryId}/${videoId}/playlist.m3u8`;
+    // 4. Gerar expiração do token (2 horas a partir de agora)
+    const expires = Math.floor(Date.now() / 1000) + 7200;
 
-    // Algoritmo de Assinatura MD5 padrão do Bunny
-    const tokenInput = tokenKey + path + expires;
-    const token = crypto.createHash('md5').update(tokenInput).digest('hex');
+    // Algoritmo de Assinatura SHA256 padrão para Iframe Embed do Bunny Stream:
+    // SHA256(token_security_key + video_id + expiration)
+    const tokenInput = tokenKey + videoId + expires;
+    const token = crypto.createHash('sha256').update(tokenInput).digest('hex');
 
-    const playUrl = `https://iframe.mediadelivery.net/play/${libraryId}/${videoId}/playlist.m3u8?token=${token}&expires=${expires}`;
+    // URL segura de reprodução via Iframe
+    const playUrl = `https://iframe.mediadelivery.net/embed/${libraryId}/${videoId}?token=${token}&expires=${expires}`;
 
     return NextResponse.json({
       playUrl,

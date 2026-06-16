@@ -114,19 +114,28 @@ export function VideoPlayer({ videoId, userEmail, userIp = '127.0.0.1', courseTi
       onContextMenu={handleContextMenu}
     >
       {playUrl && (
-        <MediaPlayer
-          ref={playerRef}
-          src={playUrl}
-          title={lessonTitle || 'Vídeoaula'}
-          className="w-full h-full object-cover"
-          playsInline
-        >
-          <MediaProvider />
-          <DefaultVideoLayout 
-            icons={defaultLayoutIcons}
-            // Desativar opções extras do menu de contexto que permitam baixar o vídeo
+        playUrl.includes('playlist.m3u8') ? (
+          <MediaPlayer
+            ref={playerRef}
+            src={playUrl}
+            title={lessonTitle || 'Vídeoaula'}
+            className="w-full h-full object-cover"
+            playsInline
+          >
+            <MediaProvider />
+            <DefaultVideoLayout 
+              icons={defaultLayoutIcons}
+            />
+          </MediaPlayer>
+        ) : (
+          <iframe
+            src={playUrl}
+            loading="lazy"
+            className="w-full h-full border-none"
+            allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
+            allowFullScreen
           />
-        </MediaPlayer>
+        )
       )}
 
       {/* Marca D'água Dinâmica Anti-Pirataria */}
