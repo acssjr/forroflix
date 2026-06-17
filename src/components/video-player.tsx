@@ -46,6 +46,17 @@ export function VideoPlayer({
   const abortControllerRef = useRef<AbortController | null>(null);
   const isMountedRef = useRef<boolean>(true);
 
+  // Guardar callbacks em refs para evitar re-criação de listeners e fetches repetidos
+  const onDurationLoadedRef = useRef(onDurationLoaded);
+  const onProgressRef = useRef(onProgress);
+  const onEndedRef = useRef(onEnded);
+
+  useEffect(() => {
+    onDurationLoadedRef.current = onDurationLoaded;
+    onProgressRef.current = onProgress;
+    onEndedRef.current = onEnded;
+  });
+
   // 1. Função para carregar a URL assinada da API do Next.js
   const fetchVideoToken = useCallback(async () => {
     if (!videoId) return;
@@ -71,8 +82,8 @@ export function VideoPlayer({
 
       if (isMountedRef.current) {
         setPlayUrl(data.playUrl);
-        if (data.duration && onDurationLoaded) {
-          onDurationLoaded(data.duration);
+        if (data.duration && onDurationLoadedRef.current) {
+          onDurationLoadedRef.current(data.duration);
         }
       }
     } catch (err: any) {
@@ -86,7 +97,7 @@ export function VideoPlayer({
         setLoading(false);
       }
     }
-  }, [videoId, onDurationLoaded]);
+  }, [videoId]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -119,13 +130,13 @@ export function VideoPlayer({
           playerJsRef.current = player;
           player.on('ready', () => {
             player.on('timeupdate', (data: any) => {
-              if (data && onProgress) {
-                onProgress(data.seconds, data.duration);
+              if (data && onProgressRef.current) {
+                onProgressRef.current(data.seconds, data.duration);
               }
             });
             player.on('ended', () => {
-              if (onEnded) {
-                onEnded();
+              if (onEndedRef.current) {
+                onEndedRef.current();
               }
             });
           });
@@ -144,7 +155,7 @@ export function VideoPlayer({
     return () => {
       script?.removeEventListener('load', initPlayer);
     };
-  }, [playUrl, onProgress, onEnded]);
+  }, [playUrl]);
 
   // Efeito para reiniciar o vídeo (Rever Aula)
   useEffect(() => {
@@ -229,19 +240,19 @@ export function VideoPlayer({
             className="w-full h-full object-cover"
             playsInline
             onDurationChange={(d) => {
-              if (d && !isNaN(d) && d > 0 && onDurationLoaded) {
-                onDurationLoaded(Math.round(d));
+              if (d && !isNaN(d) && d > 0 && onDurationLoadedRef.current) {
+                onDurationLoadedRef.current(Math.round(d));
               }
             }}
             onTimeUpdate={(e: any) => {
               const target = e.target as any;
-              if (target && onProgress) {
-                onProgress(target.currentTime, target.duration);
+              if (target && onProgressRef.current) {
+                onProgressRef.current(target.currentTime, target.duration);
               }
             }}
             onEnded={() => {
-              if (onEnded) {
-                onEnded();
+              if (onEndedRef.current) {
+                onEndedRef.current();
               }
             }}
           >
