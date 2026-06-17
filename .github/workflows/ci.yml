@@ -93,7 +93,8 @@ jobs:
       - name: Compilar Aplicação Next.js
         run: npm run build
         env:
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_SECRET: 'forroflix-secret-key-2026-auth-token-129847'
+          USE_LOCAL_SQLITE: "true"
           BUNNY_STREAM_LIBRARY_ID: ${{ secrets.BUNNY_STREAM_LIBRARY_ID }}
           BUNNY_STREAM_API_KEY: ${{ secrets.BUNNY_STREAM_API_KEY }}
 
@@ -101,12 +102,18 @@ jobs:
         run: |
           npm run start &
           npx wait-on http://127.0.0.1:3000 --timeout 60000
+        env:
+          JWT_SECRET: 'forroflix-secret-key-2026-auth-token-129847'
+          USE_LOCAL_SQLITE: "true"
+          BUNNY_STREAM_LIBRARY_ID: ${{ secrets.BUNNY_STREAM_LIBRARY_ID }}
+          BUNNY_STREAM_API_KEY: ${{ secrets.BUNNY_STREAM_API_KEY }}
 
       - name: Executar Suíte E2E do Playwright
         run: npm run test:e2e
         env:
           NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_SECRET: 'forroflix-secret-key-2026-auth-token-129847'
+          USE_LOCAL_SQLITE: "true"
           BUNNY_STREAM_LIBRARY_ID: ${{ secrets.BUNNY_STREAM_LIBRARY_ID }}
           BUNNY_STREAM_API_KEY: ${{ secrets.BUNNY_STREAM_API_KEY }}
 
