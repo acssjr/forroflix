@@ -26,8 +26,27 @@ export default function RootLayout({
     <html
       lang="pt-BR"
       className={`${plusJakartaSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-[#0a0a0f]">{children}</body>
+      <head>
+        <link rel="preconnect" href="https://iframe.mediadelivery.net" />
+        <link rel="preconnect" href="https://vz-f9c6bcce-051.b-cdn.net" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                const savedTheme = localStorage.getItem('theme');
+                if (savedTheme === 'dark') {
+                  document.documentElement.classList.add('dark');
+                } else {
+                  document.documentElement.classList.remove('dark');
+                }
+              } catch (_) {}
+            `
+          }}
+        />
+      </head>
+      <body className="min-h-full flex flex-col bg-background text-foreground">{children}</body>
     </html>
   );
 }

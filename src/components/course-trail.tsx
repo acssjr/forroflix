@@ -2,7 +2,8 @@
  
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, BookOpen, Clock, Play, GraduationCap, Layers, Star, CheckCircle2 } from 'lucide-react';
+import Image from 'next/image';
+import { ArrowLeft, BookOpen, Clock, Play, Layers, Star, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FolderSelectorModal } from '@/components/folder-selector-modal';
  
@@ -45,13 +46,13 @@ interface CourseTrailProps {
 const MODULE_GRADIENTS = [
   'from-blue-600 to-indigo-800',
   'from-emerald-500 to-teal-700',
-  'from-orange-500 to-amber-700',
+  'from-red-600 to-amber-700',
   'from-violet-600 to-indigo-900',
   'from-rose-600 to-red-800',
   'from-cyan-600 to-blue-800',
   'from-purple-600 to-fuchsia-800',
   'from-teal-600 to-emerald-800',
-  'from-amber-600 to-orange-800',
+  'from-amber-600 to-red-800',
   'from-pink-600 to-rose-800',
 ];
  
@@ -102,22 +103,24 @@ export function CourseTrail({
   const percentage = totalLessonsCount > 0 ? Math.round((completedCount / totalLessonsCount) * 100) : 0;
  
   return (
-    <div className="min-h-screen bg-[#060609] text-slate-100 flex flex-col font-sans animate-page-enter">
+    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans animate-page-enter">
       {/* Header Premium do Topo */}
-      <header className="border-b border-slate-900 bg-[#060609]/90 backdrop-blur sticky top-0 z-50">
+      <header className="border-b border-border bg-background/90 backdrop-blur sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="bg-gradient-to-tr from-orange-500 to-red-600 p-2 rounded-xl text-white group-hover:rotate-6 transition-transform">
-              <GraduationCap className="w-5 h-5" />
-            </div>
-            <span className="font-black text-xl tracking-tighter bg-gradient-to-r from-orange-400 via-red-500 to-pink-500 bg-clip-text text-transparent">
-              FORROFLIX
-            </span>
+          <Link href="/" className="flex items-center group">
+            <Image
+              src="/logo.svg"
+              alt="Forróflix"
+              width={140}
+              height={38}
+              priority
+              className="h-10 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+            />
           </Link>
           <div className="flex items-center gap-4">
-            <span className="text-xs text-slate-400 hidden sm:inline">{userEmail}</span>
+            <span className="text-xs text-muted-foreground hidden sm:inline">{userEmail}</span>
             <Link href="/">
-              <Button variant="ghost" className="text-slate-400 hover:text-white text-xs">
+              <Button variant="ghost" className="text-muted-foreground hover:text-foreground text-xs">
                 Voltar ao Catálogo
               </Button>
             </Link>
@@ -126,47 +129,47 @@ export function CourseTrail({
       </header>
  
       {/* Hero Banner do Curso (Hotmart Style) */}
-      <section className="relative overflow-hidden border-b border-slate-900 bg-slate-950">
+      <section className="relative overflow-hidden border-b border-border bg-sidebar">
         {/* Fundo desfocado com o gradiente do curso */}
-        <div className={`absolute inset-0 bg-gradient-to-br ${course.thumbnail_gradient} opacity-5 blur-3xl`} />
+        <div className={`absolute inset-0 bg-gradient-to-br ${course.thumbnail_gradient} opacity-5 dark:opacity-10 blur-3xl`} />
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20 relative z-10 flex flex-col md:flex-row items-center justify-between gap-12">
           {/* Lado Esquerdo: Metadados, Progresso e Ações */}
-          <div className="flex-grow space-y-6 max-w-2xl">
-            <Link href="/" className="inline-flex items-center gap-2 text-xs font-bold text-orange-400 hover:text-orange-300 group transition-colors">
+          <div className="flex-grow space-y-6 max-w-2xl text-left">
+            <Link href="/" className="inline-flex items-center gap-2 text-xs font-bold text-primary hover:text-primary/80 group transition-colors">
               <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
               Voltar
             </Link>
- 
+  
             <div className="space-y-3">
-              <div className="inline-block bg-white/5 border border-white/10 px-3 py-1 rounded-full text-[10px] font-bold text-slate-300 tracking-wider uppercase">
+              <div className="inline-block bg-secondary border border-border px-3 py-1 rounded-full text-[10px] font-bold text-muted-foreground tracking-wider uppercase">
                 Curso Online
               </div>
-              <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight leading-none">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-foreground tracking-tight leading-none">
                 {course.title}
               </h1>
-              <p className="text-sm md:text-base text-slate-400 leading-relaxed font-medium">
+              <p className="text-sm md:text-base text-muted-foreground leading-relaxed font-medium">
                 {course.description}
               </p>
             </div>
- 
+  
             {/* Barra de Progresso do Curso */}
             {totalLessonsCount > 0 && (
               <div className="space-y-2 pt-2">
-                <div className="text-xs md:text-sm text-slate-300 font-semibold flex items-center gap-2">
-                  <span className="text-orange-400 font-bold">{completedCount}/{totalLessonsCount}</span> conteúdos concluídos
-                  <span className="text-slate-600">•</span>
-                  <span className="text-slate-400">{percentage}%</span>
+                <div className="text-xs md:text-sm text-foreground font-semibold flex items-center gap-2">
+                  <span className="text-primary font-bold">{completedCount}/{totalLessonsCount}</span> conteúdos concluídos
+                  <span className="text-muted-foreground/30">•</span>
+                  <span className="text-muted-foreground">{percentage}%</span>
                 </div>
-                <div className="h-2 w-72 bg-white/10 rounded-full overflow-hidden">
+                <div className="h-2 w-72 bg-secondary border border-border/30 rounded-full overflow-hidden">
                   <div 
-                    className="h-full bg-gradient-to-r from-orange-400 to-red-500 rounded-full transition-all duration-500"
+                    className="h-full bg-primary rounded-full transition-all duration-500"
                     style={{ width: `${percentage}%` }}
                   />
                 </div>
               </div>
             )}
- 
+  
             {/* Botão de Continuar Assistindo */}
             {continueLessonId && (
               <div className="pt-2">
@@ -178,18 +181,18 @@ export function CourseTrail({
                   }}
                   className="cursor-pointer"
                 >
-                  <Button className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-bold py-6 px-8 rounded-2xl shadow-lg shadow-orange-500/10 hover:shadow-orange-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 text-sm md:text-base flex items-center gap-2.5 cursor-pointer">
-                    <Play className="w-4 h-4 fill-white" />
+                  <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-6 px-8 rounded-2xl shadow-lg shadow-primary/10 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 text-sm md:text-base flex items-center gap-2.5 cursor-pointer">
+                    <Play className="w-4 h-4 fill-current" />
                     {completedCount === 0 ? 'Começar Curso' : 'Continuar Assistindo'}
                   </Button>
                 </Link>
               </div>
             )}
           </div>
- 
+  
           {/* Lado Direito: Poster Estético Vertical (Oculto em telas pequenas) */}
           <div className="shrink-0 hidden md:block">
-            <div className={`relative w-64 aspect-[3/4.2] rounded-3xl overflow-hidden bg-gradient-to-b ${course.thumbnail_gradient} p-6 flex flex-col justify-between border border-white/10 shadow-2xl shadow-black/80 select-none`}>
+            <div className={`relative w-64 aspect-[3/4.2] rounded-3xl overflow-hidden bg-gradient-to-b ${course.thumbnail_gradient} p-6 flex flex-col justify-between border border-border/15 shadow-2xl select-none`}>
               <div className="absolute inset-0 bg-black/10" />
               <div className="absolute top-6 left-6 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-[9px] font-bold text-white tracking-widest uppercase border border-white/5">
                 Premium
@@ -209,13 +212,13 @@ export function CourseTrail({
  
       {/* Abas de Navegação (Hotmart Style) */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-grow flex flex-col">
-        <div className="border-b border-slate-900 flex gap-8 mb-8">
+        <div className="border-b border-border flex gap-8 mb-8">
           <button
             onClick={() => setActiveTab('conteudos')}
             className={`pb-4 text-sm font-bold tracking-tight border-b-2 transition-all ${
               activeTab === 'conteudos'
-                ? 'border-orange-500 text-orange-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
             Conteúdos
@@ -224,8 +227,8 @@ export function CourseTrail({
             onClick={() => setActiveTab('salvas')}
             className={`pb-4 text-sm font-bold tracking-tight border-b-2 transition-all ${
               activeTab === 'salvas'
-                ? 'border-orange-500 text-orange-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
             Aulas Salvas
@@ -234,8 +237,8 @@ export function CourseTrail({
             onClick={() => setActiveTab('sobre')}
             className={`pb-4 text-sm font-bold tracking-tight border-b-2 transition-all ${
               activeTab === 'sobre'
-                ? 'border-orange-500 text-orange-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
             Sobre
@@ -247,15 +250,15 @@ export function CourseTrail({
           {activeTab === 'conteudos' ? (
             <div className="space-y-6">
               <div className="space-y-1">
-                <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
-                  <Layers className="w-5 h-5 text-orange-500" />
+                <h2 className="text-xl font-extrabold text-foreground flex items-center gap-2">
+                  <Layers className="w-5 h-5 text-primary" />
                   Trilhas de Aprendizado
                 </h2>
-                <p className="text-xs text-slate-400">Escolha uma trilha de aulas abaixo e comece a praticar.</p>
+                <p className="text-xs text-muted-foreground">Escolha uma trilha de aulas abaixo e comece a praticar.</p>
               </div>
  
               {modules.length === 0 ? (
-                <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-12 text-center text-slate-500 text-sm">
+                <div className="bg-card border border-border rounded-2xl p-12 text-center text-muted-foreground text-sm">
                   Nenhuma trilha cadastrada para este curso ainda.
                 </div>
               ) : (
@@ -272,11 +275,11 @@ export function CourseTrail({
                     const cardContent = (
                       <div className="flex flex-col gap-3 group cursor-pointer text-left">
                         {/* Poster Vertical do Módulo */}
-                        <div className={`relative aspect-[3/4.2] w-full rounded-2xl overflow-hidden bg-gradient-to-b ${gradient} p-4 flex flex-col justify-between border border-transparent group-hover:border-orange-500/30 transition-all duration-300 group-hover:scale-[1.03] shadow-lg shadow-black/30 group-hover:shadow-[0_0_25px_rgba(249,115,22,0.12)]`}>
+                        <div className={`relative aspect-[3/4.2] w-full rounded-2xl overflow-hidden bg-gradient-to-b ${gradient} p-4 flex flex-col justify-between border border-transparent group-hover:border-primary/30 transition-all duration-300 group-hover:scale-[1.03] shadow-lg shadow-black/30 group-hover:shadow-[0_0_25px_rgba(229,9,20,0.06)]`}>
                           <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors" />
                           
                           {/* Indicador Numérico do Módulo (Hotmart Style) */}
-                          <div className="absolute top-4 left-4 w-6 h-6 rounded-full bg-slate-950/80 border border-slate-800 text-slate-300 flex items-center justify-center text-xs font-mono font-bold select-none z-20">
+                          <div className="absolute top-4 left-4 w-6 h-6 rounded-full bg-card border border-border text-card-foreground flex items-center justify-center text-xs font-mono font-bold select-none z-20">
                             {index + 1}
                           </div>
 
@@ -286,7 +289,7 @@ export function CourseTrail({
                               <Play className="w-3 h-3 fill-white rotate-90" />
                             </div>
                           ) : (
-                            <div className="absolute top-4 right-4 bg-black/40 border border-white/10 px-2 py-0.5 rounded text-[8px] font-bold text-slate-300 z-20">
+                            <div className="absolute top-4 right-4 bg-secondary border border-border/10 px-2 py-0.5 rounded text-[8px] font-bold text-muted-foreground z-20">
                               {modCompletedCount}/{mod.lessons.length}
                             </div>
                           )}
@@ -305,10 +308,10 @@ export function CourseTrail({
  
                         {/* Informações Textuais Abaixo do Poster */}
                         <div className="px-1">
-                          <h4 className="text-xs font-bold text-slate-300 group-hover:text-orange-400 transition-colors line-clamp-1">
+                          <h4 className="text-xs font-bold text-foreground group-hover:text-primary transition-colors line-clamp-1">
                             {mod.title}
                           </h4>
-                          <span className="text-[10px] text-slate-500 font-semibold block mt-0.5">
+                          <span className="text-[10px] text-muted-foreground font-semibold block mt-0.5">
                             {mod.lessons.length} aulas • {Math.ceil(mod.lessons.reduce((acc, l) => acc + l.duration_seconds, 0) / 60)}m
                           </span>
                         </div>
@@ -338,11 +341,11 @@ export function CourseTrail({
           ) : activeTab === 'salvas' ? (
             <div className="space-y-6">
               <div className="space-y-1">
-                <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
+                <h2 className="text-xl font-extrabold text-foreground flex items-center gap-2">
                   <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
                   Aulas Salvas para Revisão
                 </h2>
-                <p className="text-xs text-slate-400">Aulas que você marcou com estrela neste curso para revisar e praticar depois.</p>
+                <p className="text-xs text-muted-foreground">Aulas que você marcou com estrela neste curso para revisar e praticar depois.</p>
               </div>
  
               {(() => {
@@ -364,7 +367,7 @@ export function CourseTrail({
  
                 if (favoritedLessons.length === 0) {
                   return (
-                    <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-12 text-center text-slate-500 text-sm">
+                    <div className="bg-card border border-border rounded-2xl p-12 text-center text-muted-foreground text-sm">
                       Nenhuma aula salva neste curso ainda. Clique no ícone de estrela dentro das aulas para salvá-las aqui.
                     </div>
                   );
@@ -375,10 +378,10 @@ export function CourseTrail({
                     {favoritedLessons.map((les) => {
                       const isCompleted = completedLessonIds.includes(les.id);
                       return (
-                        <div key={les.id} className="bg-slate-950/40 border border-slate-900 rounded-2xl overflow-hidden hover:border-orange-500/20 transition-all duration-300 flex flex-col group relative">
+                        <div key={les.id} className="bg-card border border-border rounded-2xl overflow-hidden hover:border-primary/20 transition-all duration-300 flex flex-col group relative">
                           {/* Miniatura com hover play e badges */}
                           <div 
-                            className="relative aspect-video w-full bg-slate-900 border-b border-slate-900 overflow-hidden cursor-pointer"
+                            className="relative aspect-video w-full bg-secondary border-b border-border/10 overflow-hidden cursor-pointer"
                             onClick={() => onSelectLesson(les.id)}
                           >
                             {libraryId && les.video_id ? (
@@ -392,8 +395,8 @@ export function CourseTrail({
                                 }}
                               />
                             ) : null}
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-black/20 transition-colors">
-                              <div className="bg-orange-500 text-white p-2.5 rounded-full scale-90 group-hover:scale-100 opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-lg shadow-orange-500/20">
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/15 transition-colors">
+                              <div className="bg-primary text-primary-foreground p-2.5 rounded-full scale-90 group-hover:scale-100 opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-lg shadow-primary/20">
                                 <Play className="w-4 h-4 fill-current ml-0.5" />
                               </div>
                             </div>
@@ -405,7 +408,7 @@ export function CourseTrail({
  
                             {/* Indicador Concluído */}
                             {isCompleted && (
-                              <div className="absolute top-2 left-2 bg-green-500/90 text-white px-2 py-0.5 rounded text-[9px] font-bold tracking-wider uppercase flex items-center gap-1 shadow-md">
+                              <div className="absolute top-2 left-2 bg-green-550 text-white px-2 py-0.5 rounded text-[9px] font-bold tracking-wider uppercase flex items-center gap-1 shadow-md">
                                 <CheckCircle2 className="w-3 h-3 text-white fill-white/10" />
                                 Concluída
                               </div>
@@ -415,18 +418,18 @@ export function CourseTrail({
                           {/* Infos e botão favorito */}
                           <div className="p-4 flex-grow flex flex-col justify-between gap-3">
                             <div className="space-y-1">
-                              <span className="text-[10px] font-bold text-slate-500 tracking-wider uppercase block">
+                              <span className="text-[10px] font-bold text-muted-foreground tracking-wider uppercase block">
                                 {les.moduleTitle}
                               </span>
                               <h4 
                                 onClick={() => onSelectLesson(les.id)}
-                                className="text-sm font-extrabold text-slate-200 hover:text-orange-400 cursor-pointer transition-colors line-clamp-2 leading-tight"
+                                className="text-sm font-extrabold text-card-foreground hover:text-primary cursor-pointer transition-colors line-clamp-2 leading-tight"
                               >
                                 {les.title}
                               </h4>
                             </div>
  
-                            <div className="flex justify-between items-center pt-1 border-t border-slate-900/50">
+                            <div className="flex justify-between items-center pt-1 border-t border-border/50">
                               <button
                                 onClick={async (e) => {
                                   e.stopPropagation();
@@ -462,7 +465,7 @@ export function CourseTrail({
  
                               <button
                                 onClick={() => onSelectLesson(les.id)}
-                                className="text-[10px] font-bold text-orange-400 hover:text-orange-300 uppercase tracking-wider transition-colors"
+                                className="text-[10px] font-bold text-primary hover:text-primary/80 uppercase tracking-wider transition-colors"
                               >
                                 Assistir Aula
                               </button>
@@ -478,28 +481,28 @@ export function CourseTrail({
           ) : (
             <div className="max-w-3xl space-y-6">
               <div className="space-y-3">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <BookOpen className="w-5 h-5 text-orange-500" />
+                <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-primary" />
                   Descrição do Curso
                 </h3>
-                <p className="text-slate-400 text-sm leading-relaxed">
+                <p className="text-muted-foreground text-sm leading-relaxed">
                   {course.description || 'Nenhuma descrição fornecida.'}
                 </p>
               </div>
  
-              <div className="border-t border-slate-900 pt-6 grid grid-cols-2 gap-4">
-                <div className="bg-slate-950/30 p-4 rounded-xl border border-slate-900/50 flex items-center gap-3">
-                  <Layers className="w-5 h-5 text-orange-400" />
+              <div className="border-t border-border pt-6 grid grid-cols-2 gap-4">
+                <div className="bg-card p-4 rounded-xl border border-border flex items-center gap-3">
+                  <Layers className="w-5 h-5 text-primary" />
                   <div>
-                    <span className="text-slate-500 text-[10px] font-bold uppercase block">Total de Trilhas</span>
-                    <span className="text-white font-extrabold text-sm">{modules.length} módulos</span>
+                    <span className="text-muted-foreground text-[10px] font-bold uppercase block">Total de Trilhas</span>
+                    <span className="text-foreground font-extrabold text-sm">{modules.length} módulos</span>
                   </div>
                 </div>
-                <div className="bg-slate-950/30 p-4 rounded-xl border border-slate-900/50 flex items-center gap-3">
-                  <Clock className="w-5 h-5 text-orange-400" />
+                <div className="bg-card p-4 rounded-xl border border-border flex items-center gap-3">
+                  <Clock className="w-5 h-5 text-primary" />
                   <div>
-                    <span className="text-slate-500 text-[10px] font-bold uppercase block">Duração Total</span>
-                    <span className="text-white font-extrabold text-sm">
+                    <span className="text-muted-foreground text-[10px] font-bold uppercase block">Duração Total</span>
+                    <span className="text-foreground font-extrabold text-sm">
                       {Math.ceil(allLessons.reduce((acc, l) => acc + l.duration_seconds, 0) / 60)} minutos
                     </span>
                   </div>

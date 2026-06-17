@@ -1,11 +1,8 @@
-import Link from 'next/link';
 import { getDB } from '@/lib/db';
 import { verifyJWT } from '@/lib/auth';
 import { cookies } from 'next/headers';
-import { Button } from '@/components/ui/button';
 import { LoginForm } from '@/components/login-form';
-import { Music, LogOut, Settings, Play, ShieldAlert } from 'lucide-react';
-import { GlobalFavorites } from '@/components/global-favorites';
+import { DashboardClient } from '@/components/dashboard-client';
 
 const MOCK_COURSES = [
   {
@@ -31,13 +28,21 @@ const MOCK_COURSES = [
     title: 'Estilo Roots - Musicalidade e Charme',
     description: 'Aprenda o autêntico Forró Roots: giros cruzados, passos arrastados e como interpretar o ritmo da sanfona e da zabumba.',
     slug: 'estilo-roots-musicalidade',
-    thumbnail_gradient: 'from-orange-500 to-red-600',
+    thumbnail_gradient: 'from-red-600 to-red-600',
     center_text: 'ESTILO\nROOTS',
     label: 'Curso Roots Avançado'
   }
 ];
 
-export default async function Home() {
+interface PageProps {
+  searchParams: Promise<{ tab?: string; editCourseId?: string }>;
+}
+
+export default async function Home({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const initialTab = params.tab || 'catalog';
+  const initialEditingCourseId = params.editCourseId || null;
+
   // 1. Verificar autenticação via cookie JWT
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get('session')?.value;
@@ -61,9 +66,19 @@ export default async function Home() {
     );
   }
 
-  // 2. Se ESTIVER logado, busca os cursos do D1 ou usa os mocks
-  let coursesList = MOCK_COURSES;
+  // 2. Se ESTIVER logado, busca os dados no D1 ou usa fallbacks
+  let coursesList = MOCK_COURSES.map((c, i) => ({
+    ...c,
+    total_lessons: 4,
+    completed_lessons: 0,
+    progress_percent: 0
+  }));
   let favoritesList: any[] = [];
+  let lastLesson: any = null;
+  let lastLessonProgressPercent = 0;
+  let totalCompletedLessons = 0;
+  let coursesInProgress = 0;
+  let coursesCompleted = 0;
   
   const rawPullZone = process.env.BUNNY_STREAM_PULL_ZONE || process.env.BUNNY_STREAM_LIBRARY_ID || '';
   const pullZone = rawPullZone.startsWith('vz-') ? rawPullZone.substring(3) : rawPullZone;
@@ -71,8 +86,8 @@ export default async function Home() {
   try {
     const db = getDB();
     
-    // Buscar cursos e favoritos em paralelo
-    const [coursesRes, favoritesRes] = await Promise.all([
+    // Buscar cursos, favoritos, progresso e última aula em paralelo
+    const [coursesRes, favoritesRes, courseProgressRes, lastLessonRes, defaultLessonRes] = await Promise.all([
       db.prepare('SELECT * FROM courses ORDER BY created_at DESC').all<any>(),
       db.prepare(`
         SELECT DISTINCT
@@ -91,16 +106,94 @@ export default async function Home() {
         JOIN courses c ON m.course_id = c.id
         WHERE ffl.user_id = ? AND ff.is_global = 1
         ORDER BY ffl.created_at DESC
-      `).bind(user.id).all<any>()
+      `).bind(user.id).all<any>(),
+      db.prepare(`
+        SELECT 
+          c.id, 
+          COUNT(l.id) as total_lessons,
+          SUM(CASE WHEN p.completed = 1 THEN 1 ELSE 0 END) as completed_lessons
+        FROM courses c
+        LEFT JOIN modules m ON m.course_id = c.id
+        LEFT JOIN lessons l ON l.module_id = m.id
+        LEFT JOIN progress p ON p.lesson_id = l.id AND p.user_id = ?
+        GROUP BY c.id
+      `).bind(user.id).all<any>(),
+      db.prepare(`
+        SELECT 
+          p.updated_at,
+          p.completed,
+          l.id as lesson_id,
+          l.title as lesson_title,
+          l.duration_seconds,
+          m.title as module_title,
+          c.id as course_id,
+          c.title as course_title,
+          c.slug as course_slug
+        FROM progress p
+        JOIN lessons l ON p.lesson_id = l.id
+        JOIN modules m ON l.module_id = m.id
+        JOIN courses c ON m.course_id = c.id
+        WHERE p.user_id = ?
+        ORDER BY p.updated_at DESC
+        LIMIT 1
+      `).bind(user.id).all<any>(),
+      db.prepare(`
+        SELECT 
+          l.id as lesson_id,
+          l.title as lesson_title,
+          l.duration_seconds,
+          m.title as module_title,
+          c.id as course_id,
+          c.title as course_title,
+          c.slug as course_slug
+        FROM courses c
+        JOIN modules m ON m.course_id = c.id
+        JOIN lessons l ON l.module_id = m.id
+        ORDER BY c.created_at DESC, m.position ASC, l.position ASC
+        LIMIT 1
+      `).all<any>()
     ]);
 
     const results = coursesRes.results;
     favoritesList = favoritesRes.results || [];
     
+    // Mapeamento de progresso por ID do curso
+    const progressMap = new Map(
+      (courseProgressRes.results || []).map((p: any) => [
+        p.id,
+        { total: p.total_lessons, completed: p.completed_lessons }
+      ])
+    );
+
+    // Calcular estatísticas com base no progresso
+    if (courseProgressRes.results && courseProgressRes.results.length > 0) {
+      totalCompletedLessons = courseProgressRes.results.reduce(
+        (sum: number, p: any) => sum + (p.completed_lessons || 0),
+        0
+      );
+      coursesInProgress = courseProgressRes.results.filter(
+        (p: any) => p.completed_lessons > 0 && p.completed_lessons < p.total_lessons
+      ).length;
+      coursesCompleted = courseProgressRes.results.filter(
+        (p: any) => p.completed_lessons === p.total_lessons && p.total_lessons > 0
+      ).length;
+    }
+
+    // Identificar a última aula acessada (ou primeira aula padrão)
+    lastLesson = lastLessonRes.results?.[0] || defaultLessonRes.results?.[0];
+    if (lastLesson) {
+      const prog = progressMap.get(lastLesson.course_id);
+      if (prog && prog.total > 0) {
+        lastLessonProgressPercent = Math.round((prog.completed / prog.total) * 100);
+      } else {
+        lastLessonProgressPercent = 0;
+      }
+    }
+
     if (results && results.length > 0) {
       coursesList = results.map((c, i) => {
-        // Encontrar correspondência de mock para pegar center_text e label adicionais
         const mockMatch = MOCK_COURSES[i % MOCK_COURSES.length];
+        const prog = progressMap.get(c.id) || { total: 0, completed: 0 };
         return {
           id: c.id,
           title: c.title,
@@ -108,9 +201,19 @@ export default async function Home() {
           slug: c.slug,
           thumbnail_gradient: c.thumbnail_gradient || mockMatch.thumbnail_gradient,
           center_text: c.title.split(' - ')[0].toUpperCase(),
-          label: 'Curso Online'
+          label: 'Curso Online',
+          total_lessons: prog.total,
+          completed_lessons: prog.completed,
+          progress_percent: prog.total > 0 ? Math.round((prog.completed / prog.total) * 100) : 0,
+          cover_vertical: c.cover_vertical || null,
+          cover_horizontal: c.cover_horizontal || null,
+          cover_vertical_position: c.cover_vertical_position || '50% 50%',
+          cover_horizontal_position: c.cover_horizontal_position || '50% 50%',
+          is_featured: c.is_featured || 0,
+          hide_title: c.hide_title || 0
         };
       });
+      console.log('DEBUG_COURSES_LIST:', JSON.stringify(coursesList, null, 2));
     }
   } catch (err) {
     console.warn('[D1] Erro na home, exibindo catálogo simulado.', err);
@@ -119,103 +222,19 @@ export default async function Home() {
   const isAdmin = user.role === 'admin';
 
   return (
-    <div className="min-h-screen bg-[#060609] text-slate-100 flex flex-col font-sans animate-page-enter">
-      {/* Header Premium do Catálogo */}
-      <header className="border-b border-slate-900 bg-[#060609]/90 backdrop-blur sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="bg-gradient-to-tr from-orange-500 to-red-600 p-2 rounded-xl text-white group-hover:rotate-6 transition-transform">
-              <Music className="w-5 h-5" />
-            </div>
-            <span className="font-black text-xl tracking-tighter bg-gradient-to-r from-orange-400 via-red-500 to-pink-500 bg-clip-text text-transparent">
-              FORROFLIX
-            </span>
-          </Link>
-          
-          <nav className="flex items-center gap-4">
-            {isAdmin && (
-              <Link href="/admin">
-                <Button variant="outline" className="border-orange-500/20 hover:bg-orange-950/20 text-orange-400 gap-2 text-xs py-2 px-4 rounded-xl">
-                  <Settings className="w-3.5 h-3.5" />
-                  Painel Admin
-                </Button>
-              </Link>
-            )}
-            <span className="text-xs text-slate-400 hidden sm:inline">{user.email}</span>
-            <form action="/api/auth/logout" method="POST" className="inline">
-              <Button type="submit" variant="ghost" className="text-slate-400 hover:text-red-400 gap-1.5 hover:bg-red-950/20 text-xs py-2 px-4">
-                <LogOut className="w-3.5 h-3.5" />
-                Sair
-              </Button>
-            </form>
-          </nav>
-        </div>
-      </header>
-
-      {/* Catálogo de Cursos (Netflix-Style Vertical Cards) */}
-      <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 w-full space-y-12">
-        <div className="space-y-2">
-          <h2 className="text-2xl font-black text-white flex items-center gap-2">
-            <span className="w-1.5 h-6 bg-orange-500 rounded-full"></span>
-            O que você quer aprender a dançar hoje?
-          </h2>
-          <p className="text-xs text-slate-400">Escolha um dos cursos abaixo e inicie sua jornada no Forró.</p>
-        </div>
-
-        {/* Grid de Cartões Verticais (Inspirado no Layout enviado) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-          {coursesList.map((course) => (
-            <div key={course.id} className="flex flex-col gap-3 group">
-              <Link 
-                href={`/courses/${course.slug}`}
-                className={`relative aspect-[3/4.2] w-full rounded-3xl overflow-hidden bg-gradient-to-b ${course.thumbnail_gradient} p-6 flex flex-col justify-between border-2 border-transparent hover:border-white/20 transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_0_30px_rgba(239,68,68,0.15)] shadow-2xl`}
-              >
-                {/* Elementos Estéticos Internos */}
-                <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors" />
-                <div className="absolute top-6 left-6 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-[9px] font-bold text-white tracking-widest uppercase border border-white/5">
-                  Premium
-                </div>
-
-                {/* Texto Centralizado Verticalmente em Destaque */}
-                <div className="flex-grow flex items-center justify-center text-center select-none py-12">
-                  <h3 className="text-2xl md:text-3xl font-black tracking-tight text-white leading-none whitespace-pre-line drop-shadow-lg font-sans">
-                    {course.center_text}
-                  </h3>
-                </div>
-
-                {/* Ícone de Ação no Rodapé do Card */}
-                <div className="flex justify-between items-center relative z-10">
-                  <span className="text-[10px] font-bold text-white/60 tracking-wider uppercase">
-                    Curso Online
-                  </span>
-                </div>
-              </Link>
-
-              {/* Informações Textuais Abaixo do Card */}
-              <div className="px-1 space-y-0.5">
-                <span className="text-[10px] text-slate-500 font-semibold tracking-wider uppercase block">
-                  {course.label}
-                </span>
-                <Link href={`/courses/${course.slug}`} className="text-sm font-extrabold text-white hover:text-orange-400 transition-colors block leading-tight">
-                  {course.title}
-                </Link>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Global Saved Lessons for Review */}
-        {favoritesList.length > 0 && (
-          <div className="border-t border-slate-900/60 pt-12">
-            <GlobalFavorites initialFavorites={favoritesList} libraryId={pullZone} />
-          </div>
-        )}
-      </main>
-
-      {/* Rodapé */}
-      <footer className="border-t border-slate-950 bg-slate-950/80 py-8 text-center text-slate-500 text-xs mt-auto">
-        <p>&copy; {new Date().getFullYear()} Forroflix. Todos os direitos reservados. Feito com paixão pelo Forró.</p>
-      </footer>
-    </div>
+    <DashboardClient
+      user={user}
+      coursesList={coursesList}
+      favoritesList={favoritesList}
+      lastLesson={lastLesson}
+      lastLessonProgressPercent={lastLessonProgressPercent}
+      totalCompletedLessons={totalCompletedLessons}
+      coursesInProgress={coursesInProgress}
+      coursesCompleted={coursesCompleted}
+      isAdmin={isAdmin}
+      pullZone={pullZone}
+      initialTab={initialTab as any}
+      initialEditingCourseId={initialEditingCourseId}
+    />
   );
 }

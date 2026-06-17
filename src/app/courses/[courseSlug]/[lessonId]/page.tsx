@@ -26,7 +26,7 @@ export default async function LessonPage({ params }: PageProps) {
   let courseTitle = '';
   let courseDescription = '';
   let courseId = '';
-  let thumbnailGradient = 'from-orange-500 to-red-600';
+  let thumbnailGradient = 'from-red-600 to-red-600';
   let activeLesson = null;
   let modules: any[] = [];
   let completedLessonIds: string[] = [];
@@ -50,7 +50,7 @@ export default async function LessonPage({ params }: PageProps) {
       courseTitle = dbCourse.title;
       courseDescription = dbCourse.description || '';
       courseId = dbCourse.id;
-      thumbnailGradient = dbCourse.thumbnail_gradient || 'from-orange-500 to-red-600';
+      thumbnailGradient = dbCourse.thumbnail_gradient || 'from-red-600 to-red-600';
 
       // 2. Buscar módulos, progresso e favoritos em paralelo
       const [modulesRes, progressRes, favoritesRes] = await Promise.all([

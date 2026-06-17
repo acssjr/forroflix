@@ -46,9 +46,10 @@ interface CourseEditorProps {
   courseTitle: string;
   courseSlug: string;
   initialModules: Module[];
+  onBack?: () => void;
 }
 
-export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules }: CourseEditorProps) {
+export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules, onBack }: CourseEditorProps) {
   const [modules, setModules] = useState<Module[]>(initialModules);
   
   // Estados para Modal de Módulo
@@ -89,6 +90,9 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
     type: 'module' | 'lesson';
     position: 'before' | 'after';
   } | null>(null);
+
+  const [draggableModuleId, setDraggableModuleId] = useState<string | null>(null);
+  const [draggableLessonId, setDraggableLessonId] = useState<string | null>(null);
 
   // Controle de Módulos Colapsados
   const [collapsedModules, setCollapsedModules] = useState<Record<string, boolean>>({});
@@ -145,6 +149,60 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
       window.removeEventListener('click', handleOutsideClick);
     };
   }, [movingLessonId, bulkMoveDropdownOpen]);
+
+  // Auto-scroll suave da página durante o drag and drop
+  useEffect(() => {
+    if (!draggedItem) return;
+
+    let scrollSpeed = 0;
+    let animationFrameId: number | null = null;
+
+    const scrollLoop = () => {
+      if (scrollSpeed !== 0) {
+        window.scrollBy(0, scrollSpeed);
+      }
+      animationFrameId = requestAnimationFrame(scrollLoop);
+    };
+
+    const handleDragOverGlobal = (e: DragEvent) => {
+      const threshold = 120; // distância da borda para começar a rolar (px)
+      const maxSpeed = 15; // velocidade máxima de rolagem
+      const clientY = e.clientY;
+      const height = window.innerHeight;
+
+      if (clientY < threshold) {
+        // Rola para cima (velocidade negativa)
+        const intensity = (threshold - clientY) / threshold;
+        scrollSpeed = -maxSpeed * intensity;
+      } else if (clientY > height - threshold) {
+        // Rola para baixo (velocidade positiva)
+        const intensity = (clientY - (height - threshold)) / threshold;
+        scrollSpeed = maxSpeed * intensity;
+      } else {
+        scrollSpeed = 0;
+      }
+    };
+
+    const stopScrolling = () => {
+      scrollSpeed = 0;
+      if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
+    };
+
+    animationFrameId = requestAnimationFrame(scrollLoop);
+    window.addEventListener('dragover', handleDragOverGlobal);
+    window.addEventListener('dragend', stopScrolling);
+    window.addEventListener('drop', stopScrolling);
+
+    return () => {
+      window.removeEventListener('dragover', handleDragOverGlobal);
+      window.removeEventListener('dragend', stopScrolling);
+      window.removeEventListener('drop', stopScrolling);
+      stopScrolling();
+    };
+  }, [draggedItem]);
 
   // Excluir Módulo do Banco (D1)
   const handleDeleteModule = async (moduleId: string, title: string) => {
@@ -723,17 +781,27 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
 
   return (
     <>
-      <div className="min-h-screen bg-[#07070a] text-slate-100 flex flex-col animate-page-enter">
+      <div className="w-full bg-background text-foreground flex flex-col animate-page-enter">
       {/* Top Header */}
-      <header className="border-b border-slate-900 bg-[#07070a]/90 backdrop-blur sticky top-0 z-40">
+      <header className="border-b border-border bg-sidebar/90 backdrop-blur sticky top-0 z-40">
         <div className="max-w-5xl mx-auto px-4 md:px-8 h-20 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link href="/admin" className="flex items-center gap-2 group text-orange-400 hover:text-orange-300">
-              <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
-              <span className="text-sm font-semibold hidden md:inline">Voltar para Cursos</span>
-            </Link>
-            <span className="text-slate-800">|</span>
-            <span className="font-extrabold text-sm text-slate-300 line-clamp-1">
+            {onBack ? (
+              <button 
+                onClick={onBack} 
+                className="flex items-center gap-2 group text-red-500 hover:text-red-400 cursor-pointer border-0 bg-transparent p-0"
+              >
+                <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
+                <span className="text-sm font-semibold hidden md:inline">Voltar para Cursos</span>
+              </button>
+            ) : (
+              <Link href="/admin" className="flex items-center gap-2 group text-red-500 hover:text-red-400">
+                <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
+                <span className="text-sm font-semibold hidden md:inline">Voltar para Cursos</span>
+              </Link>
+            )}
+            <span className="text-border">|</span>
+            <span className="font-extrabold text-sm text-foreground line-clamp-1">
               Curso: {courseTitle}
             </span>
           </div>
@@ -744,14 +812,14 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                 setActiveModuleId(null);
                 setShowBatchModal(true);
               }}
-              className="bg-orange-500/10 hover:bg-orange-500/20 active:scale-[0.97] text-orange-400 font-bold border border-orange-500/20 gap-1.5 rounded-xl cursor-pointer transition-all duration-200"
+              className="bg-red-600/10 hover:bg-red-600/20 active:scale-[0.97] text-red-500 font-bold border border-red-600/20 gap-1.5 rounded-xl cursor-pointer transition-all duration-200"
             >
               <Film className="w-4 h-4" />
               Upload em Lote
             </Button>
             <Button 
               onClick={() => setShowModuleModal(true)}
-              className="bg-slate-900 hover:bg-slate-800 text-orange-400 font-bold border border-orange-500/10 gap-2 rounded-xl cursor-pointer transition-all active:scale-[0.97]"
+              className="bg-secondary hover:bg-secondary/80 text-primary font-bold border border-border gap-2 rounded-xl cursor-pointer transition-all active:scale-[0.97]"
             >
               <Plus className="w-4 h-4" />
               Adicionar Módulo
@@ -763,20 +831,20 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
       {/* Main Container */}
       <main className="max-w-5xl mx-auto px-4 md:px-8 py-12 flex-grow w-full space-y-8">
         <div>
-          <h2 className="text-2xl font-black text-white">Grade de Conteúdo</h2>
-          <p className="text-sm text-slate-400 mt-1">Crie módulos organizados e envie as vídeoaulas para preencher sua área de membros.</p>
+          <h2 className="text-2xl font-black text-foreground">Grade de Conteúdo</h2>
+          <p className="text-sm text-muted-foreground mt-1">Crie módulos organizados e envie as vídeoaulas para preencher sua área de membros.</p>
         </div>
 
         {/* Lista de Módulos */}
         <div className="space-y-6">
           {modules.length === 0 ? (
-            <div className="border border-dashed border-slate-900 rounded-3xl p-12 text-center flex flex-col items-center justify-center gap-4 bg-slate-950/20">
-              <FolderOpen className="w-12 h-12 text-slate-700" />
+            <div className="border border-dashed border-border rounded-3xl p-12 text-center flex flex-col items-center justify-center gap-4 bg-card/10">
+              <FolderOpen className="w-12 h-12 text-muted-foreground/40" />
               <div className="space-y-1">
-                <h4 className="font-semibold text-slate-400">Nenhum módulo criado</h4>
-                <p className="text-slate-600 text-xs max-w-sm">Adicione seu primeiro módulo para organizar as aulas do curso de Forró.</p>
+                <h4 className="font-semibold text-muted-foreground">Nenhum módulo criado</h4>
+                <p className="text-muted-foreground/60 text-xs max-w-sm">Adicione seu primeiro módulo para organizar as aulas do curso de Forró.</p>
               </div>
-              <Button onClick={() => setShowModuleModal(true)} className="bg-orange-500 hover:bg-orange-600 text-white font-semibold gap-2">
+              <Button onClick={() => setShowModuleModal(true)} className="bg-red-600 hover:bg-red-700 text-white font-semibold gap-2">
                 <Plus className="w-4 h-4" />
                 Criar Primeiro Módulo
               </Button>
@@ -796,31 +864,37 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
               return (
                 <div key={mod.id} className="space-y-2">
                   {isModuleIndicatorBefore && (
-                    <div className="h-1 bg-orange-500 rounded-full animate-pulse transition-all duration-250" />
+                    <div className="h-1 bg-red-600 rounded-full animate-pulse transition-all duration-250" />
                   )}
                   
                   <div 
-                    className={`bg-slate-950 border rounded-2xl overflow-hidden shadow-xl transition-all duration-300 ${
-                      draggedItem?.id === mod.id && draggedItem?.type === 'module' ? 'opacity-35 border-slate-900' : ''
+                    className={`bg-card border rounded-2xl overflow-hidden shadow-xl transition-all duration-300 ${
+                      draggedItem?.id === mod.id && draggedItem?.type === 'module' ? 'opacity-35 border-border' : ''
                     } ${
                       isLessonHoveringModule 
-                        ? 'border-orange-500/70 bg-orange-500/[0.02] shadow-[0_0_25px_rgba(249,115,22,0.03)]' 
-                        : 'border-slate-900 hover:border-orange-500/10'
+                        ? 'border-red-600/70 bg-red-600/[0.02] shadow-[0_0_25px_rgba(229,9,20,0.03)]' 
+                        : 'border-border hover:border-red-600/10'
                     }`}
                   >
                     {/* Módulo Header */}
                     <div 
-                      draggable="true"
+                      draggable={draggableModuleId === mod.id}
                       onDragStart={(e) => handleDragStart(e, 'module', mod.id)}
-                      onDragEnd={handleDragEnd}
+                      onDragEnd={(e) => {
+                        handleDragEnd(e);
+                        setDraggableModuleId(null);
+                      }}
                       onDragOver={(e) => handleDragOverItem(e, 'module', mod.id)}
                       onDragLeave={handleDragLeaveItem}
-                      onDrop={(e) => handleDropItem(e, 'module', mod.id)}
+                      onDrop={(e) => {
+                        handleDropItem(e, 'module', mod.id);
+                        setDraggableModuleId(null);
+                      }}
                       onClick={() => toggleModuleCollapse(mod.id)}
                       className={`p-5 flex items-center justify-between cursor-pointer select-none transition-all duration-200 ${
                         isCollapsed 
-                          ? 'bg-[#101018]/90 hover:bg-[#151522]' 
-                          : 'bg-[#141420] border-b border-slate-900/60 hover:bg-[#181829]'
+                          ? 'bg-card/90 hover:bg-secondary/20' 
+                          : 'bg-secondary/40 border-b border-border/60 hover:bg-secondary/60'
                       }`}
                     >
                       {editingModuleId === mod.id ? (
@@ -829,24 +903,26 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                             type="text"
                             value={editingModuleTitle}
                             onChange={(e) => setEditingModuleTitle(e.target.value)}
-                            className="bg-[#0c0c14] border border-orange-500/30 rounded-xl px-3 py-1.5 text-slate-200 focus:outline-none focus:ring-1 focus:ring-orange-500 text-sm font-semibold max-w-xs"
+                            className="bg-card border border-red-600/30 rounded-xl px-3 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-red-600 text-sm font-semibold max-w-xs"
                             autoFocus
                             onKeyDown={(e) => {
                               if (e.key === 'Escape') setEditingModuleId(null);
                             }}
                           />
-                          <Button size="sm" variant="ghost" type="submit" className="h-8 w-8 p-0 text-green-500 hover:text-green-400 hover:bg-slate-900 rounded-lg">
+                          <Button size="sm" variant="ghost" type="submit" className="h-8 w-8 p-0 text-green-500 hover:text-green-400 hover:bg-secondary rounded-lg">
                             <Check className="w-4 h-4" />
                           </Button>
-                          <Button size="sm" variant="ghost" onClick={() => setEditingModuleId(null)} className="h-8 w-8 p-0 text-slate-500 hover:text-slate-400 hover:bg-slate-900 rounded-lg">
+                          <Button size="sm" variant="ghost" onClick={() => setEditingModuleId(null)} className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg">
                             <X className="w-4 h-4" />
                           </Button>
                         </form>
                       ) : (
-                        <h3 className="font-bold text-slate-200 text-base flex items-center gap-2 group select-none">
+                        <h3 className="font-bold text-foreground text-base flex items-center gap-2 group select-none">
                           <GripVertical 
-                            className="w-4 h-4 text-slate-600 hover:text-slate-400 mr-0.5 shrink-0 cursor-grab" 
+                            className="w-4 h-4 text-muted-foreground/60 hover:text-foreground mr-0.5 shrink-0 cursor-grab" 
                             onClick={(e) => e.stopPropagation()}
+                            onMouseDown={() => setDraggableModuleId(mod.id)}
+                            onMouseUp={() => setDraggableModuleId(null)}
                           />
                           
                           {moduleLessons.length > 0 && (
@@ -866,7 +942,7 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                               e.stopPropagation();
                               toggleModuleCollapse(mod.id);
                             }}
-                            className="p-1 hover:bg-slate-900 rounded-lg text-slate-400 hover:text-slate-200 transition-colors shrink-0 cursor-pointer"
+                            className="p-1 hover:bg-secondary rounded-lg text-muted-foreground hover:text-foreground transition-colors shrink-0 cursor-pointer"
                             title={isCollapsed ? "Expandir Módulo" : "Colapsar Módulo"}
                           >
                             {isCollapsed ? (
@@ -876,7 +952,7 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                             )}
                           </button>
                           
-                          <span className="w-1.5 h-5 bg-orange-500 rounded-full shrink-0"></span>
+                          <span className="w-1.5 h-5 bg-red-600 rounded-full shrink-0"></span>
                           <span className="truncate">{mod.title}</span>
                           
                           <button
@@ -885,7 +961,7 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                               setEditingModuleId(mod.id);
                               setEditingModuleTitle(mod.title);
                             }}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-500 hover:text-orange-400 rounded-lg cursor-pointer shrink-0"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-muted-foreground hover:text-red-500 rounded-lg cursor-pointer shrink-0"
                             title="Renomear Módulo"
                           >
                             <Pencil className="w-3.5 h-3.5" />
@@ -896,7 +972,7 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                               e.stopPropagation();
                               handleDeleteModule(mod.id, mod.title);
                             }}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-500 hover:text-red-500 rounded-lg cursor-pointer shrink-0"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-muted-foreground hover:text-red-500 rounded-lg cursor-pointer shrink-0"
                             title="Excluir Módulo"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -910,7 +986,7 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                             setActiveModuleId(mod.id);
                             setShowBatchModal(true);
                           }}
-                          className="bg-orange-500/10 hover:bg-orange-500/20 active:scale-[0.96] text-orange-400 font-bold border border-orange-500/20 gap-1.5 transition-all duration-200 cursor-pointer"
+                          className="bg-red-600/10 hover:bg-red-600/20 active:scale-[0.96] text-red-500 font-bold border border-red-600/20 gap-1.5 transition-all duration-200 cursor-pointer"
                         >
                           <Film className="w-3.5 h-3.5" />
                           Upload em Lote
@@ -921,7 +997,7 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                             setActiveModuleId(mod.id);
                             setShowLessonModal(true);
                           }}
-                          className="bg-orange-500/10 hover:bg-orange-500/20 active:scale-[0.96] text-orange-400 font-bold border border-orange-500/20 gap-1.5 transition-all duration-200 cursor-pointer"
+                          className="bg-red-600/10 hover:bg-red-600/20 active:scale-[0.96] text-red-500 font-bold border border-red-600/20 gap-1.5 transition-all duration-200 cursor-pointer"
                         >
                           <Plus className="w-3.5 h-3.5" />
                           Enviar Vídeoaula
@@ -944,11 +1020,11 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                             onDrop={(e) => handleLessonDropOnEmptyModule(e, mod.id)}
                             className={`border border-dashed rounded-xl p-6 text-center transition-all duration-200 ${
                               isLessonHoveringModule 
-                                ? 'border-orange-500/40 bg-orange-500/5' 
-                                : 'border-slate-900 bg-slate-950/20'
+                                ? 'border-red-600/40 bg-red-600/5' 
+                                : 'border-border bg-card/20'
                             }`}
                           >
-                            <p className="text-slate-500 text-xs italic font-medium">Este módulo não possui nenhuma aula ativa ainda. Arraste uma aula para cá.</p>
+                            <p className="text-muted-foreground text-xs italic font-medium">Este módulo não possui nenhuma aula ativa ainda. Arraste uma aula para cá.</p>
                           </div>
                         ) : (
                           mod.lessons.map(les => {
@@ -958,52 +1034,58 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                             return (
                               <div key={les.id} className="space-y-1.5">
                                 {isLesIndicatorBefore && (
-                                  <div className="h-0.5 bg-orange-500 rounded-full animate-pulse transition-all duration-200" />
+                                  <div className="h-0.5 bg-red-600 rounded-full animate-pulse transition-all duration-200" />
                                 )}
                                 
                                 <div 
-                                  draggable="true"
+                                  draggable={draggableLessonId === les.id}
                                   onDragStart={(e) => handleDragStart(e, 'lesson', les.id, mod.id)}
-                                  onDragEnd={handleDragEnd}
+                                  onDragEnd={(e) => {
+                                    handleDragEnd(e);
+                                    setDraggableLessonId(null);
+                                  }}
                                   onDragOver={(e) => handleDragOverItem(e, 'lesson', les.id, mod.id)}
                                   onDragLeave={handleDragLeaveItem}
-                                  onDrop={(e) => handleDropItem(e, 'lesson', les.id, mod.id)}
+                                  onDrop={(e) => {
+                                    handleDropItem(e, 'lesson', les.id, mod.id);
+                                    setDraggableLessonId(null);
+                                  }}
                                   onClick={() => toggleLessonSelection(les.id)}
-                                  className={`flex flex-col md:flex-row md:items-center justify-between p-3.5 rounded-xl bg-[#0b0b11]/50 border transition-all duration-200 gap-4 group cursor-grab active:cursor-grabbing select-none hover:cursor-pointer ${
-                                    draggedItem?.id === les.id && draggedItem?.type === 'lesson' ? 'opacity-35 border-slate-900' : 'border-slate-900/40 hover:bg-[#0b0b11] hover:border-orange-500/10'
+                                  className={`flex flex-col md:flex-row md:items-center justify-between p-3.5 rounded-xl bg-card/50 border transition-all duration-200 gap-4 group cursor-grab active:cursor-grabbing select-none hover:cursor-pointer ${
+                                    draggedItem?.id === les.id && draggedItem?.type === 'lesson' ? 'opacity-35 border-border' : 'border-border/40 hover:bg-secondary/40 hover:border-red-600/10'
                                   } ${
-                                    selectedLessons[les.id] ? 'border-orange-500/30 bg-orange-500/[0.01]' : ''
+                                    selectedLessons[les.id] ? 'border-red-600/30 bg-red-600/[0.01]' : ''
                                   } ${
-                                    dropIndicator?.type === 'lesson' && dropIndicator.targetId === les.id ? 'border-orange-500/30' : ''
+                                    dropIndicator?.type === 'lesson' && dropIndicator.targetId === les.id ? 'border-red-600/30' : ''
                                   }`}
                                 >
                                   {editingLessonId === les.id ? (
-                                    <form onSubmit={(e) => handleRenameLesson(e, mod.id, les.id)} className="flex flex-col gap-3 flex-grow bg-[#0a0a0f] p-4 rounded-xl border border-slate-900 w-full" onClick={(e) => e.stopPropagation()}>
+                                    <form onSubmit={(e) => handleRenameLesson(e, mod.id, les.id)} className="flex flex-col gap-3 flex-grow bg-muted/30 p-4 rounded-xl border border-border w-full" onClick={(e) => e.stopPropagation()}>
                                       <div>
-                                        <label className="block text-[10px] font-semibold text-slate-500 mb-1">Título da Aula</label>
+                                        <label className="block text-[10px] font-semibold text-muted-foreground mb-1">Título da Aula</label>
                                         <input
                                           type="text"
                                           value={editingLessonTitle}
                                           onChange={(e) => setEditingLessonTitle(e.target.value)}
-                                          className="w-full bg-[#0c0c14] border border-slate-900 rounded-lg px-3 py-1.5 text-slate-200 focus:outline-none focus:ring-1 focus:ring-orange-500 text-xs font-semibold"
+                                          className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-red-600 text-xs font-semibold"
                                           autoFocus
                                         />
                                       </div>
                                       <div>
-                                        <label className="block text-[10px] font-semibold text-slate-500 mb-1">Descrição da Aula</label>
+                                        <label className="block text-[10px] font-semibold text-muted-foreground mb-1">Descrição da Aula</label>
                                         <textarea
                                           value={editingLessonDescription}
                                           onChange={(e) => setEditingLessonDescription(e.target.value)}
                                           placeholder="Adicione instruções práticas..."
                                           rows={2}
-                                          className="w-full bg-[#0c0c14] border border-slate-900 rounded-lg px-3 py-1.5 text-slate-200 focus:outline-none focus:ring-1 focus:ring-orange-500 text-xs resize-none"
+                                          className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-red-600 text-xs resize-none"
                                         />
                                       </div>
                                       <div className="flex justify-end gap-2">
-                                        <Button size="sm" variant="ghost" onClick={() => setEditingLessonId(null)} type="button" className="text-slate-500 hover:text-slate-400 hover:bg-slate-900 text-xs px-3.5 h-8">
+                                        <Button size="sm" variant="ghost" onClick={() => setEditingLessonId(null)} type="button" className="text-muted-foreground hover:text-foreground hover:bg-muted text-xs px-3.5 h-8">
                                           Cancelar
                                         </Button>
-                                        <Button size="sm" type="submit" className="bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs px-3.5 h-8">
+                                        <Button size="sm" type="submit" className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-3.5 h-8">
                                           Salvar
                                         </Button>
                                       </div>
@@ -1018,18 +1100,22 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                                         onClick={(e) => e.stopPropagation()}
                                         title="Selecionar esta aula"
                                       />
-                                      <GripVertical className="w-3.5 h-3.5 text-slate-600 hover:text-slate-400 cursor-grab shrink-0 mr-0.5" />
-                                      <div className="bg-slate-900 p-2 rounded-lg text-orange-500 self-start shrink-0">
-                                        <Play className="w-3.5 h-3.5 fill-orange-500" />
+                                      <GripVertical 
+                                        className="w-3.5 h-3.5 text-muted-foreground/60 hover:text-foreground cursor-grab shrink-0 mr-0.5" 
+                                        onMouseDown={() => setDraggableLessonId(les.id)}
+                                        onMouseUp={() => setDraggableLessonId(null)}
+                                      />
+                                      <div className="bg-slate-100 dark:bg-slate-900 p-2 rounded-lg text-red-600 self-start shrink-0">
+                                        <Play className="w-3.5 h-3.5 fill-red-600" />
                                       </div>
                                       <div className="flex flex-col min-w-0 text-left">
-                                        <span className="text-slate-300 text-xs font-semibold truncate">{les.title}</span>
+                                        <span className="text-foreground text-xs font-semibold truncate">{les.title}</span>
                                         {les.description ? (
-                                          <span className="text-slate-500 text-[10px] font-medium mt-0.5 line-clamp-1">
+                                          <span className="text-muted-foreground text-[10px] font-medium mt-0.5 line-clamp-1">
                                             {les.description}
                                           </span>
                                         ) : (
-                                          <span className="text-slate-600 text-[9px] italic mt-0.5">Sem descrição</span>
+                                          <span className="text-muted-foreground/60 text-[9px] italic mt-0.5">Sem descrição</span>
                                         )}
                                       </div>
                                       
@@ -1040,7 +1126,7 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                                           setEditingLessonTitle(les.title);
                                           setEditingLessonDescription(les.description || '');
                                         }}
-                                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-500 hover:text-orange-400 rounded cursor-pointer self-start mt-0.5 shrink-0"
+                                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-muted-foreground hover:text-red-500 rounded cursor-pointer self-start mt-0.5 shrink-0"
                                         title="Editar Aula"
                                       >
                                         <Pencil className="w-3 h-3" />
@@ -1052,7 +1138,7 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                                             e.stopPropagation();
                                             setMovingLessonId(movingLessonId === les.id ? null : les.id);
                                           }}
-                                          className="p-1 text-slate-500 hover:text-orange-400 rounded cursor-pointer"
+                                          className="p-1 text-muted-foreground hover:text-red-500 rounded cursor-pointer"
                                           title="Mover para outro módulo"
                                         >
                                           <FolderInput className="w-3 h-3" />
@@ -1060,10 +1146,10 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                                         
                                         {movingLessonId === les.id && (
                                           <div 
-                                            className="absolute right-0 mt-1 w-56 bg-slate-950 border border-slate-900 rounded-xl shadow-2xl z-50 p-2 space-y-1 animate-in fade-in slide-in-from-top-1 duration-150"
+                                            className="absolute right-0 mt-1 w-56 bg-popover border border-border rounded-xl shadow-2xl z-50 p-2 space-y-1 animate-in fade-in slide-in-from-top-1 duration-150"
                                             onClick={(e) => e.stopPropagation()}
                                           >
-                                            <div className="px-2 py-1.5 border-b border-slate-900 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left">
+                                            <div className="px-2 py-1.5 border-b border-border text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-left">
                                               Mover para Módulo:
                                             </div>
                                             <div className="max-h-40 overflow-y-auto space-y-0.5">
@@ -1073,13 +1159,13 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                                                   <button
                                                     key={m.id}
                                                     onClick={() => moveLessonToModule(les.id, mod.id, m.id)}
-                                                    className="w-full text-left px-2 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:bg-orange-500/10 hover:text-orange-400 transition-colors truncate cursor-pointer"
+                                                    className="w-full text-left px-2 py-1.5 rounded-lg text-xs font-semibold text-foreground hover:bg-red-600/10 hover:text-red-500 transition-colors truncate cursor-pointer"
                                                   >
                                                     {m.title}
                                                   </button>
                                                 ))}
                                               {modules.length <= 1 && (
-                                                <div className="px-2 py-1.5 text-[10px] text-slate-600 italic text-left">
+                                                <div className="px-2 py-1.5 text-[10px] text-muted-foreground/60 italic text-left">
                                                   Nenhum outro módulo
                                                 </div>
                                               )}
@@ -1093,28 +1179,30 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                                           e.stopPropagation();
                                           handleDeleteLesson(les.id, les.title, mod.id);
                                         }}
-                                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-500 hover:text-red-500 rounded cursor-pointer self-start mt-0.5 shrink-0"
+                                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-muted-foreground hover:text-red-500 rounded cursor-pointer self-start mt-0.5 shrink-0"
                                         title="Excluir Aula"
                                       >
                                         <Trash2 className="w-3 h-3" />
                                       </button>
                                     </div>
                                   )}
-                                  <div className="flex items-center gap-4 text-[10px] text-slate-500 font-semibold font-mono shrink-0" onClick={(e) => e.stopPropagation()}>
+                                  <div className="flex items-center gap-4 text-[10px] text-muted-foreground font-semibold font-mono shrink-0" onClick={(e) => e.stopPropagation()}>
                                     {les.video_id ? (
-                                      <span className="text-green-500 bg-green-950/20 px-2 py-0.5 rounded border border-green-500/10 flex items-center gap-1">
+                                      <span className="text-green-600 dark:text-green-400 bg-green-500/10 border border-green-500/20 px-2 py-0.5 rounded flex items-center gap-1">
                                         <CheckCircle className="w-3 h-3" />
                                         Vídeo Ativo
                                       </span>
                                     ) : (
-                                      <span className="text-yellow-500">Aguardando Vídeo</span>
+                                      <span className="text-yellow-600 dark:text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 px-2 py-0.5 rounded flex items-center gap-1">
+                                        Aguardando Vídeo
+                                      </span>
                                     )}
                                     <span>ID: {les.video_id ? les.video_id.substring(0, 8) : 'n/a'}...</span>
                                   </div>
                                 </div>
 
                                 {isLesIndicatorAfter && (
-                                  <div className="h-0.5 bg-orange-500 rounded-full animate-pulse transition-all duration-200" />
+                                  <div className="h-0.5 bg-red-600 rounded-full animate-pulse transition-all duration-200" />
                                 )}
                               </div>
                             );
@@ -1125,7 +1213,7 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                   </div>
                   
                   {isModuleIndicatorAfter && (
-                    <div className="h-1 bg-orange-500 rounded-full animate-pulse transition-all duration-250" />
+                    <div className="h-1 bg-red-600 rounded-full animate-pulse transition-all duration-250" />
                   )}
                 </div>
               );
@@ -1137,10 +1225,10 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
 
     {/* Barra de Ações em Lote */}
     {selectedCount > 0 && (
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-950/95 border border-orange-500/20 px-6 py-3.5 rounded-2xl shadow-2xl z-40 flex items-center gap-6 animate-in slide-in-from-bottom-6 fade-in duration-200 backdrop-blur-md">
-        <div className="flex items-center gap-2 border-r border-slate-900 pr-6 shrink-0">
-          <span className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></span>
-          <span className="text-xs font-bold text-white font-mono">
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-popover/95 border border-border px-6 py-3.5 rounded-2xl shadow-2xl z-40 flex items-center gap-6 animate-in slide-in-from-bottom-6 fade-in duration-200 backdrop-blur-md">
+        <div className="flex items-center gap-2 border-r border-border pr-6 shrink-0">
+          <span className="w-2 h-2 bg-red-600 rounded-full animate-pulse"></span>
+          <span className="text-xs font-bold text-foreground font-mono">
             {selectedCount} {selectedCount === 1 ? 'aula selecionada' : 'aulas selecionadas'}
           </span>
         </div>
@@ -1154,7 +1242,7 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                 e.stopPropagation();
                 setBulkMoveDropdownOpen(!bulkMoveDropdownOpen);
               }}
-              className="bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 font-bold border border-orange-500/20 gap-1.5 h-8.5 rounded-xl cursor-pointer text-[11px]"
+              className="bg-red-600/10 hover:bg-red-600/20 text-red-500 font-bold border border-red-600/20 gap-1.5 h-8.5 rounded-xl cursor-pointer text-[11px]"
             >
               <FolderInput className="w-3.5 h-3.5" />
               Mover para...
@@ -1162,10 +1250,10 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
 
             {bulkMoveDropdownOpen && (
               <div 
-                className="absolute bottom-full mb-2 right-0 w-56 bg-slate-950 border border-slate-900 rounded-xl shadow-2xl p-2 space-y-1 z-50 animate-in fade-in slide-in-from-bottom-1 duration-150"
+                className="absolute bottom-full mb-2 right-0 w-56 bg-popover border border-border rounded-xl shadow-2xl p-2 space-y-1 z-50 animate-in fade-in slide-in-from-bottom-1 duration-150"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="px-2 py-1.5 border-b border-slate-900 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left">
+                <div className="px-2 py-1.5 border-b border-border text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-left">
                   Selecionar Módulo Destino:
                 </div>
                 <div className="max-h-40 overflow-y-auto space-y-0.5">
@@ -1173,7 +1261,7 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                     <button
                       key={m.id}
                       onClick={() => moveSelectedLessonsToModule(m.id)}
-                      className="w-full text-left px-2 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:bg-orange-500/10 hover:text-orange-400 transition-colors truncate cursor-pointer"
+                      className="w-full text-left px-2 py-1.5 rounded-lg text-xs font-semibold text-foreground hover:bg-red-600/10 hover:text-red-500 transition-colors truncate cursor-pointer"
                     >
                       {m.title}
                     </button>
@@ -1196,7 +1284,7 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
           {/* Cancelar Seleção */}
           <button
             onClick={clearSelection}
-            className="text-xs font-bold text-slate-500 hover:text-slate-300 uppercase tracking-wider pl-2 transition-colors cursor-pointer"
+            className="text-xs font-bold text-muted-foreground hover:text-foreground uppercase tracking-wider pl-2 transition-colors cursor-pointer"
           >
             Desmarcar
           </button>
@@ -1207,12 +1295,12 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
     {/* Modal - Novo Módulo */}
       {showModuleModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-slate-950 border border-slate-900 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-slate-900 flex justify-between items-center">
-              <h3 className="text-lg font-bold text-slate-200">Novo Módulo</h3>
+          <div className="bg-card border border-border w-full max-w-md rounded-3xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-border flex justify-between items-center">
+              <h3 className="text-lg font-bold text-foreground">Novo Módulo</h3>
               <button 
                 onClick={() => setShowModuleModal(false)}
-                className="text-slate-500 hover:text-slate-300 text-sm font-semibold cursor-pointer"
+                className="text-muted-foreground hover:text-foreground text-sm font-semibold cursor-pointer"
               >
                 Fechar
               </button>
@@ -1220,14 +1308,14 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
 
             <form onSubmit={handleCreateModule} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-slate-400 mb-1.5">Nome do Módulo</label>
+                <label className="block text-sm font-semibold text-muted-foreground mb-1.5">Nome do Módulo</label>
                 <input 
                   type="text" 
                   required
                   value={moduleTitle}
                   onChange={(e) => setModuleTitle(e.target.value)}
                   placeholder="Ex: Passo Básico Universitário"
-                  className="w-full bg-[#0d0d14] border border-slate-900 rounded-xl px-4 py-3 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 text-sm"
+                  className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground placeholder-muted-foreground focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 text-sm"
                 />
               </div>
 
@@ -1236,14 +1324,14 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                   type="button" 
                   variant="outline" 
                   onClick={() => setShowModuleModal(false)}
-                  className="border-slate-800 hover:bg-slate-900 text-slate-400"
+                  className="border-border hover:bg-muted text-muted-foreground"
                 >
                   Cancelar
                 </Button>
                 <Button 
                   type="submit" 
                   disabled={moduleLoading}
-                  className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-bold px-6"
+                  className="bg-gradient-to-r from-red-600 to-red-600 hover:from-red-700 hover:to-red-700 text-white font-bold px-6"
                 >
                   {moduleLoading ? 'Criando...' : 'Criar Módulo'}
                 </Button>
@@ -1256,16 +1344,16 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
       {/* Modal - Nova Aula / Upload de Vídeo */}
       {showLessonModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-slate-950 border border-slate-900 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-slate-900 flex justify-between items-center">
-              <h3 className="text-lg font-bold text-slate-200 flex items-center gap-2">
-                <Film className="w-5 h-5 text-orange-500" />
+          <div className="bg-card border border-border w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-border flex justify-between items-center">
+              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                <Film className="w-5 h-5 text-red-600" />
                 Upload de Vídeoaula
               </h3>
               <button 
                 onClick={() => !uploading && setShowLessonModal(false)}
                 disabled={uploading}
-                className="text-slate-500 hover:text-slate-300 text-sm font-semibold disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
+                className="text-muted-foreground hover:text-foreground text-sm font-semibold disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
               >
                 Fechar
               </button>
@@ -1273,7 +1361,7 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
 
             <form onSubmit={handleCreateLesson} className="p-6 space-y-5">
               <div>
-                <label className="block text-sm font-semibold text-slate-400 mb-1.5">Título da Aula</label>
+                <label className="block text-sm font-semibold text-muted-foreground mb-1.5">Título da Aula</label>
                 <input 
                   type="text" 
                   required
@@ -1281,25 +1369,25 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                   value={lessonTitle}
                   onChange={(e) => setLessonTitle(e.target.value)}
                   placeholder="Ex: Aula 01 - Postura e Giro Simples"
-                  className="w-full bg-[#0d0d14] border border-slate-900 rounded-xl px-4 py-3 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 text-sm disabled:opacity-50"
+                  className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground placeholder-muted-foreground focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 text-sm disabled:opacity-50"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-400 mb-1.5">Descrição da Aula (Opcional)</label>
+                <label className="block text-sm font-semibold text-muted-foreground mb-1.5">Descrição da Aula (Opcional)</label>
                 <textarea 
                   disabled={uploading}
                   value={lessonDescription}
                   onChange={(e) => setLessonDescription(e.target.value)}
                   placeholder="Instruções sobre o que praticar..."
                   rows={2}
-                  className="w-full bg-[#0d0d14] border border-slate-900 rounded-xl px-4 py-3 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 text-sm resize-none disabled:opacity-50"
+                  className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground placeholder-muted-foreground focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 text-sm resize-none disabled:opacity-50"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-400 mb-1.5">Arquivo de Vídeo (.mp4, .mov, etc.)</label>
-                <div className="relative border border-dashed border-slate-900 rounded-xl p-6 bg-slate-950/40 text-center flex flex-col items-center justify-center gap-2">
+                <label className="block text-sm font-semibold text-muted-foreground mb-1.5">Arquivo de Vídeo (.mp4, .mov, etc.)</label>
+                <div className="relative border border-dashed border-border rounded-xl p-6 bg-muted/10 text-center flex flex-col items-center justify-center gap-2">
                   <input 
                     type="file" 
                     required
@@ -1308,12 +1396,12 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                     onChange={handleFileChange}
                     className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed"
                   />
-                  <FileVideo className="w-8 h-8 text-slate-500" />
-                  <span className="text-xs font-semibold text-slate-400">
+                  <FileVideo className="w-8 h-8 text-muted-foreground" />
+                  <span className="text-xs font-semibold text-muted-foreground">
                     {selectedFile ? selectedFile.name : 'Arraste ou clique para selecionar o vídeo'}
                   </span>
                   {selectedFile && (
-                    <span className="text-[10px] text-slate-500 font-semibold font-mono">
+                    <span className="text-[10px] text-muted-foreground font-semibold font-mono">
                       Size: {(selectedFile.size / 1024 / 1024).toFixed(1)} MB
                     </span>
                   )}
@@ -1322,17 +1410,17 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
 
               {/* Status de Progresso do Upload */}
               {uploading && (
-                <div className="space-y-2 p-4 rounded-2xl bg-orange-950/10 border border-orange-500/10">
-                  <div className="flex items-center justify-between text-xs font-semibold text-orange-400">
+                <div className="space-y-2 p-4 rounded-2xl bg-red-950/10 border border-red-600/10">
+                  <div className="flex items-center justify-between text-xs font-semibold text-red-500">
                     <span className="flex items-center gap-1.5 animate-pulse">
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-orange-500" />
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-red-600" />
                       {uploadStatus}
                     </span>
                     <span>{uploadProgress}%</span>
                   </div>
-                  <div className="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden">
+                  <div className="w-full h-1.5 bg-secondary rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-gradient-to-r from-orange-500 to-red-500 transition-all duration-300"
+                      className="h-full bg-gradient-to-r from-red-600 to-red-500 transition-all duration-300"
                       style={{ width: `${uploadProgress}%` }}
                     />
                   </div>
@@ -1359,14 +1447,14 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                   variant="outline" 
                   disabled={uploading}
                   onClick={() => setShowLessonModal(false)}
-                  className="border-slate-800 hover:bg-slate-900 text-slate-400 disabled:opacity-30"
+                  className="border-border hover:bg-muted text-muted-foreground disabled:opacity-30"
                 >
                   Cancelar
                 </Button>
                 <Button 
                   type="submit" 
                   disabled={uploading}
-                  className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-bold px-6"
+                  className="bg-gradient-to-r from-red-600 to-red-600 hover:from-red-700 hover:to-red-700 text-white font-bold px-6"
                 >
                   {uploading ? 'Fazendo Upload...' : 'Criar Aula & Upload'}
                 </Button>

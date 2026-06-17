@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Music, AlertCircle, Sparkles, LogIn } from 'lucide-react';
+import { AlertCircle, Sparkles, LogIn } from 'lucide-react';
 
 export function LoginForm() {
   const router = useRouter();
@@ -99,13 +100,15 @@ export function LoginForm() {
 
   return (
     <div className="bg-[#0b0b11]/90 backdrop-blur-md p-8 md:p-10 border border-slate-900 shadow-2xl rounded-3xl w-full max-w-md relative z-10">
-      <div className="flex flex-col items-center justify-center gap-3 text-center mb-8">
-        <div className="bg-gradient-to-tr from-orange-500 to-red-600 p-2.5 rounded-2xl text-white shadow-xl">
-          <Music className="w-7 h-7" />
-        </div>
-        <span className="font-black text-2xl tracking-tighter bg-gradient-to-r from-orange-400 via-red-500 to-pink-500 bg-clip-text text-transparent">
-          FORROFLIX
-        </span>
+      <div className="flex flex-col items-center justify-center gap-4 text-center mb-8">
+        <Image
+          src="/logo.svg"
+          alt="Forróflix"
+          width={180}
+          height={48}
+          priority
+          className="h-12 w-auto object-contain mb-1"
+        />
         <p className="text-slate-400 text-xs mt-1">
           {isSignUp ? 'Preencha os dados abaixo' : 'Faça login para acessar suas aulas'}
         </p>
@@ -125,7 +128,7 @@ export function LoginForm() {
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder="João Silva"
-              className="w-full bg-[#07070c] border border-slate-900 rounded-xl px-4 py-3 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 text-sm"
+              className="w-full bg-[#07070c] border border-slate-900 rounded-xl px-4 py-3 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 text-sm"
             />
           </div>
         )}
@@ -142,7 +145,7 @@ export function LoginForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="seuemail@exemplo.com"
-            className="w-full bg-[#07070c] border border-slate-900 rounded-xl px-4 py-3 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 text-sm"
+            className="w-full bg-[#07070c] border border-slate-900 rounded-xl px-4 py-3 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 text-sm"
           />
         </div>
 
@@ -158,12 +161,12 @@ export function LoginForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
-            className="w-full bg-[#07070c] border border-slate-900 rounded-xl px-4 py-3 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 text-sm"
+            className="w-full bg-[#07070c] border border-slate-900 rounded-xl px-4 py-3 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 text-sm"
           />
         </div>
 
         {message && (
-          <div className="p-3.5 rounded-xl bg-orange-950/20 border border-orange-500/20 flex gap-2.5 text-xs text-orange-400 items-start">
+          <div className="p-3.5 rounded-xl bg-red-950/20 border border-red-600/20 flex gap-2.5 text-xs text-red-500 items-start">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
             <span>{message}</span>
           </div>
@@ -173,7 +176,7 @@ export function LoginForm() {
           <Button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-bold py-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2"
+            className="w-full bg-gradient-to-r from-red-600 to-red-600 hover:from-red-700 hover:to-red-700 text-white font-bold py-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2"
           >
             <LogIn className="w-4 h-4" />
             {loading ? 'Processando...' : isSignUp ? 'Cadastrar' : 'Entrar'}
@@ -186,7 +189,7 @@ export function LoginForm() {
               variant="outline"
               className="w-full border-slate-800 hover:bg-slate-900 text-slate-400 font-semibold gap-2 py-3.5"
             >
-              <Sparkles className="w-4 h-4 text-orange-500" />
+              <Sparkles className="w-4 h-4 text-red-600" />
               Acessar como Convidado
             </Button>
           )}
@@ -202,7 +205,7 @@ export function LoginForm() {
             setIsSignUp(!isSignUp);
             setMessage(null);
           }}
-          className="text-orange-400 hover:underline font-bold"
+          className="text-red-500 hover:underline font-bold"
         >
           {isSignUp ? 'Fazer login' : 'Cadastre-se agora'}
         </button>

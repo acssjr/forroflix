@@ -325,9 +325,9 @@ export function LessonViewer({
   const countdownDisplay = Math.ceil(timeRemaining);
 
   return (
-    <div className="min-h-screen bg-[#07070a] text-slate-100 flex flex-col animate-page-enter">
+    <div className="min-h-screen bg-background text-foreground flex flex-col animate-page-enter">
       {/* Top Bar / Header */}
-      <header className="border-b border-slate-900 bg-[#07070a]/90 backdrop-blur sticky top-0 z-40">
+      <header className="border-b border-border bg-sidebar/90 backdrop-blur sticky top-0 z-40">
         <div className="px-4 md:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link 
@@ -336,28 +336,28 @@ export function LessonViewer({
                 e.preventDefault();
                 onBackToTrail();
               }}
-              className="flex items-center gap-2 group text-orange-400 hover:text-orange-300 transition-colors"
+              className="flex items-center gap-2 group text-red-500 hover:text-red-400 transition-colors"
             >
               <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
               <span className="text-sm font-semibold hidden md:inline">Voltar para o Curso</span>
             </Link>
-            <span className="text-slate-700">|</span>
+            <span className="text-border">|</span>
             <div className="flex items-center gap-2">
-              <span className="font-extrabold text-sm text-slate-300 line-clamp-1">
+              <span className="font-extrabold text-sm text-foreground line-clamp-1">
                 {courseTitle}
               </span>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-xs text-slate-500 font-mono hidden sm:inline">
+            <span className="text-xs text-muted-foreground font-mono hidden sm:inline">
               Aluno: {userEmail}
             </span>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="border-slate-800 hover:bg-slate-900 text-slate-300 gap-2"
+              className="border-border hover:bg-secondary text-foreground gap-2"
             >
               <Menu className="w-4 h-4" />
               <span className="hidden sm:inline">
@@ -411,23 +411,23 @@ export function LessonViewer({
 
               {/* Autoplay Next Lesson Overlay */}
               {isTimeForCountdown && nextLesson && (
-                <div className="absolute bottom-16 right-6 z-40 bg-[#0c0c12]/95 backdrop-blur border border-slate-800 rounded-2xl p-4 shadow-2xl max-w-xs animate-page-enter flex flex-col gap-3">
+                <div className="absolute bottom-16 right-6 z-40 bg-card/95 backdrop-blur border border-border rounded-2xl p-4 shadow-2xl max-w-xs animate-page-enter flex flex-col gap-3">
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-[9px] font-bold text-orange-400 uppercase tracking-widest">Próxima Aula em {countdownDisplay}s</span>
-                    <h5 className="text-xs font-extrabold text-white line-clamp-1">{nextLesson.title}</h5>
+                    <span className="text-[9px] font-bold text-red-500 uppercase tracking-widest">Próxima Aula em {countdownDisplay}s</span>
+                    <h5 className="text-xs font-extrabold text-foreground line-clamp-1">{nextLesson.title}</h5>
                   </div>
                   <div className="flex items-center gap-2">
                     <button 
                       onClick={() => {
                         handleSelectLesson(nextLesson);
                       }}
-                      className="bg-orange-500 hover:bg-orange-600 text-white font-bold text-[10px] py-1.5 px-3 rounded-xl flex items-center gap-1 cursor-pointer"
+                      className="bg-red-600 hover:bg-red-700 text-white font-bold text-[10px] py-1.5 px-3 rounded-xl flex items-center gap-1 cursor-pointer"
                     >
                       Assistir agora
                     </button>
                     <button 
                       onClick={handleReverAula}
-                      className="border border-slate-800 hover:bg-slate-900 text-slate-400 hover:text-white font-bold text-[10px] py-1.5 px-3 rounded-xl cursor-pointer"
+                      className="border border-border hover:bg-secondary text-muted-foreground hover:text-foreground font-bold text-[10px] py-1.5 px-3 rounded-xl cursor-pointer"
                     >
                       Rever Aula
                     </button>
@@ -437,9 +437,9 @@ export function LessonViewer({
             </div>
 
             {/* Lesson Info Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-900 pb-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
               <div className="space-y-1">
-                <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
+                <h1 className="text-2xl md:text-3xl font-black text-foreground tracking-tight">
                   {currentActiveLesson.title}
                 </h1>
               </div>
@@ -449,10 +449,10 @@ export function LessonViewer({
                   onClick={toggleActiveFavorite}
                   variant="outline"
                   title={isActiveFavorited ? 'Remover dos Favoritos' : 'Salvar para Revisar'}
-                  className={`rounded-xl font-bold py-5 px-4 transition-all border border-slate-800 hover:bg-slate-900 ${
+                  className={`rounded-xl font-bold py-5 px-4 transition-all border border-border hover:bg-secondary ${
                     isActiveFavorited
                       ? 'text-yellow-500 bg-yellow-500/5 border-yellow-500/20'
-                      : 'text-slate-400 border-slate-800'
+                      : 'text-muted-foreground border-border'
                   }`}
                 >
                   <Star className={`w-5 h-5 ${isActiveFavorited ? 'fill-yellow-500 text-yellow-500' : ''}`} />
@@ -466,7 +466,7 @@ export function LessonViewer({
                   className={`rounded-xl font-bold py-5 px-6 transition-all ${
                     isCompleted
                       ? 'bg-green-950/40 hover:bg-green-900/30 text-green-400 border border-green-500/20'
-                      : 'bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white'
+                      : 'bg-gradient-to-r from-red-600 to-red-600 hover:from-red-700 hover:to-red-700 text-white'
                   }`}
                 >
                   <CheckCircle2 className={`w-5 h-5 mr-2 ${isCompleted ? 'text-green-400' : ''}`} />
@@ -476,7 +476,7 @@ export function LessonViewer({
             </div>
 
             {/* Navigation Buttons (Prev/Next) */}
-            <div className="flex justify-between items-center bg-slate-950 p-4 rounded-2xl border border-slate-900">
+            <div className="flex justify-between items-center bg-card p-4 rounded-2xl border border-border">
               {prevLesson ? (
                 <Link 
                   href={`/courses/${courseSlug}/${prevLesson.id}`}
@@ -485,7 +485,7 @@ export function LessonViewer({
                     handleSelectLesson(prevLesson);
                   }}
                 >
-                  <Button variant="ghost" className="text-slate-300 hover:bg-slate-900 gap-2">
+                  <Button variant="ghost" className="text-foreground hover:bg-secondary gap-2">
                     <ChevronLeft className="w-5 h-5" />
                     <span className="hidden sm:inline">Aula Anterior</span>
                   </Button>
@@ -502,7 +502,7 @@ export function LessonViewer({
                     handleSelectLesson(nextLesson);
                   }}
                 >
-                  <Button className="bg-slate-900 hover:bg-slate-800 text-orange-400 gap-2 border border-orange-500/10">
+                  <Button className="bg-secondary hover:bg-secondary/80 text-primary gap-2 border border-border">
                     <span className="hidden sm:inline">Próxima Aula</span>
                     <ChevronRight className="w-5 h-5" />
                   </Button>
@@ -513,12 +513,12 @@ export function LessonViewer({
             </div>
 
             {/* Course Description */}
-            <div className="space-y-3 bg-slate-950/40 p-6 rounded-2xl border border-slate-900/50">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-orange-400" />
+            <div className="space-y-3 bg-card/40 p-6 rounded-2xl border border-border/50">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-red-500" />
                 Sobre este Curso
               </h3>
-              <p className="text-sm text-slate-400 leading-relaxed">
+              <p className="text-sm text-muted-foreground leading-relaxed">
                 {courseDescription || 'Este curso faz parte do catálogo premium do Forroflix. Aproveite as aulas para aprender na prática os passos e movimentações.'}
               </p>
             </div>
@@ -527,18 +527,18 @@ export function LessonViewer({
 
         {/* Right Side: Collapsible Sidebar Menu */}
         <aside
-          className={`shrink-0 border-l border-slate-900 bg-[#07070a]/90 backdrop-blur w-80 md:w-96 flex flex-col h-[calc(100vh-4rem)] overflow-y-auto absolute md:relative right-0 top-0 bottom-0 z-30 transition-transform duration-300 ${
+          className={`shrink-0 border-l border-border bg-sidebar/95 backdrop-blur w-80 md:w-96 flex flex-col h-[calc(100vh-4rem)] overflow-y-auto absolute md:relative right-0 top-0 bottom-0 z-30 transition-transform duration-300 ${
             sidebarOpen ? 'translate-x-0' : 'translate-x-full md:hidden'
           }`}
         >
-          <div className="p-4 border-b border-slate-900 flex justify-between items-center">
-            <h3 className="font-bold text-slate-200 flex items-center gap-2">
-              <Music className="w-4 h-4 text-orange-500 animate-pulse" />
+          <div className="p-4 border-b border-border flex justify-between items-center">
+            <h3 className="font-bold text-foreground flex items-center gap-2">
+              <Music className="w-4 h-4 text-red-600 animate-pulse" />
               Módulos e Aulas
             </h3>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="p-1 rounded hover:bg-slate-950 text-slate-500 md:hidden"
+              className="p-1 rounded hover:bg-secondary text-muted-foreground md:hidden"
             >
               <X className="w-5 h-5" />
             </button>
@@ -550,11 +550,11 @@ export function LessonViewer({
                 <AccordionItem
                   value={mod.id}
                   key={mod.id}
-                  className="border border-slate-900 rounded-xl overflow-hidden bg-slate-950/40"
+                  className="border border-border rounded-xl overflow-hidden bg-card/40"
                 >
-                  <AccordionTrigger className="hover:no-underline px-4 py-3 bg-slate-950/80 text-slate-300">
+                  <AccordionTrigger className="hover:no-underline px-4 py-3 bg-card/85 text-foreground">
                     <div className="flex items-center gap-2.5 text-left text-sm font-bold leading-tight">
-                      <span className="w-6 h-6 rounded-full bg-slate-900 border border-slate-800 text-slate-400 flex items-center justify-center text-xs font-mono shrink-0 select-none">
+                      <span className="w-6 h-6 rounded-full bg-secondary border border-border text-muted-foreground flex items-center justify-center text-xs font-mono shrink-0 select-none">
                         {modIdx + 1}
                       </span>
                       <span>{mod.title}</span>
@@ -576,14 +576,14 @@ export function LessonViewer({
                           style={{ textDecoration: 'none' }}
                           className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs transition-all duration-200 cursor-pointer !no-underline no-underline ${
                             isActive
-                              ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20 font-bold'
+                              ? 'bg-red-600/10 text-red-500 border border-red-600/20 font-bold'
                               : isLesCompleted
-                                ? 'bg-green-950/20 text-slate-300 hover:bg-green-950/30 border border-green-500/10 font-medium'
-                                : 'text-slate-400 hover:bg-slate-900/60 hover:text-slate-200 border border-transparent'
+                                ? 'bg-green-500/10 dark:bg-green-950/20 text-green-700 dark:text-green-300 hover:bg-green-500/20 dark:hover:bg-green-950/30 border border-green-500/20 font-medium'
+                                : 'text-muted-foreground hover:bg-secondary hover:text-foreground border border-transparent'
                           }`}
                         >
                           {/* Miniatura do vídeo à esquerda */}
-                          <div className="relative w-24 aspect-video rounded-lg overflow-hidden bg-slate-900 border border-slate-800 shrink-0">
+                          <div className="relative w-24 aspect-video rounded-lg overflow-hidden bg-secondary border border-border shrink-0">
                             {libraryId && les.video_id ? (
                               <img
                                 src={`https://vz-${libraryId}.b-cdn.net/${les.video_id}/thumbnail.jpg`}
@@ -595,10 +595,10 @@ export function LessonViewer({
                                 }}
                               />
                             ) : null}
-                            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-tr from-slate-950 to-slate-900 text-slate-700">
+                            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-tr from-card to-secondary text-muted-foreground">
                               <Play className="w-4 h-4 fill-current opacity-40" />
                             </div>
-                            <div className="absolute bottom-1 right-1 bg-black/85 px-1 rounded text-[9px] font-mono font-medium text-slate-300 z-20">
+                            <div className="absolute bottom-1 right-1 bg-black/85 px-1 rounded text-[9px] font-mono font-medium text-white z-20">
                               {formatDuration(les.duration_seconds)}
                             </div>
                           </div>
@@ -640,25 +640,25 @@ export function LessonViewer({
                                   setFolderModalOpen(true);
                                 }
                               }}
-                              className="p-1.5 hover:bg-slate-800/80 rounded-lg transition-colors shrink-0"
+                              className="p-1.5 hover:bg-secondary rounded-lg transition-colors shrink-0"
                               title={isLesFavorited ? 'Remover dos Favoritos' : 'Favoritar Aula'}
                             >
                               <Star className={`w-3.5 h-3.5 transition-transform hover:scale-110 ${
                                 isLesFavorited 
                                   ? 'text-yellow-500 fill-yellow-500' 
-                                  : 'text-slate-600 hover:text-slate-400'
+                                  : 'text-muted-foreground hover:text-foreground'
                               }`} />
                             </button>
 
                             {/* Checkbox redondo interativo */}
                             <button
                               onClick={(e) => toggleLessonProgress(e, les.id, isLesCompleted)}
-                              className="p-1 hover:bg-slate-800/80 rounded-lg transition-colors shrink-0"
+                              className="p-1 hover:bg-secondary rounded-lg transition-colors shrink-0"
                             >
                               {isLesCompleted ? (
                                 <CheckCircle2 className="w-5 h-5 text-green-500 fill-green-500/10 shrink-0 hover:scale-110 transition-transform" />
                               ) : (
-                                <div className="w-5 h-5 rounded-full border border-slate-700 hover:border-orange-500 transition-colors shrink-0" />
+                                <div className="w-5 h-5 rounded-full border border-border hover:border-primary transition-colors shrink-0" />
                               )}
                             </button>
                           </div>
@@ -701,7 +701,7 @@ export function LessonViewer({
               ? 'bg-red-500/10 border-red-500/20 text-red-400'
               : toast.type === 'info'
                 ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400'
-                : 'bg-slate-950/95 border-slate-900 text-slate-300'
+                : 'bg-card border-border text-foreground'
         }`}>
           <div className={`w-2 h-2 rounded-full animate-pulse ${
             toast.type === 'success'
@@ -710,7 +710,7 @@ export function LessonViewer({
                 ? 'bg-red-500'
                 : toast.type === 'info'
                   ? 'bg-yellow-500'
-                  : 'bg-slate-400'
+                  : 'bg-muted-foreground'
           }`} />
           <span>{toast.message}</span>
         </div>

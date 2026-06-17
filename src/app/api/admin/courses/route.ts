@@ -3,6 +3,80 @@ import { getDB } from '@/lib/db';
 import { verifyJWT } from '@/lib/auth';
 import { cookies } from 'next/headers';
 
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const courseId = searchParams.get('courseId');
+
+    if (!courseId) {
+      return NextResponse.json({ error: 'courseId é obrigatório' }, { status: 400 });
+    }
+
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get('session')?.value;
+    const sessionUser = sessionToken ? await verifyJWT(sessionToken) : null;
+
+    if (!sessionUser || sessionUser.role !== 'admin') {
+      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
+    }
+
+    const db = getDB();
+    const { results: dbCourses } = await db
+      .prepare('SELECT * FROM courses WHERE id = ?')
+      .bind(courseId)
+      .all<any>();
+
+    const dbCourse = dbCourses[0];
+    if (!dbCourse) {
+      return NextResponse.json({ error: 'Curso não encontrado' }, { status: 404 });
+    }
+
+    const { results: dbModules } = await db
+      .prepare('SELECT * FROM modules WHERE course_id = ? ORDER BY position ASC')
+      .bind(courseId)
+      .all<any>();
+
+    const modules: any[] = [];
+    if (dbModules) {
+      for (const mod of dbModules) {
+        const { results: dbLessons } = await db
+          .prepare('SELECT * FROM lessons WHERE module_id = ? ORDER BY position ASC')
+          .bind(mod.id)
+          .all<any>();
+
+        modules.push({
+          id: mod.id,
+          title: mod.title,
+          position: mod.position,
+          lessons: (dbLessons || []).map(l => ({
+            id: l.id,
+            title: l.title,
+            duration_seconds: l.duration_seconds || 0,
+            video_id: l.video_id || '',
+            position: l.position,
+            description: l.description || ''
+          }))
+        });
+      }
+    }
+
+    return NextResponse.json({
+      title: dbCourse.title,
+      slug: dbCourse.slug,
+      cover_vertical: dbCourse.cover_vertical || null,
+      cover_horizontal: dbCourse.cover_horizontal || null,
+      cover_vertical_position: dbCourse.cover_vertical_position || '50% 50%',
+      cover_horizontal_position: dbCourse.cover_horizontal_position || '50% 50%',
+      is_featured: dbCourse.is_featured || 0,
+      hide_title: dbCourse.hide_title || 0,
+      modules
+    });
+  } catch (error: any) {
+    console.error('Erro na rota admin courses GET:', error);
+    return NextResponse.json({ error: error.message || 'Erro interno no servidor' }, { status: 500 });
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -21,19 +95,28 @@ export async function POST(request: Request) {
 
     // 2. Inserir Curso
     if (type === 'course') {
-      const { title, description, slug, thumbnail_gradient } = body;
+      const { title, description, slug, thumbnail_gradient, cover_vertical, cover_horizontal, is_featured } = body;
 
       if (!title || !slug) {
         return NextResponse.json({ error: 'Título e slug são obrigatórios' }, { status: 400 });
       }
 
       const id = crypto.randomUUID();
-      const gradient = thumbnail_gradient || 'from-orange-500 to-red-600';
+      const gradient = thumbnail_gradient || 'from-red-600 to-red-600';
+      const featured = is_featured ? 1 : 0;
 
-      await db
-        .prepare('INSERT INTO courses (id, title, description, slug, thumbnail_gradient) VALUES (?, ?, ?, ?, ?)')
-        .bind(id, title, description || '', slug.toLowerCase().trim(), gradient)
-        .run();
+      const statements: any[] = [];
+      if (featured === 1) {
+        statements.push(db.prepare('UPDATE courses SET is_featured = 0'));
+      }
+
+      statements.push(
+        db
+          .prepare('INSERT INTO courses (id, title, description, slug, thumbnail_gradient, cover_vertical, cover_horizontal, is_featured) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+          .bind(id, title, description || '', slug.toLowerCase().trim(), gradient, cover_vertical || null, cover_horizontal || null, featured)
+      );
+
+      await db.batch(statements);
 
       return NextResponse.json({ success: true, id });
     }
@@ -184,6 +267,77 @@ export async function PATCH(request: Request) {
         .bind(...params)
         .run();
 
+      return NextResponse.json({ success: true });
+    }
+
+    // 5. Editar Metadados do Curso
+    if (type === 'course_metadata') {
+      const { 
+        title, description, slug, thumbnail_gradient, 
+        cover_vertical, cover_horizontal, 
+        cover_vertical_position, cover_horizontal_position, 
+        is_featured, hide_title 
+      } = body;
+
+      if (!id) {
+        return NextResponse.json({ error: 'ID do curso é obrigatório' }, { status: 400 });
+      }
+
+      const featured = is_featured ? 1 : 0;
+      const statements: any[] = [];
+
+      // Se for tornar destaque, zera todos os outros primeiro
+      if (featured === 1) {
+        statements.push(db.prepare('UPDATE courses SET is_featured = 0'));
+      }
+
+      statements.push(
+        db.prepare(`
+          UPDATE courses 
+          SET title = ?, description = ?, slug = ?, thumbnail_gradient = ?, 
+              cover_vertical = ?, cover_horizontal = ?, 
+              cover_vertical_position = ?, cover_horizontal_position = ?, 
+              is_featured = ?, hide_title = ?
+          WHERE id = ?
+        `).bind(
+          title?.trim(), 
+          description?.trim() || '', 
+          slug?.toLowerCase().trim(), 
+          thumbnail_gradient || 'from-red-600 to-red-600', 
+          cover_vertical?.trim() || null, 
+          cover_horizontal?.trim() || null, 
+          cover_vertical_position || '50% 50%',
+          cover_horizontal_position || '50% 50%',
+          featured, 
+          hide_title ? 1 : 0,
+          id
+        )
+      );
+
+      await db.batch(statements);
+      return NextResponse.json({ success: true });
+    }
+
+    // 6. Alternar Destaque (is_featured) de Curso
+    if (type === 'toggle_featured') {
+      const { is_featured } = body;
+      if (!id) {
+        return NextResponse.json({ error: 'ID do curso é obrigatório' }, { status: 400 });
+      }
+
+      const featured = is_featured ? 1 : 0;
+      const statements: any[] = [];
+
+      if (featured === 1) {
+        statements.push(db.prepare('UPDATE courses SET is_featured = 0'));
+      }
+
+      statements.push(
+        db.prepare('UPDATE courses SET is_featured = ? WHERE id = ?')
+          .bind(featured, id)
+      );
+
+      await db.batch(statements);
       return NextResponse.json({ success: true });
     }
 

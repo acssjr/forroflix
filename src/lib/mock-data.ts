@@ -28,7 +28,7 @@ export const MOCK_COURSES_DATA: Course[] = [
     title: 'Forró Universitário - Do Zero ao Passo Básico',
     description: 'Aprenda os passos fundamentais do Forró Universitário para começar a dançar do absoluto zero.',
     slug: 'forro-universitario-basico',
-    thumbnail_gradient: 'from-orange-500 to-red-600',
+    thumbnail_gradient: 'from-red-600 to-red-600',
     modules: [
       {
         id: 'mod-1',
