@@ -78,7 +78,7 @@ export function GlobalFavorites({ initialFavorites, libraryId }: GlobalFavorites
         {favorites.map((fav) => (
           <div 
             key={fav.id} 
-            className="bg-slate-950/40 border border-slate-900 rounded-2xl overflow-hidden hover:border-orange-500/20 transition-all duration-300 flex flex-col group relative"
+            className="bg-slate-950/40 border border-slate-900 rounded-2xl overflow-hidden hover:border-red-600/20 transition-all duration-300 flex flex-col group relative"
           >
             {/* Thumbnail Wrapper */}
             <Link 
@@ -98,7 +98,7 @@ export function GlobalFavorites({ initialFavorites, libraryId }: GlobalFavorites
                 />
               ) : null}
               <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-black/20 transition-colors">
-                <div className="bg-orange-500 text-white p-2.5 rounded-full scale-90 group-hover:scale-100 opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-lg shadow-orange-500/20">
+                <div className="bg-red-600 text-white p-2.5 rounded-full scale-90 group-hover:scale-100 opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-lg shadow-red-600/20">
                   <Play className="w-4 h-4 fill-current ml-0.5" />
                 </div>
               </div>
@@ -113,14 +113,14 @@ export function GlobalFavorites({ initialFavorites, libraryId }: GlobalFavorites
             <div className="p-4 flex-grow flex flex-col justify-between gap-3">
               <div className="space-y-1">
                 <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider line-clamp-1">
-                  <span className="text-orange-400/85">{fav.course_title}</span>
+                  <span className="text-red-500/85">{fav.course_title}</span>
                   <span>•</span>
                   <span>{fav.module_title}</span>
                 </div>
                 <Link 
                   href={`/courses/${fav.course_slug}/${fav.id}`}
                   style={{ textDecoration: 'none' }}
-                  className="text-sm font-extrabold text-slate-200 hover:text-orange-400 transition-colors line-clamp-2 leading-tight block !no-underline no-underline"
+                  className="text-sm font-extrabold text-slate-200 hover:text-red-500 transition-colors line-clamp-2 leading-tight block !no-underline no-underline"
                 >
                   {fav.title}
                 </Link>
@@ -160,7 +160,7 @@ export function GlobalFavorites({ initialFavorites, libraryId }: GlobalFavorites
                 <Link
                   href={`/courses/${fav.course_slug}/${fav.id}`}
                   style={{ textDecoration: 'none' }}
-                  className="text-[10px] font-bold text-orange-400 hover:text-orange-300 uppercase tracking-wider transition-colors !no-underline no-underline"
+                  className="text-[10px] font-bold text-red-500 hover:text-red-400 uppercase tracking-wider transition-colors !no-underline no-underline"
                 >
                   Assistir Aula
                 </Link>

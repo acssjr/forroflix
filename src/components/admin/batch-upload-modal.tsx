@@ -168,10 +168,16 @@ export function BatchUploadModal({
         currentMap.set(f.folderName, list);
       });
 
-      return Array.from(currentMap.entries()).map(([folderName, filesList]) => ({
-        folderName,
-        files: filesList
-      }));
+      return Array.from(currentMap.entries()).map(([folderName, filesList]) => {
+        // Ordenação natural/numérica para manter a ordem sequencial das aulas (ex: 1, 2, ..., 16)
+        const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+        const sortedFiles = [...filesList].sort((a, b) => collator.compare(a.title, b.title));
+        
+        return {
+          folderName,
+          files: sortedFiles
+        };
+      });
     });
   };
 
@@ -583,7 +589,7 @@ export function BatchUploadModal({
                 onUploadCompleted();
                 onClose();
               }}
-              className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-orange-500/10 text-sm uppercase tracking-wider transition-all duration-200"
+              className="w-full bg-gradient-to-r from-red-600 to-red-600 hover:from-red-700 hover:to-red-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-red-600/10 text-sm uppercase tracking-wider transition-all duration-200"
             >
               Concluir e Ver Grade
             </Button>
@@ -591,7 +597,7 @@ export function BatchUploadModal({
             {errorCount > 0 && (
               <button
                 onClick={() => setUploadDone(false)}
-                className="w-full text-xs font-bold text-orange-400 hover:text-orange-300 uppercase tracking-wider py-2 cursor-pointer transition-colors"
+                className="w-full text-xs font-bold text-red-500 hover:text-red-400 uppercase tracking-wider py-2 cursor-pointer transition-colors"
               >
                 Revisar Aulas com Erro
               </button>
@@ -611,7 +617,7 @@ export function BatchUploadModal({
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-slate-900">
           <div className="flex items-center gap-2">
-            <Film className="w-5 h-5 text-orange-500" />
+            <Film className="w-5 h-5 text-red-600" />
             <h3 className="font-extrabold text-white text-lg">
               {moduleId ? `Adicionar em Lote: ${moduleTitle}` : 'Upload Estruturado em Lote'}
             </h3>
@@ -626,10 +632,10 @@ export function BatchUploadModal({
         </div>
 
         {/* Info */}
-        <div className="bg-orange-500/5 border border-orange-500/10 p-3 rounded-2xl flex items-start gap-2.5 my-4">
-          <Info className="w-4 h-4 text-orange-400 shrink-0 mt-0.5" />
+        <div className="bg-red-600/5 border border-red-600/10 p-3 rounded-2xl flex items-start gap-2.5 my-4">
+          <Info className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
           <div className="space-y-0.5 text-left">
-            <span className="text-[10px] font-bold text-orange-400 uppercase tracking-wide block">
+            <span className="text-[10px] font-bold text-red-500 uppercase tracking-wide block">
               {moduleId ? 'Upload Local de Aulas' : 'Importação de Pastas'}
             </span>
             <p className="text-[11px] text-slate-400 leading-normal">
@@ -652,11 +658,11 @@ export function BatchUploadModal({
               data-testid="tus-upload-input-trigger"
               className={`flex-grow border-2 border-dashed rounded-2xl flex flex-col items-center justify-center p-8 text-center gap-3 transition-all cursor-pointer ${
                 isDragOver 
-                  ? 'border-orange-500 bg-orange-500/5' 
+                  ? 'border-red-600 bg-red-600/5' 
                   : 'border-slate-900 bg-slate-950/40 hover:border-slate-800'
               }`}
             >
-              <FileVideo className={`w-12 h-12 transition-colors ${isDragOver ? 'text-orange-500' : 'text-slate-700'}`} />
+              <FileVideo className={`w-12 h-12 transition-colors ${isDragOver ? 'text-red-600' : 'text-slate-700'}`} />
               <div className="space-y-1">
                 <span className="text-sm font-semibold text-slate-400 block">
                   {moduleId ? 'Arraste os vídeos aqui' : 'Arraste Pastas contendo vídeos aqui'}
@@ -687,7 +693,7 @@ export function BatchUploadModal({
                     {/* Header do Módulo sugerido */}
                     <div className="flex items-center justify-between border-b border-slate-900 pb-2">
                       <div className="flex items-center gap-2 text-slate-200">
-                        <FolderOpen className="w-4 h-4 text-orange-400" />
+                        <FolderOpen className="w-4 h-4 text-red-500" />
                         <span className="text-xs font-bold uppercase tracking-wider">Módulo: {mod.folderName}</span>
                       </div>
                       {!uploadingAll && !moduleId && (
@@ -718,7 +724,7 @@ export function BatchUploadModal({
                                   type="text"
                                   value={item.title}
                                   onChange={(e) => updateTitle(mod.folderName, item.id, e.target.value)}
-                                  className="bg-[#0c0c14] border border-slate-800 rounded-lg px-2.5 py-0.5 text-xs font-semibold text-slate-200 focus:outline-none focus:border-orange-500/50 w-full"
+                                  className="bg-[#0c0c14] border border-slate-800 rounded-lg px-2.5 py-0.5 text-xs font-semibold text-slate-200 focus:outline-none focus:border-red-600/50 w-full"
                                 />
                               ) : (
                                 <span className="text-xs font-bold text-slate-300 line-clamp-1 block px-1">
@@ -731,7 +737,7 @@ export function BatchUploadModal({
                               {item.status === 'uploading' && (
                                 <div className="w-full h-1 bg-slate-950 rounded-full overflow-hidden mt-1">
                                   <div 
-                                    className="h-full bg-gradient-to-r from-orange-500 to-red-500 transition-all duration-300"
+                                    className="h-full bg-gradient-to-r from-red-600 to-red-500 transition-all duration-300"
                                     style={{ width: `${item.progress}%` }}
                                   />
                                 </div>
@@ -755,14 +761,14 @@ export function BatchUploadModal({
                             )}
 
                             {item.status === 'preparing' && (
-                              <span className="text-[9px] text-orange-400/80 font-bold uppercase flex items-center gap-1.5 animate-pulse">
+                              <span className="text-[9px] text-red-500/80 font-bold uppercase flex items-center gap-1.5 animate-pulse">
                                 <Loader2 className="w-3 h-3 animate-spin animate-pulse" />
                                 Preparando
                               </span>
                             )}
 
                             {item.status === 'uploading' && (
-                              <span className="text-[9px] text-orange-400 font-extrabold uppercase flex items-center gap-1.5">
+                              <span className="text-[9px] text-red-500 font-extrabold uppercase flex items-center gap-1.5">
                                 <Loader2 className="w-3 h-3 animate-spin" />
                                 {item.progress}%
                               </span>
@@ -799,17 +805,17 @@ export function BatchUploadModal({
 
               {/* Status Global */}
               {uploadingAll && (
-                <div className="mt-4 p-4 rounded-2xl bg-orange-950/10 border border-orange-500/10 space-y-2">
-                  <div className="flex items-center justify-between text-xs font-semibold text-orange-400">
+                <div className="mt-4 p-4 rounded-2xl bg-red-950/10 border border-red-600/10 space-y-2">
+                  <div className="flex items-center justify-between text-xs font-semibold text-red-500">
                     <span className="flex items-center gap-1.5 animate-pulse">
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-orange-500" />
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-red-600" />
                       Enviando estrutura completa para Bunny CDN...
                     </span>
                     <span>{globalProgress}%</span>
                   </div>
                   <div className="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-gradient-to-r from-orange-500 to-red-500 transition-all duration-300"
+                      className="h-full bg-gradient-to-r from-red-600 to-red-500 transition-all duration-300"
                       style={{ width: `${globalProgress}%` }}
                     />
                   </div>
@@ -845,7 +851,7 @@ export function BatchUploadModal({
               <Button 
                 onClick={startBatchUpload}
                 disabled={uploadingAll || structure.every(m => m.files.every(f => f.status === 'completed'))}
-                className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-bold px-6 rounded-xl shadow-lg shadow-orange-500/10 disabled:opacity-50 cursor-pointer text-xs uppercase tracking-wider"
+                className="bg-gradient-to-r from-red-600 to-red-600 hover:from-red-700 hover:to-red-700 text-white font-bold px-6 rounded-xl shadow-lg shadow-red-600/10 disabled:opacity-50 cursor-pointer text-xs uppercase tracking-wider"
               >
                 {uploadingAll ? 'Processando Lote...' : 'Iniciar Importação Estruturada'}
               </Button>

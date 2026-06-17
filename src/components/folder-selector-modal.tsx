@@ -199,7 +199,7 @@ export function FolderSelectorModal({
         <div className="flex-grow overflow-y-auto max-h-60 space-y-2 pr-1 min-h-24">
           {loading ? (
             <div className="h-24 flex items-center justify-center text-slate-500 gap-2">
-              <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
+              <Loader2 className="w-5 h-5 animate-spin text-red-600" />
               <span>Carregando pastas...</span>
             </div>
           ) : (() => {
@@ -281,7 +281,7 @@ export function FolderSelectorModal({
                 onClick={() => setNewFolderIsGlobal(true)}
                 className={`py-2 px-3 rounded-xl border text-[10px] font-bold tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 ${
                   newFolderIsGlobal
-                    ? 'bg-orange-500/10 border-orange-500/30 text-orange-400'
+                    ? 'bg-red-600/10 border-red-600/30 text-red-500'
                     : 'bg-slate-900/20 border-slate-900 text-slate-400 hover:text-slate-200'
                 }`}
               >
@@ -293,7 +293,7 @@ export function FolderSelectorModal({
                 onClick={() => setNewFolderIsGlobal(false)}
                 className={`py-2 px-3 rounded-xl border text-[10px] font-bold tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 ${
                   !newFolderIsGlobal
-                    ? 'bg-orange-500/10 border-orange-500/30 text-orange-400'
+                    ? 'bg-red-600/10 border-red-600/30 text-red-500'
                     : 'bg-slate-900/20 border-slate-900 text-slate-400 hover:text-slate-200'
                 }`}
               >
@@ -309,14 +309,14 @@ export function FolderSelectorModal({
               placeholder="Criar nova pasta..."
               value={newFolderName}
               onChange={(e) => setNewFolderName(e.target.value)}
-              className="flex-grow bg-slate-900 border border-slate-800 rounded-2xl py-3 px-4 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-orange-500/50 transition-colors"
+              className="flex-grow bg-slate-900 border border-slate-800 rounded-2xl py-3 px-4 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-red-600/50 transition-colors"
               maxLength={30}
               required
             />
             <button
               type="submit"
               disabled={!newFolderName.trim() || actionLoading}
-              className="p-3 bg-orange-500 hover:bg-orange-600 disabled:opacity-40 disabled:hover:bg-orange-500 text-white rounded-2xl shadow-lg shadow-orange-500/10 transition-all shrink-0"
+              className="p-3 bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:hover:bg-red-600 text-white rounded-2xl shadow-lg shadow-red-600/10 transition-all shrink-0"
               title="Criar Pasta"
             >
               {actionLoading ? (

@@ -22,20 +22,12 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Usuário não autenticado' }, { status: 401 });
     }
 
-    // 2. Buscar o status de assinatura atualizado no D1
+    // 2. Verificar permissão usando o payload do JWT (evita query no banco no caminho crítico de latência)
     const db = getDB();
-    const { results } = await db
-      .prepare('SELECT role, subscription_active FROM users WHERE id = ?')
-      .bind(sessionUser.id)
-      .all<any>();
-
-    const user = results[0];
-
-    if (!user) {
-      return NextResponse.json({ error: 'Perfil não encontrado' }, { status: 404 });
-    }
-
-    const hasAccess = user.subscription_active === 1 || user.role === 'admin';
+    const hasAccess = sessionUser.subscription_active === true || 
+                      sessionUser.subscription_active === 1 || 
+                      sessionUser.role === 'admin';
+                      
     if (!hasAccess) {
       return NextResponse.json({ error: 'Assinatura inativa' }, { status: 403 });
     }
@@ -62,10 +54,10 @@ export async function GET(request: Request) {
     const tokenInput = tokenKey + videoId + expires;
     const token = crypto.createHash('sha256').update(tokenInput).digest('hex');
 
-    // URL segura de reprodução via Iframe
-    const playUrl = `https://iframe.mediadelivery.net/embed/${libraryId}/${videoId}?token=${token}&expires=${expires}`;
+    // URL segura de reprodução via Iframe (adicionado autoplay=true para início instantâneo)
+    const playUrl = `https://iframe.mediadelivery.net/embed/${libraryId}/${videoId}?token=${token}&expires=${expires}&autoplay=true`;
 
-    // 5. Sincronizar duração da aula no banco se estiver zerada
+    // 5. Sincronizar duração da aula no banco se estiver zerada (executado em segundo plano, não-bloqueante)
     let duration = 0;
     try {
       const lessonRes = await db
@@ -80,26 +72,29 @@ export async function GET(request: Request) {
         if (duration === 0) {
           const apiKey = process.env.BUNNY_STREAM_API_KEY;
           if (apiKey) {
-            const bunnyRes = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos/${videoId}`, {
+            // Chamada Bunny API e persistência rodando em segundo plano sem travar a resposta HTTP
+            fetch(`https://video.bunnycdn.com/library/${libraryId}/videos/${videoId}`, {
               headers: { 'AccessKey': apiKey, 'accept': 'application/json' }
-            });
-            if (bunnyRes.ok) {
-              const bunnyData = await bunnyRes.json() as any;
-              const length = bunnyData.length || 0;
-              if (length > 0) {
-                duration = length;
-                await db
-                  .prepare('UPDATE lessons SET duration_seconds = ? WHERE id = ?')
-                  .bind(length, lesson.id)
-                  .run();
-                console.log(`[BUNNY SYNC] Duração da aula ${lesson.id} sincronizada: ${length}s.`);
+            }).then(async (bunnyRes) => {
+              if (bunnyRes.ok) {
+                const bunnyData = await bunnyRes.json() as any;
+                const length = bunnyData.length || 0;
+                if (length > 0) {
+                  await db
+                    .prepare('UPDATE lessons SET duration_seconds = ? WHERE id = ?')
+                    .bind(length, lesson.id)
+                    .run();
+                  console.log(`[BUNNY SYNC BACKGROUND] Duração da aula ${lesson.id} sincronizada: ${length}s.`);
+                }
               }
-            }
+            }).catch((err) => {
+              console.warn('[BUNNY SYNC BACKGROUND] Erro:', err);
+            });
           }
         }
       }
     } catch (dbErr) {
-      console.warn('[BUNNY SYNC] Falha ao sincronizar duração:', dbErr);
+      console.warn('[BUNNY SYNC] Falha ao ler duração do banco:', dbErr);
     }
 
     return NextResponse.json({

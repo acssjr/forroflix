@@ -21,9 +21,12 @@
 - [x] Instalar o componente Checkbox oficial do Shadcn v4 (`npx shadcn add checkbox`) baseado na biblioteca `@base-ui/react`.
 - [x] Estilizar o checkbox com cores escuras/laranja neon e glows, adicionando suporte limpo a estado indeterminado (ícone `Minus`) e selecionado (ícone `Check`).
 - [x] Implementar o botão "Upload em Lote" global no cabeçalho da página para importação estruturada de pastas (criação automática de módulos e lições).
-- [x] Configurar o modal para modo local quando ativado em módulos específicos (permitindo seleção de múltiplos vídeos soltos e inserção direta no módulo alvo).
-- [x] Ajustar o backend da API `/api/admin/courses/batch-import` para tratar o `moduleId` existente e calcular corretamente a posição de inserção das lições.
-- [x] Habilitar seleção de aulas ao clicar em qualquer parte da área (card) da aula, fornecendo cursor `pointer` no hover (e impedindo a propagação de cliques nos botões de ação).
+- [x] Configurar o modal para modo local quando ativado em módulos específicos (permitindo seleção de múltiplos vídeos soltos
+- [x] Corrigir transição de tema claro/escuro no CSS
+  - [x] Ajustar seletores em `src/app/globals.css`
+  - [x] Remover transições globais de SVGs, círculos e elementos de formulário genéricos
+- [/] Integrar tela de configurações no Dashboard principal (`src/components/dashboard-client.tsx`)
+  - [/] Modificar links da barra lateral (desktop) para atualizar a aba ativar em qualquer parte da área (card) da aula, fornecendo cursor `pointer` no hover (e impedindo a propagação de cliques nos botões de ação).
 - [x] Remover a descrição descritiva automática `"Vídeoaula enviada via upload em lote."`, deixando a descrição em branco (`null`) por padrão.
 
 ## Melhorias de Usabilidade no Painel Admin

@@ -57,6 +57,49 @@ try {
   `);
   console.log('Tabela favorite_folder_lessons criada ou já existente.');
 
+  // 4. Adicionar novas colunas em courses se não existirem (para retrocompatibilidade)
+  try {
+    db.exec(`ALTER TABLE courses ADD COLUMN cover_vertical TEXT;`);
+    console.log('Coluna cover_vertical adicionada ao SQLite local.');
+  } catch (e) {
+    // A coluna já existe
+  }
+
+  try {
+    db.exec(`ALTER TABLE courses ADD COLUMN cover_horizontal TEXT;`);
+    console.log('Coluna cover_horizontal adicionada ao SQLite local.');
+  } catch (e) {
+    // A coluna já existe
+  }
+
+  try {
+    db.exec(`ALTER TABLE courses ADD COLUMN is_featured INTEGER DEFAULT 0;`);
+    console.log('Coluna is_featured adicionada ao SQLite local.');
+  } catch (e) {
+    // A coluna já existe
+  }
+
+  try {
+    db.exec(`ALTER TABLE courses ADD COLUMN cover_vertical_position TEXT DEFAULT '50% 50%';`);
+    console.log('Coluna cover_vertical_position adicionada ao SQLite local.');
+  } catch (e) {
+    // A coluna já existe
+  }
+
+  try {
+    db.exec(`ALTER TABLE courses ADD COLUMN cover_horizontal_position TEXT DEFAULT '50% 50%';`);
+    console.log('Coluna cover_horizontal_position adicionada ao SQLite local.');
+  } catch (e) {
+    // A coluna já existe
+  }
+
+  try {
+    db.exec(`ALTER TABLE courses ADD COLUMN hide_title INTEGER DEFAULT 0;`);
+    console.log('Coluna hide_title adicionada ao SQLite local.');
+  } catch (e) {
+    // A coluna já existe
+  }
+
   db.close();
   console.log('Migrações locais concluídas.');
 } catch (err) {

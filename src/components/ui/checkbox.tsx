@@ -12,11 +12,11 @@ function Checkbox({ className, checked, indeterminate, ...props }: CheckboxPrimi
       checked={checked}
       indeterminate={indeterminate}
       className={cn(
-        "peer relative flex size-4 shrink-0 items-center justify-center rounded-md border border-slate-800 bg-[#0c0c14] transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-orange-500/30 focus-visible:border-orange-500/50 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer",
+        "peer relative flex size-4 shrink-0 items-center justify-center rounded-md border border-slate-800 bg-[#0c0c14] transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-red-600/30 focus-visible:border-red-600/50 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer",
         // checked styles
-        "data-checked:border-orange-500 data-checked:bg-orange-500 data-checked:text-slate-950 data-checked:shadow-[0_0_8px_rgba(249,115,22,0.4)]",
+        "data-checked:border-red-600 data-checked:bg-red-600 data-checked:text-slate-950 data-checked:shadow-[0_0_8px_rgba(249,115,22,0.4)]",
         // indeterminate styles
-        "data-indeterminate:border-orange-500 data-indeterminate:bg-orange-500/10 data-indeterminate:text-orange-500 data-indeterminate:shadow-[0_0_8px_rgba(249,115,22,0.2)]",
+        "data-indeterminate:border-red-600 data-indeterminate:bg-red-600/10 data-indeterminate:text-red-600 data-indeterminate:shadow-[0_0_8px_rgba(249,115,22,0.2)]",
         className
       )}
       {...props}

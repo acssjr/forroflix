@@ -226,7 +226,7 @@ export function VideoPlayer({
     >
       {/* Hotmart-Style Hover Header Overlay */}
       <div className="absolute top-0 left-0 right-0 p-5 bg-gradient-to-b from-black/85 via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30 pointer-events-none flex flex-col gap-0.5 select-none">
-        <span className="text-[10px] font-bold text-orange-500 uppercase tracking-widest">{courseTitle}</span>
+        <span className="text-[10px] font-bold text-red-600 uppercase tracking-widest">{courseTitle}</span>
         <h4 className="text-sm font-extrabold text-white leading-tight drop-shadow-md">
           {moduleTitle ? `${moduleTitle} • ` : ''}{lessonTitle}
         </h4>
@@ -266,7 +266,7 @@ export function VideoPlayer({
             ref={iframeRef}
             id="bunny-stream-embed"
             src={playUrl}
-            loading="lazy"
+            loading="eager"
             className="w-full h-full border-none"
             allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
             allowFullScreen

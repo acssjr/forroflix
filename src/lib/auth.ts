@@ -2,7 +2,7 @@ import { SignJWT, jwtVerify } from 'jose';
 import bcrypt from 'bcryptjs';
 
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'chave-secreta-forroflix-2026-roots-orange-gradient'
+  process.env.JWT_SECRET || 'chave-secreta-forroflix-2026-roots-red-gradient'
 );
 
 // Gerar token JWT assinado (expira em 7 dias)
