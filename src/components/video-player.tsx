@@ -44,9 +44,10 @@ export function VideoPlayer({
   const playerJsRef = useRef<any>(null);
  
   const abortControllerRef = useRef<AbortController | null>(null);
+  const isMountedRef = useRef<boolean>(true);
 
   // 1. Função para carregar a URL assinada da API do Next.js
-  const fetchVideoToken = useCallback(async (isMounted: { current: boolean }) => {
+  const fetchVideoToken = useCallback(async () => {
     if (!videoId) return;
 
     if (abortControllerRef.current) {
@@ -59,7 +60,7 @@ export function VideoPlayer({
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/video-token?videoId=${videoId}`, {
+      const response = await fetch(`/api/video-token?videoId=${encodeURIComponent(videoId)}`, {
         signal: controller.signal,
       });
       const data = await response.json();
@@ -68,7 +69,7 @@ export function VideoPlayer({
         throw new Error(data.error || 'Erro ao carregar vídeo.');
       }
 
-      if (isMounted.current) {
+      if (isMountedRef.current) {
         setPlayUrl(data.playUrl);
         if (data.duration && onDurationLoaded) {
           onDurationLoaded(data.duration);
@@ -76,23 +77,23 @@ export function VideoPlayer({
       }
     } catch (err: any) {
       if (err.name === 'AbortError') return;
-      if (isMounted.current) {
+      if (isMountedRef.current) {
         console.error(err);
         setError(err.message || 'Falha ao autenticar o vídeo.');
       }
     } finally {
-      if (isMounted.current && abortControllerRef.current === controller) {
+      if (isMountedRef.current && abortControllerRef.current === controller) {
         setLoading(false);
       }
     }
   }, [videoId, onDurationLoaded]);
 
   useEffect(() => {
-    const isMounted = { current: true };
-    fetchVideoToken(isMounted);
+    isMountedRef.current = true;
+    fetchVideoToken();
 
     return () => {
-      isMounted.current = false;
+      isMountedRef.current = false;
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
@@ -197,7 +198,7 @@ export function VideoPlayer({
         </div>
         <Button 
           variant="outline" 
-          onClick={() => fetchVideoToken({ current: true })} 
+          onClick={() => fetchVideoToken()} 
           className="border-red-900/40 hover:bg-red-950/30 text-slate-300 gap-2"
         >
           <RotateCcw className="w-4 h-4" />

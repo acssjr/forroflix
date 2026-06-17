@@ -28,8 +28,9 @@ try {
   // 2. Criar índices adicionais
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_lessons_module_position ON lessons(module_id, position);
+    CREATE INDEX IF NOT EXISTS idx_modules_course_position ON modules(course_id, position);
   `);
-  console.log('Índice idx_lessons_module_position criado ou já existente no SQLite local.');
+  console.log('Índices idx_lessons_module_position e idx_modules_course_position criados ou já existentes no SQLite local.');
 
   // 3. Criar as tabelas extras de favoritos caso não existam no SQLite local
   db.exec(`

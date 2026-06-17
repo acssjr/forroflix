@@ -10,6 +10,11 @@ jobs:
   build-and-test:
     name: CI Pipeline (Lint, Unit, E2E)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      JWT_SECRET: 'forroflix-secret-key-2026-auth-token-129847'
+      USE_LOCAL_SQLITE: 'true'
     steps:
       - name: Checkout do Repositório
         uses: actions/checkout@v4
@@ -28,9 +33,6 @@ jobs:
 
       - name: Execução dos Testes Unitários e Integração (Vitest)
         run: npm run test
-        env:
-          JWT_SECRET: 'forroflix-secret-key-2026-auth-token-129847'
-          USE_LOCAL_SQLITE: "true"
 
       - name: Cache de Navegadores do Playwright
         uses: actions/cache@v4
@@ -49,24 +51,16 @@ jobs:
 
       - name: Compilar Aplicação Next.js
         run: npm run build
-        env:
-          JWT_SECRET: 'forroflix-secret-key-2026-auth-token-129847'
-          USE_LOCAL_SQLITE: "true"
 
       - name: Inicializar Servidor Next.js em Segundo Plano
         run: |
           npm run start &
           npx wait-on http://127.0.0.1:3000 --timeout 60000
-        env:
-          JWT_SECRET: 'forroflix-secret-key-2026-auth-token-129847'
-          USE_LOCAL_SQLITE: "true"
 
       - name: Executar Suíte E2E do Playwright
         run: npm run test:e2e
         env:
           NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
-          JWT_SECRET: 'forroflix-secret-key-2026-auth-token-129847'
-          USE_LOCAL_SQLITE: "true"
 
       - name: Salvaguarda de Relatórios de Falhas (Artifacts)
         uses: actions/upload-artifact@v4

@@ -12,18 +12,48 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // Test directories (linted separately by their own tooling)
-    "tests/**",
-    "e2e/**",
   ]),
+  // 1. Regras globais (estritas)
   {
     rules: {
-      // D1 interface + REST API adapter use 'any' by design
-      "@typescript-eslint/no-explicit-any": "off",
-      "@typescript-eslint/no-require-imports": "off",
-      "react-hooks/set-state-in-effect": "off",
-    },
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-require-imports": "error",
+    }
   },
+  // 2. Overrides para banco de dados, APIs e testes que precisam de 'any' dinâmico por design
+  {
+    files: [
+      "src/lib/db.ts",
+      "src/app/api/**/*.ts",
+      "tests/**/*.ts",
+      "e2e/**/*.ts"
+    ],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off"
+    }
+  },
+  // 3. Overrides para scripts e configurações que usam require()
+  {
+    files: [
+      "scripts/**/*.js",
+      "eslint.config.mjs",
+      "playwright.config.ts",
+      "src/lib/db.ts"
+    ],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off"
+    }
+  },
+  // 4. Overrides para componentes específicos onde o sincronismo prop-to-state em useEffect é tolerado
+  {
+    files: [
+      "src/components/**/*.tsx",
+      "src/app/**/*.tsx"
+    ],
+    rules: {
+      "react-hooks/set-state-in-effect": "off"
+    }
+  }
 ]);
 
 export default eslintConfig;

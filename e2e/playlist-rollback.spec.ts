@@ -33,36 +33,40 @@ test.describe('Resiliência de Rede e UI Rollback', () => {
     const db = new Database(dbPath);
     db.pragma('journal_mode = WAL');
     
-    // Garantir que as tabelas existam
-    const schemaPath = path.resolve(process.cwd(), 'db/schema.sql');
-    if (fs.existsSync(schemaPath)) {
-      const schemaSql = fs.readFileSync(schemaPath, 'utf8');
-      db.exec(schemaSql);
+    try {
+      // Garantir que as tabelas existam
+      const schemaPath = path.resolve(process.cwd(), 'db/schema.sql');
+      if (fs.existsSync(schemaPath)) {
+        const schemaSql = fs.readFileSync(schemaPath, 'utf8');
+        db.exec(schemaSql);
+      }
+      
+      // Inserir curso e módulo
+      db.prepare('DELETE FROM courses WHERE id = ?').run('course-test-e2e');
+      db.prepare(`
+        INSERT INTO courses (id, title, description, slug)
+        VALUES (?, ?, ?, ?)
+      `).run('course-test-e2e', 'Curso Teste E2E', 'Curso para testes automatizados.', 'curso-teste-e2e');
+
+      db.prepare('DELETE FROM modules WHERE id = ?').run('mod-test-1');
+      db.prepare(`
+        INSERT INTO modules (id, course_id, title, position)
+        VALUES (?, ?, ?, ?)
+      `).run('mod-test-1', 'course-test-e2e', 'Módulo 1', 1);
+
+      db.prepare('DELETE FROM lessons WHERE id IN (?, ?)').run('les-test-1', 'les-test-2');
+      db.prepare(`
+        INSERT INTO lessons (id, module_id, title, position)
+        VALUES (?, ?, ?, ?)
+      `).run('les-test-1', 'mod-test-1', 'Aula 1', 1);
+
+      db.prepare(`
+        INSERT INTO lessons (id, module_id, title, position)
+        VALUES (?, ?, ?, ?)
+      `).run('les-test-2', 'mod-test-1', 'Aula 2', 2);
+    } finally {
+      db.close();
     }
-    
-    // Inserir curso e módulo
-    db.prepare('DELETE FROM courses WHERE id = ?').run('course-test-e2e');
-    db.prepare(`
-      INSERT INTO courses (id, title, description, slug)
-      VALUES (?, ?, ?, ?)
-    `).run('course-test-e2e', 'Curso Teste E2E', 'Curso para testes automatizados.', 'curso-teste-e2e');
-
-    db.prepare('DELETE FROM modules WHERE id = ?').run('mod-test-1');
-    db.prepare(`
-      INSERT INTO modules (id, course_id, title, position)
-      VALUES (?, ?, ?, ?)
-    `).run('mod-test-1', 'course-test-e2e', 'Módulo 1', 1);
-
-    db.prepare('DELETE FROM lessons WHERE id IN (?, ?)').run('les-test-1', 'les-test-2');
-    db.prepare(`
-      INSERT INTO lessons (id, module_id, title, position)
-      VALUES (?, ?, ?, ?)
-    `).run('les-test-1', 'mod-test-1', 'Aula 1', 1);
-
-    db.prepare(`
-      INSERT INTO lessons (id, module_id, title, position)
-      VALUES (?, ?, ?, ?)
-    `).run('les-test-2', 'mod-test-1', 'Aula 2', 2);
   });
 
   test.beforeEach(async ({ context }) => {
@@ -130,15 +134,19 @@ test.describe('Resiliência de Rede e UI Rollback', () => {
       const firstTempId = files[0]?.tempId || 'mock-temp-file-id';
       const responseBody = {
         success: true,
+        libraryId: 'mock-library-id',
         uploads: [
           {
             tempId: firstTempId,
             videoId: 'mock-video-guid-998877',
             lessonId: 'mock-lesson-guid-998877',
             signature: 'mock-signature-sha256',
-            expirationTime: Math.floor(Date.now() / 1000) + 3600
+            expirationTime: Math.floor(Date.now() / 1000) + 3600,
+            title: files[0]?.title || 'Mock Title',
+            folderName: payload?.structure?.[0]?.folderName || 'Mock Folder'
           }
-        ]
+        ],
+        errors: []
       };
       await route.fulfill({
         status: 200,
