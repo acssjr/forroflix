@@ -10,27 +10,31 @@ test.describe('Autenticação Forroflix E2E', () => {
     const dbPath = path.resolve(process.cwd(), 'db/local.db');
     const db = new Database(dbPath);
     
-    const schemaPath = path.resolve(process.cwd(), 'db/schema.sql');
-    if (fs.existsSync(schemaPath)) {
-      const schemaSql = fs.readFileSync(schemaPath, 'utf8');
-      db.exec(schemaSql);
+    try {
+      const schemaPath = path.resolve(process.cwd(), 'db/schema.sql');
+      if (fs.existsSync(schemaPath)) {
+        const schemaSql = fs.readFileSync(schemaPath, 'utf8');
+        db.exec(schemaSql);
+      }
+      
+      const passwordHash = bcrypt.hashSync('senha123forro', 10);
+      
+      db.prepare('DELETE FROM users WHERE email = ?').run('aluno@forroflix.com.br');
+      db.prepare('DELETE FROM users WHERE email = ?').run('admin@forroflix.com');
+
+      db.prepare(`
+        INSERT INTO users (id, email, password_hash, full_name, role, subscription_active)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run('user-student-test', 'aluno@forroflix.com.br', passwordHash, 'Aluno Teste', 'student', 1);
+
+      const adminHash = bcrypt.hashSync('admin123', 10);
+      db.prepare(`
+        INSERT INTO users (id, email, password_hash, full_name, role, subscription_active)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run('user-admin-test', 'admin@forroflix.com', adminHash, 'Admin Teste', 'admin', 1);
+    } finally {
+      db.close();
     }
-    
-    const passwordHash = bcrypt.hashSync('senha123forro', 10);
-    
-    db.prepare('DELETE FROM users WHERE email = ?').run('aluno@forroflix.com.br');
-    db.prepare('DELETE FROM users WHERE email = ?').run('admin@forroflix.com');
-
-    db.prepare(`
-      INSERT INTO users (id, email, password_hash, full_name, role, subscription_active)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run('user-student-test', 'aluno@forroflix.com.br', passwordHash, 'Aluno Teste', 'student', 1);
-
-    const adminHash = bcrypt.hashSync('admin123', 10);
-    db.prepare(`
-      INSERT INTO users (id, email, password_hash, full_name, role, subscription_active)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run('user-admin-test', 'admin@forroflix.com', adminHash, 'Admin Teste', 'admin', 1);
   });
 
   test('Deve exibir a tela de login para usuário não autenticado', async ({ page }) => {

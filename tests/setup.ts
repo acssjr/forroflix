@@ -11,7 +11,7 @@ vi.mock('@/lib/db', () => ({
 }));
 
 beforeAll(() => {
-  process.env.NODE_ENV = 'test';
+  (process.env as any).NODE_ENV = 'test';
   process.env.JWT_SECRET = 'forroflix-secret-key-2026-auth-token-129847';
 });
 

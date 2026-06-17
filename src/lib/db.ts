@@ -128,7 +128,7 @@ export function getDB(): D1Database {
         const path = require('path');
         const dbPath = path.resolve(process.cwd(), 'db/local.db');
         const sqliteDb = new Database(dbPath);
-        
+        sqliteDb.pragma('journal_mode = WAL');
         localDbInstance = {
           prepare(sql: string) {
             const stmt = sqliteDb.prepare(sql);
@@ -200,7 +200,7 @@ export function getDB(): D1Database {
   );
   
   return {
-    prepare(query: string) {
+    prepare(_query: string) {
       return {
         bind() { return this; },
         async first() { return null; },
