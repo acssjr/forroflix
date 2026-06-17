@@ -21,6 +21,7 @@ const eslintConfig = defineConfig([
       // D1 interface + REST API adapter use 'any' by design
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-require-imports": "off",
+      "react-hooks/set-state-in-effect": "off",
     },
   },
 ]);

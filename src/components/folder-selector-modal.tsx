@@ -34,6 +34,21 @@ export function FolderSelectorModal({
   const [actionLoading, setActionLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'warning' } | null>(null);
 
+  const fetchFolders = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/favorites?lessonId=${lessonId}&courseId=${courseId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setFolders(data.folders || []);
+      }
+    } catch (err) {
+      console.error('Erro ao buscar pastas:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (isOpen && lessonId) {
       fetchFolders();
@@ -52,21 +67,6 @@ export function FolderSelectorModal({
 
   const showFeedback = (msg: string, type: 'success' | 'warning' = 'success') => {
     setFeedback({ message: msg, type });
-  };
-
-  const fetchFolders = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/favorites?lessonId=${lessonId}&courseId=${courseId}`);
-      if (res.ok) {
-        const data = await res.json();
-        setFolders(data.folders || []);
-      }
-    } catch (err) {
-      console.error('Erro ao buscar pastas:', err);
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleToggleFolder = async (folder: FolderItem) => {

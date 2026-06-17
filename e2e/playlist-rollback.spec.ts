@@ -118,21 +118,26 @@ test.describe('Resiliência de Rede e UI Rollback', () => {
 
     // Interceptar a rota de batch-import para retornar dados simulados sem chamar a Bunny CDN real
     await page.route('**/api/admin/courses/batch-import', async (route) => {
+      const request = route.request();
+      const payload = request.postDataJSON();
+      const files = payload?.structure?.[0]?.files || [];
+      const firstTempId = files[0]?.tempId || 'mock-temp-file-id';
+      const responseBody = {
+        success: true,
+        uploads: [
+          {
+            tempId: firstTempId,
+            videoId: 'mock-video-guid-998877',
+            lessonId: 'mock-lesson-guid-998877',
+            signature: 'mock-signature-sha256',
+            expirationTime: Math.floor(Date.now() / 1000) + 3600
+          }
+        ]
+      };
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          uploads: [
-            {
-              tempId: 'mock-temp-file-id',
-              videoId: 'mock-video-guid-998877',
-              lessonId: 'mock-lesson-guid-998877',
-              authSignature: 'mock-signature-sha256',
-              authExpire: Math.floor(Date.now() / 1000) + 3600
-            }
-          ]
-        })
+        body: JSON.stringify(responseBody)
       });
     });
 
@@ -154,11 +159,22 @@ test.describe('Resiliência de Rede e UI Rollback', () => {
     });
 
     // Interceptar o endpoint oficial de upload da Bunny Stream para simular resiliência
-    await page.route('**/tusupload*', async (route) => {
+    await page.route(/\/tusupload/, async (route) => {
       const request = route.request();
       const method = request.method();
 
-      if (method === 'POST') {
+      if (method === 'OPTIONS') {
+        await route.fulfill({
+          status: 204,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, PATCH, HEAD, OPTIONS',
+            'Access-Control-Allow-Headers': 'Tus-Resumable, Upload-Length, Upload-Metadata, AuthorizationSignature, AuthorizationExpire, LibraryId, VideoId, Content-Type, Upload-Offset',
+            'Access-Control-Expose-Headers': 'Location, Upload-Offset, Tus-Resumable',
+            'Tus-Resumable': '1.0.0'
+          }
+        });
+      } else if (method === 'POST') {
         await route.fulfill({
           status: 201,
           headers: {
@@ -181,7 +197,8 @@ test.describe('Resiliência de Rede e UI Rollback', () => {
         } else {
           // Sucesso
           const offsetHeader = request.headers()['upload-offset'] || '0';
-          const nextOffset = parseInt(offsetHeader, 10) + (10 * 1024 * 1024);
+          const fileLength = 20971520; // 20MB
+          const nextOffset = Math.min(parseInt(offsetHeader, 10) + (10 * 1024 * 1024), fileLength);
 
           await route.fulfill({
             status: 204,
@@ -202,7 +219,8 @@ test.describe('Resiliência de Rede e UI Rollback', () => {
             'Upload-Offset': '5242880',
             'Upload-Length': '20971520',
             'Tus-Resumable': '1.0.0',
-            'Access-Control-Allow-Origin': '*'
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Expose-Headers': 'Upload-Offset, Upload-Length, Tus-Resumable'
           }
         });
       } else {

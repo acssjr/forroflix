@@ -21,6 +21,14 @@ export default async function CoursePage({ params }: PageProps) {
     redirect('/login');
   }
  
+  let dbCourse: any = null;
+  let modulesWithLessons: any[] = [];
+  let completedLessonIds: string[] = [];
+  let favoriteLessonIds: string[] = [];
+  let isSubscribed = false;
+  let pullZone = '';
+  let loadFromDbSuccess = false;
+
   try {
     const db = getDB();
     
@@ -31,9 +39,9 @@ export default async function CoursePage({ params }: PageProps) {
     ]);
 
     const userProfile = usersRes.results[0];
-    const isSubscribed = userProfile ? (userProfile.subscription_active === 1 || userProfile.role === 'admin') : false;
+    isSubscribed = userProfile ? (userProfile.subscription_active === 1 || userProfile.role === 'admin') : false;
 
-    const dbCourse = coursesRes.results[0];
+    dbCourse = coursesRes.results[0];
  
     if (dbCourse) {
       // 2. Buscar módulos, aulas, progresso de conclusão e favoritos do aluno em paralelo
@@ -52,11 +60,11 @@ export default async function CoursePage({ params }: PageProps) {
 
       const dbModules = modulesRes.results || [];
       const lessonsList = lessonsRes.results || [];
-      const completedLessonIds = progressRes.results ? progressRes.results.map((p) => p.lesson_id) : [];
-      const favoriteLessonIds = favoritesRes.results ? favoritesRes.results.map((f) => f.lesson_id) : [];
+      completedLessonIds = progressRes.results ? progressRes.results.map((p) => p.lesson_id) : [];
+      favoriteLessonIds = favoritesRes.results ? favoritesRes.results.map((f) => f.lesson_id) : [];
 
       // Agrupar aulas nos módulos correspondentes
-      const modulesWithLessons = dbModules.map(mod => ({
+      modulesWithLessons = dbModules.map(mod => ({
         id: mod.id,
         title: mod.title,
         position: mod.position,
@@ -64,30 +72,33 @@ export default async function CoursePage({ params }: PageProps) {
       }));
  
       const rawPullZone = process.env.BUNNY_STREAM_PULL_ZONE || process.env.BUNNY_STREAM_LIBRARY_ID || '';
-      const pullZone = rawPullZone.startsWith('vz-') ? rawPullZone.substring(3) : rawPullZone;
-
-      return (
-        <CourseViewer
-          course={{
-            id: dbCourse.id,
-            title: dbCourse.title,
-            description: dbCourse.description || '',
-            slug: dbCourse.slug,
-            thumbnail_gradient: dbCourse.thumbnail_gradient,
-          }}
-          modules={modulesWithLessons}
-          completedLessonIds={completedLessonIds}
-          favoriteLessonIds={favoriteLessonIds}
-          initialLessonId={null}
-          userEmail={sessionUser.email || ''}
-          isAdmin={sessionUser.role === 'admin'}
-          isSubscribed={isSubscribed}
-          libraryId={pullZone}
-        />
-      );
+      pullZone = rawPullZone.startsWith('vz-') ? rawPullZone.substring(3) : rawPullZone;
+      loadFromDbSuccess = true;
     }
   } catch (err) {
     console.warn('[D1] Erro ao carregar trilha na D1, tentando fallback dos mocks.', err);
+  }
+
+  if (loadFromDbSuccess && dbCourse) {
+    return (
+      <CourseViewer
+        course={{
+          id: dbCourse.id,
+          title: dbCourse.title,
+          description: dbCourse.description || '',
+          slug: dbCourse.slug,
+          thumbnail_gradient: dbCourse.thumbnail_gradient,
+        }}
+        modules={modulesWithLessons}
+        completedLessonIds={completedLessonIds}
+        favoriteLessonIds={favoriteLessonIds}
+        initialLessonId={null}
+        userEmail={sessionUser.email || ''}
+        isAdmin={sessionUser.role === 'admin'}
+        isSubscribed={isSubscribed}
+        libraryId={pullZone}
+      />
+    );
   }
  
   // 7. Fallback para os dados simulados

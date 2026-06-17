@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { MediaPlayer, MediaProvider, Poster } from '@vidstack/react';
 import { defaultLayoutIcons, DefaultVideoLayout } from '@vidstack/react/player/layouts/default';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -43,51 +43,61 @@ export function VideoPlayer({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const playerJsRef = useRef<any>(null);
  
-  // 1. Efeito para carregar a URL assinada da API do Next.js
-  useEffect(() => {
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // 1. Função para carregar a URL assinada da API do Next.js
+  const fetchVideoToken = useCallback(async (isMounted: { current: boolean }) => {
     if (!videoId) return;
 
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
     const controller = new AbortController();
-    let cancelled = false;
+    abortControllerRef.current = controller;
 
-    const loadToken = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await fetch(`/api/video-token?videoId=${videoId}`, {
-          signal: controller.signal,
-        });
-        const data = await response.json();
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/video-token?videoId=${videoId}`, {
+        signal: controller.signal,
+      });
+      const data = await response.json();
 
-        if (!response.ok) {
-          throw new Error(data.error || 'Erro ao carregar vídeo.');
-        }
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao carregar vídeo.');
+      }
 
-        if (!cancelled) {
-          setPlayUrl(data.playUrl);
-          if (data.duration && onDurationLoaded) {
-            onDurationLoaded(data.duration);
-          }
-        }
-      } catch (err: any) {
-        if (!cancelled) {
-          console.error(err);
-          setError(err.message || 'Falha ao autenticar o vídeo.');
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
+      if (isMounted.current) {
+        setPlayUrl(data.playUrl);
+        if (data.duration && onDurationLoaded) {
+          onDurationLoaded(data.duration);
         }
       }
-    };
+    } catch (err: any) {
+      if (err.name === 'AbortError') return;
+      if (isMounted.current) {
+        console.error(err);
+        setError(err.message || 'Falha ao autenticar o vídeo.');
+      }
+    } finally {
+      if (isMounted.current && abortControllerRef.current === controller) {
+        setLoading(false);
+      }
+    }
+  }, [videoId, onDurationLoaded]);
 
-    loadToken();
+  useEffect(() => {
+    const isMounted = { current: true };
+    fetchVideoToken(isMounted);
 
     return () => {
-      cancelled = true;
-      controller.abort();
+      isMounted.current = false;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
     };
-  }, [videoId, onDurationLoaded]);
+  }, [fetchVideoToken]);
 
   // Carregar player.js da Bunny CDN para iframes e ouvir eventos
   useEffect(() => {
@@ -187,7 +197,7 @@ export function VideoPlayer({
         </div>
         <Button 
           variant="outline" 
-          onClick={fetchVideoToken} 
+          onClick={() => fetchVideoToken({ current: true })} 
           className="border-red-900/40 hover:bg-red-950/30 text-slate-300 gap-2"
         >
           <RotateCcw className="w-4 h-4" />
