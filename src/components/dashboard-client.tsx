@@ -517,24 +517,23 @@ export function DashboardClient({
                               className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.015]" 
                               style={{ objectPosition: featuredCourse.cover_horizontal_position || '50% 50%' }}
                             />
-                            {/* Gradiente escuro para contraste e legibilidade das letras */}
-                            <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-black/90 via-black/60 to-transparent z-10" />
-                            
-                            {/* Textos com contraste aumentado em branco */}
-                            <div className="relative z-20 p-6 md:p-8 max-w-md md:max-w-lg text-left space-y-4 text-white flex flex-col justify-end min-h-[260px] md:min-h-0 md:h-full w-full">
-                              {!featuredCourse.hide_title && (
-                                <div className="space-y-2">
-                                  <h3 className="text-2xl md:text-3xl font-black tracking-tight leading-tight text-white drop-shadow-md">
-                                    {featuredCourse.title}
-                                  </h3>
-                                  <p className="text-xs md:text-sm text-white/80 line-clamp-2 leading-relaxed drop-shadow-sm">
-                                    {featuredCourse.description || 'Aulas exclusivas do Forroflix.'}
-                                  </p>
+                            {/* Conteúdo flutuante em Glassmorphism */}
+                            <div className="relative z-20 p-6 md:p-8 text-left text-white flex flex-col justify-center h-full w-full md:max-w-xl">
+                              <div className="bg-[#07070a]/55 backdrop-blur-md border border-white/10 p-5 md:p-6 rounded-2xl md:rounded-3xl space-y-4 max-w-[90%] md:max-w-[420px] shadow-2xl relative">
+                                {!featuredCourse.hide_title && (
+                                  <div className="space-y-1.5">
+                                    <h3 className="text-xl md:text-2xl font-black tracking-tight leading-tight text-white drop-shadow-md">
+                                      {featuredCourse.title}
+                                    </h3>
+                                    <p className="text-[10px] md:text-xs text-white/75 line-clamp-2 leading-relaxed">
+                                      {featuredCourse.description || 'Aulas exclusivas do Forroflix.'}
+                                    </p>
+                                  </div>
+                                )}
+                                <div className="bg-primary group-hover:bg-primary/95 text-white font-bold text-[10px] md:text-xs flex items-center justify-center gap-2 px-4 py-2 rounded-xl shadow-lg shadow-primary/20 transition-all w-fit duration-200">
+                                  <Play className="w-3.5 h-3.5 fill-current" />
+                                  ACESSAR
                                 </div>
-                              )}
-                              <div className="bg-primary group-hover:bg-primary/95 text-white font-bold text-xs flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl shadow-lg shadow-primary/20 transition-all w-fit duration-200">
-                                <Play className="w-3.5 h-3.5 fill-current" />
-                                ACESSAR
                               </div>
                             </div>
                           </>
