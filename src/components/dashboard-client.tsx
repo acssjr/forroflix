@@ -517,24 +517,23 @@ export function DashboardClient({
                               className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.015]" 
                               style={{ objectPosition: featuredCourse.cover_horizontal_position || '50% 50%' }}
                             />
-                            {/* Gradiente escuro para contraste e legibilidade das letras */}
-                            <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-black/90 via-black/60 to-transparent z-10" />
-                            
-                            {/* Textos com contraste aumentado em branco */}
-                            <div className="relative z-20 p-6 md:p-8 max-w-md md:max-w-lg text-left space-y-4 text-white flex flex-col justify-end min-h-[260px] md:min-h-0 md:h-full w-full">
-                              {!featuredCourse.hide_title && (
-                                <div className="space-y-2">
-                                  <h3 className="text-2xl md:text-3xl font-black tracking-tight leading-tight text-white drop-shadow-md">
-                                    {featuredCourse.title}
-                                  </h3>
-                                  <p className="text-xs md:text-sm text-white/80 line-clamp-2 leading-relaxed drop-shadow-sm">
-                                    {featuredCourse.description || 'Aulas exclusivas do Forroflix.'}
-                                  </p>
+                            {/* Conteúdo flutuante em Glassmorphism */}
+                            <div className="relative z-20 p-6 md:p-8 text-left text-white flex flex-col justify-center h-full w-full md:max-w-xl">
+                              <div className="bg-[#07070a]/55 backdrop-blur-md border border-white/10 p-5 md:p-6 rounded-2xl md:rounded-3xl space-y-4 max-w-[90%] md:max-w-[420px] shadow-2xl relative">
+                                {!featuredCourse.hide_title && (
+                                  <div className="space-y-1.5">
+                                    <h3 className="text-xl md:text-2xl font-black tracking-tight leading-tight text-white drop-shadow-md">
+                                      {featuredCourse.title}
+                                    </h3>
+                                    <p className="text-[10px] md:text-xs text-white/75 line-clamp-2 leading-relaxed">
+                                      {featuredCourse.description || 'Aulas exclusivas do Forroflix.'}
+                                    </p>
+                                  </div>
+                                )}
+                                <div className="bg-primary group-hover:bg-primary/95 text-white font-bold text-[10px] md:text-xs flex items-center justify-center gap-2 px-4 py-2 rounded-xl shadow-lg shadow-primary/20 transition-all w-fit duration-200">
+                                  <Play className="w-3.5 h-3.5 fill-current" />
+                                  ACESSAR
                                 </div>
-                              )}
-                              <div className="bg-primary group-hover:bg-primary/95 text-white font-bold text-xs flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl shadow-lg shadow-primary/20 transition-all w-fit duration-200">
-                                <Play className="w-3.5 h-3.5 fill-current" />
-                                ACESSAR
                               </div>
                             </div>
                           </>
@@ -969,7 +968,30 @@ export function DashboardClient({
                         className="bg-card border border-border hover:border-primary/20 rounded-3xl p-5 flex flex-col justify-between shadow-sm hover:shadow-md hover:scale-[1.01] transition-all duration-300 relative group cursor-pointer"
                       >
                         <div className={`w-full aspect-[2.1/1] rounded-2xl bg-gradient-to-br ${course.thumbnail_gradient} p-4 flex flex-col justify-between mb-4 relative overflow-hidden border border-border/10 shadow-inner`}>
-                          <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors" />
+                          {course.cover_horizontal ? (
+                            <Image
+                              src={course.cover_horizontal}
+                              alt=""
+                              fill
+                              sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                              className="absolute inset-0 object-cover transition-transform duration-500 group-hover:scale-[1.03] z-0"
+                              style={{ objectPosition: course.cover_horizontal_position || '50% 50%' }}
+                            />
+                          ) : course.cover_vertical ? (
+                            <Image
+                              src={course.cover_vertical}
+                              alt=""
+                              fill
+                              sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                              className="absolute inset-0 object-cover transition-transform duration-500 group-hover:scale-[1.03] z-0"
+                              style={{ objectPosition: course.cover_vertical_position || '50% 50%' }}
+                            />
+                          ) : null}
+                          {/* Gradiente escuro para contraste nos textos sobre a imagem */}
+                          {(course.cover_horizontal || course.cover_vertical) && (
+                            <div className="absolute inset-0 bg-black/45 z-10" />
+                          )}
+                          <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors z-10" />
                           <button 
                             onClick={(e) => {
                               e.stopPropagation();
@@ -981,12 +1003,12 @@ export function DashboardClient({
                             <Star className={`w-3.5 h-3.5 ${course.is_featured === 1 ? 'fill-yellow-400 text-yellow-400' : 'text-white'}`} />
                           </button>
                           
-                          <div className="flex-grow flex items-center justify-center text-center select-none py-2">
+                          <div className="flex-grow flex items-center justify-center text-center select-none py-2 relative z-20">
                             <span className="text-sm font-black tracking-tight text-white leading-tight drop-shadow-md">
                               {course.title.split(' - ')[0].toUpperCase()}
                             </span>
                           </div>
-                          <div className="flex justify-between items-center text-[8px] font-semibold text-white/50 tracking-wider uppercase">
+                          <div className="flex justify-between items-center text-[8px] font-semibold text-white/70 tracking-wider uppercase relative z-20">
                             <span>{course.total_lessons || 0} aulas</span>
                           </div>
                         </div>
