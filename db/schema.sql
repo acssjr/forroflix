@@ -18,8 +18,10 @@ CREATE TABLE IF NOT EXISTS courses (
     thumbnail_gradient TEXT DEFAULT 'from-orange-500 to-red-600',
     cover_vertical TEXT,
     cover_horizontal TEXT,
+    cover_background TEXT,
     cover_vertical_position TEXT DEFAULT '50% 50%',
     cover_horizontal_position TEXT DEFAULT '50% 50%',
+    cover_background_position TEXT DEFAULT '50% 50%',
     is_featured INTEGER DEFAULT 0,
     hide_title INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -32,6 +34,8 @@ CREATE TABLE IF NOT EXISTS modules (
     title TEXT NOT NULL,
     description TEXT,
     position INTEGER DEFAULT 0,
+    cover_vertical TEXT,
+    cover_vertical_position TEXT DEFAULT '50% 50%',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

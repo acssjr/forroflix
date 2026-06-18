@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDB } from '@/lib/db';
 import { verifyJWT } from '@/lib/auth';
 import { cookies } from 'next/headers';
+import { syncZeroDurationLessons } from '@/lib/sync-duration';
 
 export async function GET(request: Request) {
   try {
@@ -44,10 +45,15 @@ export async function GET(request: Request) {
           .bind(mod.id)
           .all<any>();
 
+        // Sincronizar durações zeradas em segundo plano
+        syncZeroDurationLessons(dbLessons || []);
+
         modules.push({
           id: mod.id,
           title: mod.title,
           position: mod.position,
+          cover_vertical: mod.cover_vertical || null,
+          cover_vertical_position: mod.cover_vertical_position || '50% 50%',
           lessons: (dbLessons || []).map(l => ({
             id: l.id,
             title: l.title,
@@ -65,8 +71,10 @@ export async function GET(request: Request) {
       slug: dbCourse.slug,
       cover_vertical: dbCourse.cover_vertical || null,
       cover_horizontal: dbCourse.cover_horizontal || null,
+      cover_background: dbCourse.cover_background || null,
       cover_vertical_position: dbCourse.cover_vertical_position || '50% 50%',
       cover_horizontal_position: dbCourse.cover_horizontal_position || '50% 50%',
+      cover_background_position: dbCourse.cover_background_position || '50% 50%',
       is_featured: dbCourse.is_featured || 0,
       hide_title: dbCourse.hide_title || 0,
       modules
@@ -236,6 +244,20 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: true });
     }
 
+    // 3b. Editar Metadados do Módulo (Capa Vertical, Título, etc.)
+    if (type === 'module_metadata') {
+      const { cover_vertical, cover_vertical_position } = body;
+      if (!title) {
+        return NextResponse.json({ error: 'Título do módulo é obrigatório' }, { status: 400 });
+      }
+      await db
+        .prepare('UPDATE modules SET title = ?, cover_vertical = ?, cover_vertical_position = ? WHERE id = ?')
+        .bind(title.trim(), cover_vertical || null, cover_vertical_position || '50% 50%', id)
+        .run();
+
+      return NextResponse.json({ success: true });
+    }
+
     // 4. Editar Aula (Título, Descrição e/ou uploadStatus)
     if (type === 'lesson') {
       const { description, uploadStatus } = body;
@@ -274,8 +296,8 @@ export async function PATCH(request: Request) {
     if (type === 'course_metadata') {
       const { 
         title, description, slug, thumbnail_gradient, 
-        cover_vertical, cover_horizontal, 
-        cover_vertical_position, cover_horizontal_position, 
+        cover_vertical, cover_horizontal, cover_background,
+        cover_vertical_position, cover_horizontal_position, cover_background_position,
         is_featured, hide_title 
       } = body;
 
@@ -295,8 +317,8 @@ export async function PATCH(request: Request) {
         db.prepare(`
           UPDATE courses 
           SET title = ?, description = ?, slug = ?, thumbnail_gradient = ?, 
-              cover_vertical = ?, cover_horizontal = ?, 
-              cover_vertical_position = ?, cover_horizontal_position = ?, 
+              cover_vertical = ?, cover_horizontal = ?, cover_background = ?,
+              cover_vertical_position = ?, cover_horizontal_position = ?, cover_background_position = ?,
               is_featured = ?, hide_title = ?
           WHERE id = ?
         `).bind(
@@ -306,8 +328,10 @@ export async function PATCH(request: Request) {
           thumbnail_gradient || 'from-red-600 to-red-600', 
           cover_vertical?.trim() || null, 
           cover_horizontal?.trim() || null, 
+          cover_background?.trim() || null, 
           cover_vertical_position || '50% 50%',
           cover_horizontal_position || '50% 50%',
+          cover_background_position || '50% 50%',
           featured, 
           hide_title ? 1 : 0,
           id

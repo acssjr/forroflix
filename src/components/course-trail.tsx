@@ -18,15 +18,23 @@ interface Module {
   id: string;
   title: string;
   position: number;
+  cover_vertical?: string | null;
+  cover_vertical_position?: string | null;
   lessons: Lesson[];
 }
- 
+  
 interface Course {
   id: string;
   title: string;
   description: string;
   slug: string;
   thumbnail_gradient: string;
+  cover_vertical?: string | null;
+  cover_horizontal?: string | null;
+  cover_background?: string | null;
+  cover_vertical_position?: string | null;
+  cover_horizontal_position?: string | null;
+  cover_background_position?: string | null;
 }
  
 interface CourseTrailProps {
@@ -130,8 +138,30 @@ export function CourseTrail({
  
       {/* Hero Banner do Curso (Hotmart Style) */}
       <section className="relative overflow-hidden border-b border-border bg-sidebar">
-        {/* Fundo desfocado com o gradiente do curso */}
-        <div className={`absolute inset-0 bg-gradient-to-br ${course.thumbnail_gradient} opacity-5 dark:opacity-10 blur-3xl`} />
+        {/* Fundo desfocado com a imagem ou gradiente do curso */}
+        {(() => {
+          const bgImage = course.cover_background || course.cover_horizontal || null;
+          const bgPos = course.cover_background ? course.cover_background_position : course.cover_horizontal_position;
+          
+          if (bgImage) {
+            return (
+              <div className="absolute inset-0 z-0 overflow-hidden">
+                <Image
+                  src={bgImage}
+                  alt=""
+                  fill
+                  priority
+                  className="object-cover opacity-55 dark:opacity-40 blur-[35px] scale-110"
+                  style={{ objectPosition: bgPos || '50% 50%' }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-r from-sidebar via-sidebar/70 to-sidebar/20" />
+              </div>
+            );
+          }
+          return (
+            <div className={`absolute inset-0 bg-gradient-to-br ${course.thumbnail_gradient} opacity-5 dark:opacity-10 blur-3xl`} />
+          );
+        })()}
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20 relative z-10 flex flex-col md:flex-row items-center justify-between gap-12">
           {/* Lado Esquerdo: Metadados, Progresso e Ações */}
@@ -191,18 +221,32 @@ export function CourseTrail({
           </div>
   
           {/* Lado Direito: Poster Estético Vertical (Oculto em telas pequenas) */}
-          <div className="shrink-0 hidden md:block">
+          <div className="shrink-0 hidden md:block relative z-10">
             <div className={`relative w-64 aspect-[3/4.2] rounded-3xl overflow-hidden bg-gradient-to-b ${course.thumbnail_gradient} p-6 flex flex-col justify-between border border-border/15 shadow-2xl select-none`}>
-              <div className="absolute inset-0 bg-black/10" />
-              <div className="absolute top-6 left-6 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-[9px] font-bold text-white tracking-widest uppercase border border-white/5">
+              {course.cover_vertical ? (
+                <>
+                  <Image
+                    src={course.cover_vertical}
+                    alt=""
+                    fill
+                    priority
+                    className="absolute inset-0 object-cover z-0"
+                    style={{ objectPosition: course.cover_vertical_position || '50% 50%' }}
+                  />
+                  <div className="absolute inset-0 bg-black/35 z-10" />
+                </>
+              ) : (
+                <div className="absolute inset-0 bg-black/10" />
+              )}
+              <div className="absolute top-6 left-6 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-[9px] font-bold text-white tracking-widest uppercase border border-white/5 z-20">
                 Premium
               </div>
-              <div className="flex-grow flex items-center justify-center text-center py-12">
+              <div className="flex-grow flex items-center justify-center text-center py-12 relative z-20">
                 <h3 className="text-2xl font-black tracking-tight text-white leading-none uppercase drop-shadow-lg">
                   {course.title.split(' - ')[0]}
                 </h3>
               </div>
-              <span className="text-[10px] font-bold text-white/50 tracking-wider uppercase z-10">
+              <span className="text-[10px] font-bold text-white/50 tracking-wider uppercase z-20">
                 Forroflix Player
               </span>
             </div>
@@ -246,7 +290,7 @@ export function CourseTrail({
         </div>
  
         {/* Conteúdo das Abas */}
-        <div className="flex-grow">
+        <div className="flex-grow min-h-[500px]">
           {activeTab === 'conteudos' ? (
             <div className="space-y-6">
               <div className="space-y-1">
@@ -276,7 +320,21 @@ export function CourseTrail({
                       <div className="flex flex-col gap-3 group cursor-pointer text-left">
                         {/* Poster Vertical do Módulo */}
                         <div className={`relative aspect-[3/4.2] w-full rounded-2xl overflow-hidden bg-gradient-to-b ${gradient} p-4 flex flex-col justify-between border border-transparent group-hover:border-primary/30 transition-all duration-300 group-hover:scale-[1.03] shadow-lg shadow-black/30 group-hover:shadow-[0_0_25px_rgba(229,9,20,0.06)]`}>
-                          <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors" />
+                          {mod.cover_vertical ? (
+                            <>
+                              <Image
+                                src={mod.cover_vertical}
+                                alt=""
+                                fill
+                                sizes="(min-width: 1024px) 20vw, (min-width: 640px) 30vw, 50vw"
+                                className="absolute inset-0 object-cover z-0 transition-transform duration-300 group-hover:scale-[1.03]"
+                                style={{ objectPosition: mod.cover_vertical_position || '50% 50%' }}
+                              />
+                              <div className="absolute inset-0 bg-black/35 group-hover:bg-black/20 transition-colors z-10" />
+                            </>
+                          ) : (
+                            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors z-10" />
+                          )}
                           
                           {/* Indicador Numérico do Módulo (Hotmart Style) */}
                           <div className="absolute top-4 left-4 w-6 h-6 rounded-full bg-card border border-border text-card-foreground flex items-center justify-center text-xs font-mono font-bold select-none z-20">
@@ -295,13 +353,13 @@ export function CourseTrail({
                           )}
                           
                           {/* Título Centralizado do Módulo */}
-                          <div className="flex-grow flex items-center justify-center text-center py-6">
+                          <div className="flex-grow flex items-center justify-center text-center py-6 relative z-20">
                             <h4 className="text-lg font-black tracking-tight text-white uppercase leading-tight drop-shadow-md select-none">
                               {mod.title}
                             </h4>
                           </div>
- 
-                          <span className="text-[8px] font-bold text-white/50 tracking-wider uppercase z-10">
+
+                          <span className="text-[8px] font-bold text-white/50 tracking-wider uppercase z-20">
                             MÓDULO {index + 1}
                           </span>
                         </div>
