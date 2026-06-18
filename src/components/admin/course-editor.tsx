@@ -103,6 +103,7 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
 
   // Estados para Seleção de Aulas em Lote (Checkboxes)
   const [selectedLessons, setSelectedLessons] = useState<Record<string, boolean>>({});
+  const [isSorting, setIsSorting] = useState(false);
   const [bulkMoveDropdownOpen, setBulkMoveDropdownOpen] = useState(false);
 
   const toggleModuleCollapse = (moduleId: string) => {
@@ -383,41 +384,49 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
 
   // Ordenar aulas de um módulo numericamento ou alfabeticamente
   const handleSortLessons = async (moduleId: string, type: 'numeric' | 'alphabetic') => {
-    const updated = modules.map(m => {
-      if (m.id === moduleId) {
-        const sorted = [...m.lessons];
-        if (type === 'numeric') {
-          // Extrair o primeiro número do título e ordenar com base nele. Se não houver, vai para o fim.
-          sorted.sort((a, b) => {
-            const numA = parseInt(a.title.match(/\d+/)?.[0] || '999999', 10);
-            const numB = parseInt(b.title.match(/\d+/)?.[0] || '999999', 10);
-            if (numA !== numB) {
-              return numA - numB;
-            }
-            // Fallback para ordem alfabética se os números forem iguais ou ausentes
-            return a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' });
-          });
-        } else {
-          // Ordenação alfabética
-          sorted.sort((a, b) => a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' }));
+    if (isSorting) return;
+    setIsSorting(true);
+    try {
+      const updated = modules.map(m => {
+        if (m.id === moduleId) {
+          const sorted = [...m.lessons];
+          if (type === 'numeric') {
+            // Extrair o primeiro número do título e ordenar com base nele. Se não houver, vai para o fim.
+            sorted.sort((a, b) => {
+              const numA = parseInt(a.title.match(/\d+/)?.[0] || '999999', 10);
+              const numB = parseInt(b.title.match(/\d+/)?.[0] || '999999', 10);
+              if (numA !== numB) {
+                return numA - numB;
+              }
+              // Fallback para ordem alfabética se os números forem iguais ou ausentes
+              return a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' });
+            });
+          } else {
+            // Ordenação alfabética
+            sorted.sort((a, b) => a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' }));
+          }
+          
+          // Atualizar as posições das aulas
+          const mappedLessons = sorted.map((l, idx) => ({
+            ...l,
+            position: idx + 1
+          }));
+          
+          return {
+            ...m,
+            lessons: mappedLessons
+          };
         }
-        
-        // Atualizar as posições das aulas
-        const mappedLessons = sorted.map((l, idx) => ({
-          ...l,
-          position: idx + 1
-        }));
-        
-        return {
-          ...m,
-          lessons: mappedLessons
-        };
-      }
-      return m;
-    });
+        return m;
+      });
 
-    setModules(updated);
-    await saveNewOrder(updated);
+      setModules(updated);
+      await saveNewOrder(updated);
+    } catch (err) {
+      console.error("Erro ao ordenar aulas:", err);
+    } finally {
+      setIsSorting(false);
+    }
   };
 
   // Drag and Drop Event Handlers
@@ -904,7 +913,12 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
               return (
                 <div key={mod.id} className="space-y-2">
                   {isModuleIndicatorBefore && (
-                    <div className="h-[76px] border-2 border-dashed border-red-600/40 rounded-2xl bg-red-600/[0.02] my-3 flex items-center justify-center gap-2 text-red-500/60 transition-all duration-300 ease-out animate-pulse shadow-[0_0_20px_rgba(229,9,20,0.02)]">
+                    <div 
+                      onDragOver={(e) => handleDragOverItem(e, 'module', mod.id)}
+                      onDragLeave={handleDragLeaveItem}
+                      onDrop={(e) => handleDropItem(e, 'module', mod.id)}
+                      className="h-[76px] border-2 border-dashed border-red-600/40 rounded-2xl bg-red-600/[0.02] my-3 flex items-center justify-center gap-2 text-red-500/60 transition-all duration-300 ease-out animate-pulse shadow-[0_0_20px_rgba(229,9,20,0.02)]"
+                    >
                       <FolderInput className="w-4 h-4 animate-bounce" />
                       <span className="text-xs font-bold uppercase tracking-wider">Mover Módulo para cá</span>
                     </div>
@@ -1029,15 +1043,17 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                           <div className="flex items-center bg-secondary/50 border border-border/80 rounded-xl p-0.5 shadow-sm">
                             <span className="text-[9px] text-muted-foreground font-extrabold uppercase px-2 tracking-wider select-none">Ordenar:</span>
                             <button
+                              disabled={isSorting}
                               onClick={() => handleSortLessons(mod.id, 'numeric')}
-                              className="h-7 px-2.5 text-[9px] font-bold text-muted-foreground hover:text-red-500 hover:bg-background/80 active:scale-[0.96] transition-all duration-150 cursor-pointer rounded-lg uppercase tracking-wider"
+                              className="h-7 px-2.5 text-[9px] font-bold text-muted-foreground hover:text-red-500 hover:bg-background/80 active:scale-[0.96] transition-all duration-150 cursor-pointer rounded-lg uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed"
                               title="Ordenar por número no título (1-9)"
                             >
                               1-9
                             </button>
                             <button
+                              disabled={isSorting}
                               onClick={() => handleSortLessons(mod.id, 'alphabetic')}
-                              className="h-7 px-2.5 text-[9px] font-bold text-muted-foreground hover:text-red-500 hover:bg-background/80 active:scale-[0.96] transition-all duration-150 cursor-pointer rounded-lg uppercase tracking-wider border-l border-border/40"
+                              className="h-7 px-2.5 text-[9px] font-bold text-muted-foreground hover:text-red-500 hover:bg-background/80 active:scale-[0.96] transition-all duration-150 cursor-pointer rounded-lg uppercase tracking-wider border-l border-border/40 disabled:opacity-40 disabled:cursor-not-allowed"
                               title="Ordenar alfabeticamente (A-Z)"
                             >
                               A-Z
@@ -1098,7 +1114,15 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                             return (
                               <div key={les.id} className="space-y-1.5">
                                 {isLesIndicatorBefore && (
-                                  <div className="h-[52px] border-2 border-dashed border-red-600/40 rounded-xl bg-red-600/[0.02] my-2 flex items-center justify-center gap-2 text-red-500/60 transition-all duration-300 ease-out animate-pulse shadow-[0_0_15px_rgba(229,9,20,0.02)]">
+                                  <div 
+                                    onDragOver={(e) => handleDragOverItem(e, 'lesson', les.id, mod.id)}
+                                    onDragLeave={handleDragLeaveItem}
+                                    onDrop={(e) => {
+                                      handleDropItem(e, 'lesson', les.id, mod.id);
+                                      setDraggableLessonId(null);
+                                    }}
+                                    className="h-[52px] border-2 border-dashed border-red-600/40 rounded-xl bg-red-600/[0.02] my-2 flex items-center justify-center gap-2 text-red-500/60 transition-all duration-300 ease-out animate-pulse shadow-[0_0_15px_rgba(229,9,20,0.02)]"
+                                  >
                                     <Plus className="w-3.5 h-3.5 animate-bounce" />
                                     <span className="text-[10px] font-bold uppercase tracking-wider">Mover Aula para cá</span>
                                   </div>
@@ -1271,7 +1295,15 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                                 </div>
 
                                 {isLesIndicatorAfter && (
-                                  <div className="h-[52px] border-2 border-dashed border-red-600/40 rounded-xl bg-red-600/[0.02] my-2 flex items-center justify-center gap-2 text-red-500/60 transition-all duration-300 ease-out animate-pulse shadow-[0_0_15px_rgba(229,9,20,0.02)]">
+                                  <div 
+                                    onDragOver={(e) => handleDragOverItem(e, 'lesson', les.id, mod.id)}
+                                    onDragLeave={handleDragLeaveItem}
+                                    onDrop={(e) => {
+                                      handleDropItem(e, 'lesson', les.id, mod.id);
+                                      setDraggableLessonId(null);
+                                    }}
+                                    className="h-[52px] border-2 border-dashed border-red-600/40 rounded-xl bg-red-600/[0.02] my-2 flex items-center justify-center gap-2 text-red-500/60 transition-all duration-300 ease-out animate-pulse shadow-[0_0_15px_rgba(229,9,20,0.02)]"
+                                  >
                                     <Plus className="w-3.5 h-3.5 animate-bounce" />
                                     <span className="text-[10px] font-bold uppercase tracking-wider">Mover Aula para cá</span>
                                   </div>
@@ -1285,7 +1317,12 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                   </div>
                   
                   {isModuleIndicatorAfter && (
-                    <div className="h-[76px] border-2 border-dashed border-red-600/40 rounded-2xl bg-red-600/[0.02] my-3 flex items-center justify-center gap-2 text-red-500/60 transition-all duration-300 ease-out animate-pulse shadow-[0_0_20px_rgba(229,9,20,0.02)]">
+                    <div 
+                      onDragOver={(e) => handleDragOverItem(e, 'module', mod.id)}
+                      onDragLeave={handleDragLeaveItem}
+                      onDrop={(e) => handleDropItem(e, 'module', mod.id)}
+                      className="h-[76px] border-2 border-dashed border-red-600/40 rounded-2xl bg-red-600/[0.02] my-3 flex items-center justify-center gap-2 text-red-500/60 transition-all duration-300 ease-out animate-pulse shadow-[0_0_20px_rgba(229,9,20,0.02)]"
+                    >
                       <FolderInput className="w-4 h-4 animate-bounce" />
                       <span className="text-xs font-bold uppercase tracking-wider">Mover Módulo para cá</span>
                     </div>

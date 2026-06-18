@@ -969,17 +969,21 @@ export function DashboardClient({
                       >
                         <div className={`w-full aspect-[2.1/1] rounded-2xl bg-gradient-to-br ${course.thumbnail_gradient} p-4 flex flex-col justify-between mb-4 relative overflow-hidden border border-border/10 shadow-inner`}>
                           {course.cover_horizontal ? (
-                            <img 
-                              src={course.cover_horizontal} 
-                              alt="" 
-                              className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03] z-0" 
+                            <Image
+                              src={course.cover_horizontal}
+                              alt=""
+                              fill
+                              sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                              className="absolute inset-0 object-cover transition-transform duration-500 group-hover:scale-[1.03] z-0"
                               style={{ objectPosition: course.cover_horizontal_position || '50% 50%' }}
                             />
                           ) : course.cover_vertical ? (
-                            <img 
-                              src={course.cover_vertical} 
-                              alt="" 
-                              className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03] z-0" 
+                            <Image
+                              src={course.cover_vertical}
+                              alt=""
+                              fill
+                              sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                              className="absolute inset-0 object-cover transition-transform duration-500 group-hover:scale-[1.03] z-0"
                               style={{ objectPosition: course.cover_vertical_position || '50% 50%' }}
                             />
                           ) : null}

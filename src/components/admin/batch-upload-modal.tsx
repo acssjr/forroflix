@@ -55,6 +55,8 @@ const readEntriesPromise = (reader: FileSystemDirectoryReader): Promise<FileSyst
   });
 };
 
+const naturalCollator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+
 export function BatchUploadModal({
   courseId,
   moduleId,
@@ -185,8 +187,7 @@ export function BatchUploadModal({
             if (idxB !== -1) return 1;
             
             // Novos arquivos são ordenados numericamente entre si
-            const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
-            return collator.compare(a.title, b.title);
+            return naturalCollator.compare(a.title, b.title);
           });
           return {
             folderName,
@@ -194,8 +195,7 @@ export function BatchUploadModal({
           };
         } else {
           // Se for recém-adicionado, fazemos a ordenação numérica/natural inicial
-          const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
-          const sortedFiles = [...filesList].sort((a, b) => collator.compare(a.title, b.title));
+          const sortedFiles = [...filesList].sort((a, b) => naturalCollator.compare(a.title, b.title));
           
           return {
             folderName,
@@ -348,12 +348,10 @@ export function BatchUploadModal({
             const numA = parseInt(a.title.match(/\d+/)?.[0] || '999999', 10);
             const numB = parseInt(b.title.match(/\d+/)?.[0] || '999999', 10);
             if (numA !== numB) return numA - numB;
-            const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
-            return collator.compare(a.title, b.title);
+            return naturalCollator.compare(a.title, b.title);
           });
         } else {
-          const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
-          files.sort((a, b) => collator.compare(a.title, b.title));
+          files.sort((a, b) => naturalCollator.compare(a.title, b.title));
         }
         return { ...mod, files };
       }
@@ -820,6 +818,7 @@ export function BatchUploadModal({
                                   onClick={() => moveFileUp(mod.folderName, idx)}
                                   className="p-0.5 text-slate-500 hover:text-red-500 disabled:opacity-25 disabled:hover:text-slate-500 rounded hover:bg-slate-900 transition-colors cursor-pointer"
                                   title="Subir na fila"
+                                  aria-label="Subir arquivo na fila"
                                 >
                                   <ArrowUp className="w-3 h-3" />
                                 </button>
@@ -828,6 +827,7 @@ export function BatchUploadModal({
                                   onClick={() => moveFileDown(mod.folderName, idx)}
                                   className="p-0.5 text-slate-500 hover:text-red-500 disabled:opacity-25 disabled:hover:text-slate-500 rounded hover:bg-slate-900 transition-colors cursor-pointer"
                                   title="Descer na fila"
+                                  aria-label="Descer arquivo na fila"
                                 >
                                   <ArrowDown className="w-3 h-3" />
                                 </button>
