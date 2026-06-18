@@ -21,7 +21,8 @@ import {
   ChevronDown,
   ChevronRight,
   FolderInput,
-  Trash2
+  Trash2,
+  ArrowUpDown
 } from 'lucide-react';
 import { BatchUploadModal } from './batch-upload-modal';
 
@@ -378,6 +379,45 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
       // Reverter estado local em caso de falha de conexão ou erro no banco
       window.location.reload();
     }
+  };
+
+  // Ordenar aulas de um módulo numericamento ou alfabeticamente
+  const handleSortLessons = async (moduleId: string, type: 'numeric' | 'alphabetic') => {
+    const updated = modules.map(m => {
+      if (m.id === moduleId) {
+        const sorted = [...m.lessons];
+        if (type === 'numeric') {
+          // Extrair o primeiro número do título e ordenar com base nele. Se não houver, vai para o fim.
+          sorted.sort((a, b) => {
+            const numA = parseInt(a.title.match(/\d+/)?.[0] || '999999', 10);
+            const numB = parseInt(b.title.match(/\d+/)?.[0] || '999999', 10);
+            if (numA !== numB) {
+              return numA - numB;
+            }
+            // Fallback para ordem alfabética se os números forem iguais ou ausentes
+            return a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' });
+          });
+        } else {
+          // Ordenação alfabética
+          sorted.sort((a, b) => a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' }));
+        }
+        
+        // Atualizar as posições das aulas
+        const mappedLessons = sorted.map((l, idx) => ({
+          ...l,
+          position: idx + 1
+        }));
+        
+        return {
+          ...m,
+          lessons: mappedLessons
+        };
+      }
+      return m;
+    });
+
+    setModules(updated);
+    await saveNewOrder(updated);
   };
 
   // Drag and Drop Event Handlers
@@ -864,12 +904,17 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
               return (
                 <div key={mod.id} className="space-y-2">
                   {isModuleIndicatorBefore && (
-                    <div className="h-1 bg-red-600 rounded-full animate-pulse transition-all duration-250" />
+                    <div className="h-[76px] border-2 border-dashed border-red-600/40 rounded-2xl bg-red-600/[0.02] my-3 flex items-center justify-center gap-2 text-red-500/60 transition-all duration-300 ease-out animate-pulse shadow-[0_0_20px_rgba(229,9,20,0.02)]">
+                      <FolderInput className="w-4 h-4 animate-bounce" />
+                      <span className="text-xs font-bold uppercase tracking-wider">Mover Módulo para cá</span>
+                    </div>
                   )}
                   
                   <div 
                     className={`bg-card border rounded-2xl overflow-hidden shadow-xl transition-all duration-300 ${
-                      draggedItem?.id === mod.id && draggedItem?.type === 'module' ? 'opacity-35 border-border' : ''
+                      draggedItem?.id === mod.id && draggedItem?.type === 'module' 
+                        ? 'opacity-25 border-dashed border-red-600/35 bg-red-600/[0.01] shadow-none scale-[0.98]' 
+                        : ''
                     } ${
                       isLessonHoveringModule 
                         ? 'border-red-600/70 bg-red-600/[0.02] shadow-[0_0_25px_rgba(229,9,20,0.03)]' 
@@ -980,6 +1025,25 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                         </h3>
                       )}
                       <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                        {moduleLessons.length > 1 && (
+                          <div className="flex items-center bg-secondary/50 border border-border/80 rounded-xl p-0.5 shadow-sm">
+                            <span className="text-[9px] text-muted-foreground font-extrabold uppercase px-2 tracking-wider select-none">Ordenar:</span>
+                            <button
+                              onClick={() => handleSortLessons(mod.id, 'numeric')}
+                              className="h-7 px-2.5 text-[9px] font-bold text-muted-foreground hover:text-red-500 hover:bg-background/80 active:scale-[0.96] transition-all duration-150 cursor-pointer rounded-lg uppercase tracking-wider"
+                              title="Ordenar por número no título (1-9)"
+                            >
+                              1-9
+                            </button>
+                            <button
+                              onClick={() => handleSortLessons(mod.id, 'alphabetic')}
+                              className="h-7 px-2.5 text-[9px] font-bold text-muted-foreground hover:text-red-500 hover:bg-background/80 active:scale-[0.96] transition-all duration-150 cursor-pointer rounded-lg uppercase tracking-wider border-l border-border/40"
+                              title="Ordenar alfabeticamente (A-Z)"
+                            >
+                              A-Z
+                            </button>
+                          </div>
+                        )}
                         <Button 
                           size="sm"
                           onClick={() => {
@@ -1034,7 +1098,10 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                             return (
                               <div key={les.id} className="space-y-1.5">
                                 {isLesIndicatorBefore && (
-                                  <div className="h-0.5 bg-red-600 rounded-full animate-pulse transition-all duration-200" />
+                                  <div className="h-[52px] border-2 border-dashed border-red-600/40 rounded-xl bg-red-600/[0.02] my-2 flex items-center justify-center gap-2 text-red-500/60 transition-all duration-300 ease-out animate-pulse shadow-[0_0_15px_rgba(229,9,20,0.02)]">
+                                    <Plus className="w-3.5 h-3.5 animate-bounce" />
+                                    <span className="text-[10px] font-bold uppercase tracking-wider">Mover Aula para cá</span>
+                                  </div>
                                 )}
                                 
                                 <div 
@@ -1051,12 +1118,14 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                                     setDraggableLessonId(null);
                                   }}
                                   onClick={() => toggleLessonSelection(les.id)}
-                                  className={`flex flex-col md:flex-row md:items-center justify-between p-3.5 rounded-xl bg-card/50 border transition-all duration-200 gap-4 group cursor-grab active:cursor-grabbing select-none hover:cursor-pointer ${
-                                    draggedItem?.id === les.id && draggedItem?.type === 'lesson' ? 'opacity-35 border-border' : 'border-border/40 hover:bg-secondary/40 hover:border-red-600/10'
+                                  className={`flex flex-col md:flex-row md:items-center justify-between p-3.5 rounded-xl bg-card/50 border transition-all duration-250 gap-4 group cursor-grab active:cursor-grabbing select-none hover:cursor-pointer ${
+                                    draggedItem?.id === les.id && draggedItem?.type === 'lesson' 
+                                      ? 'opacity-25 border-dashed border-red-600/35 bg-red-600/[0.01] shadow-none scale-[0.98]' 
+                                      : 'border-border/40 hover:bg-secondary/40 hover:border-red-600/10'
                                   } ${
                                     selectedLessons[les.id] ? 'border-red-600/30 bg-red-600/[0.01]' : ''
                                   } ${
-                                    dropIndicator?.type === 'lesson' && dropIndicator.targetId === les.id ? 'border-red-600/30' : ''
+                                    dropIndicator?.type === 'lesson' && dropIndicator.targetId === les.id ? 'border-red-600/80 bg-red-600/[0.02] shadow-[0_0_15px_rgba(229,9,20,0.04)] scale-[1.01]' : ''
                                   }`}
                                 >
                                   {editingLessonId === les.id ? (
@@ -1202,7 +1271,10 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                                 </div>
 
                                 {isLesIndicatorAfter && (
-                                  <div className="h-0.5 bg-red-600 rounded-full animate-pulse transition-all duration-200" />
+                                  <div className="h-[52px] border-2 border-dashed border-red-600/40 rounded-xl bg-red-600/[0.02] my-2 flex items-center justify-center gap-2 text-red-500/60 transition-all duration-300 ease-out animate-pulse shadow-[0_0_15px_rgba(229,9,20,0.02)]">
+                                    <Plus className="w-3.5 h-3.5 animate-bounce" />
+                                    <span className="text-[10px] font-bold uppercase tracking-wider">Mover Aula para cá</span>
+                                  </div>
                                 )}
                               </div>
                             );
@@ -1213,7 +1285,10 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                   </div>
                   
                   {isModuleIndicatorAfter && (
-                    <div className="h-1 bg-red-600 rounded-full animate-pulse transition-all duration-250" />
+                    <div className="h-[76px] border-2 border-dashed border-red-600/40 rounded-2xl bg-red-600/[0.02] my-3 flex items-center justify-center gap-2 text-red-500/60 transition-all duration-300 ease-out animate-pulse shadow-[0_0_20px_rgba(229,9,20,0.02)]">
+                      <FolderInput className="w-4 h-4 animate-bounce" />
+                      <span className="text-xs font-bold uppercase tracking-wider">Mover Módulo para cá</span>
+                    </div>
                   )}
                 </div>
               );

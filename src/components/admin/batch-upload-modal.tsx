@@ -14,7 +14,9 @@ import {
   Trash2,
   RefreshCw,
   Info,
-  FolderOpen
+  FolderOpen,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -169,14 +171,37 @@ export function BatchUploadModal({
       });
 
       return Array.from(currentMap.entries()).map(([folderName, filesList]) => {
-        // Ordenação natural/numérica para manter a ordem sequencial das aulas (ex: 1, 2, ..., 16)
-        const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
-        const sortedFiles = [...filesList].sort((a, b) => collator.compare(a.title, b.title));
-        
-        return {
-          folderName,
-          files: sortedFiles
-        };
+        // Se o módulo já existia no estado anterior, mantemos a ordem existente
+        // e colocamos novos arquivos no final.
+        const prevMod = prev.find(mod => mod.folderName === folderName);
+        if (prevMod) {
+          const oldIds = prevMod.files.map(f => f.id);
+          const sorted = [...filesList].sort((a, b) => {
+            const idxA = oldIds.indexOf(a.id);
+            const idxB = oldIds.indexOf(b.id);
+            
+            if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+            if (idxA !== -1) return -1;
+            if (idxB !== -1) return 1;
+            
+            // Novos arquivos são ordenados numericamente entre si
+            const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+            return collator.compare(a.title, b.title);
+          });
+          return {
+            folderName,
+            files: sorted
+          };
+        } else {
+          // Se for recém-adicionado, fazemos a ordenação numérica/natural inicial
+          const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+          const sortedFiles = [...filesList].sort((a, b) => collator.compare(a.title, b.title));
+          
+          return {
+            folderName,
+            files: sortedFiles
+          };
+        }
       });
     });
   };
@@ -278,6 +303,59 @@ export function BatchUploadModal({
           ...mod,
           files: mod.files.map(f => f.id === id ? { ...f, title: newTitle } : f)
         };
+      }
+      return mod;
+    }));
+  };
+
+  // Mover arquivo para cima na fila de upload
+  const moveFileUp = (folderName: string, idx: number) => {
+    if (idx === 0) return;
+    setStructure(prev => prev.map(mod => {
+      if (mod.folderName === folderName) {
+        const files = [...mod.files];
+        const temp = files[idx];
+        files[idx] = files[idx - 1];
+        files[idx - 1] = temp;
+        return { ...mod, files };
+      }
+      return mod;
+    }));
+  };
+
+  // Mover arquivo para baixo na fila de upload
+  const moveFileDown = (folderName: string, idx: number) => {
+    setStructure(prev => prev.map(mod => {
+      if (mod.folderName === folderName) {
+        const files = [...mod.files];
+        if (idx === files.length - 1) return mod;
+        const temp = files[idx];
+        files[idx] = files[idx + 1];
+        files[idx + 1] = temp;
+        return { ...mod, files };
+      }
+      return mod;
+    }));
+  };
+
+  // Ordenar arquivos de um módulo no modal
+  const sortFiles = (folderName: string, type: 'numeric' | 'alphabetic') => {
+    setStructure(prev => prev.map(mod => {
+      if (mod.folderName === folderName) {
+        const files = [...mod.files];
+        if (type === 'numeric') {
+          files.sort((a, b) => {
+            const numA = parseInt(a.title.match(/\d+/)?.[0] || '999999', 10);
+            const numB = parseInt(b.title.match(/\d+/)?.[0] || '999999', 10);
+            if (numA !== numB) return numA - numB;
+            const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+            return collator.compare(a.title, b.title);
+          });
+        } else {
+          const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+          files.sort((a, b) => collator.compare(a.title, b.title));
+        }
+        return { ...mod, files };
       }
       return mod;
     }));
@@ -696,24 +774,66 @@ export function BatchUploadModal({
                         <FolderOpen className="w-4 h-4 text-red-500" />
                         <span className="text-xs font-bold uppercase tracking-wider">Módulo: {mod.folderName}</span>
                       </div>
-                      {!uploadingAll && !moduleId && (
-                        <button 
-                          onClick={() => removeModule(mod.folderName)}
-                          className="text-[10px] font-bold text-red-400 hover:text-red-300 transition-colors uppercase cursor-pointer"
-                        >
-                          Remover Módulo
-                        </button>
-                      )}
+                      <div className="flex items-center gap-3">
+                        {!uploadingAll && mod.files.length > 1 && (
+                          <div className="flex items-center gap-1.5 border-r border-slate-900 pr-3 mr-1">
+                            <span className="text-[9px] text-slate-500 font-semibold uppercase">Ordenar:</span>
+                            <button 
+                              onClick={() => sortFiles(mod.folderName, 'numeric')}
+                              className="text-[9px] bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold px-2 py-0.5 rounded transition-colors cursor-pointer"
+                              title="Ordenar por número no título"
+                            >
+                              1-9
+                            </button>
+                            <button 
+                              onClick={() => sortFiles(mod.folderName, 'alphabetic')}
+                              className="text-[9px] bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold px-2 py-0.5 rounded transition-colors cursor-pointer"
+                              title="Ordenar alfabeticamente"
+                            >
+                              A-Z
+                            </button>
+                          </div>
+                        )}
+                        {!uploadingAll && !moduleId && (
+                          <button 
+                            onClick={() => removeModule(mod.folderName)}
+                            className="text-[10px] font-bold text-red-400 hover:text-red-300 transition-colors uppercase cursor-pointer"
+                          >
+                            Remover Módulo
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     {/* Aulas/Arquivos dentro do módulo */}
                     <div className="space-y-2">
-                      {mod.files.map((item) => (
+                      {mod.files.map((item, idx) => (
                         <div 
                           key={item.id}
                           className="p-3 bg-[#0b0b11]/80 border border-slate-900/55 rounded-xl flex items-center justify-between gap-4"
                         >
                           <div className="flex items-center gap-3 flex-grow min-w-0">
+                            {!uploadingAll && item.status === 'pending' && (
+                              <div className="flex flex-col gap-0.5 shrink-0">
+                                <button
+                                  disabled={idx === 0}
+                                  onClick={() => moveFileUp(mod.folderName, idx)}
+                                  className="p-0.5 text-slate-500 hover:text-red-500 disabled:opacity-25 disabled:hover:text-slate-500 rounded hover:bg-slate-900 transition-colors cursor-pointer"
+                                  title="Subir na fila"
+                                >
+                                  <ArrowUp className="w-3 h-3" />
+                                </button>
+                                <button
+                                  disabled={idx === mod.files.length - 1}
+                                  onClick={() => moveFileDown(mod.folderName, idx)}
+                                  className="p-0.5 text-slate-500 hover:text-red-500 disabled:opacity-25 disabled:hover:text-slate-500 rounded hover:bg-slate-900 transition-colors cursor-pointer"
+                                  title="Descer na fila"
+                                >
+                                  <ArrowDown className="w-3 h-3" />
+                                </button>
+                              </div>
+                            )}
+                            
                             <div className="bg-slate-950 p-1.5 rounded-lg text-slate-500 shrink-0">
                               <Play className="w-3.5 h-3.5 fill-slate-500" />
                             </div>

@@ -969,7 +969,26 @@ export function DashboardClient({
                         className="bg-card border border-border hover:border-primary/20 rounded-3xl p-5 flex flex-col justify-between shadow-sm hover:shadow-md hover:scale-[1.01] transition-all duration-300 relative group cursor-pointer"
                       >
                         <div className={`w-full aspect-[2.1/1] rounded-2xl bg-gradient-to-br ${course.thumbnail_gradient} p-4 flex flex-col justify-between mb-4 relative overflow-hidden border border-border/10 shadow-inner`}>
-                          <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors" />
+                          {course.cover_horizontal ? (
+                            <img 
+                              src={course.cover_horizontal} 
+                              alt="" 
+                              className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03] z-0" 
+                              style={{ objectPosition: course.cover_horizontal_position || '50% 50%' }}
+                            />
+                          ) : course.cover_vertical ? (
+                            <img 
+                              src={course.cover_vertical} 
+                              alt="" 
+                              className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03] z-0" 
+                              style={{ objectPosition: course.cover_vertical_position || '50% 50%' }}
+                            />
+                          ) : null}
+                          {/* Gradiente escuro para contraste nos textos sobre a imagem */}
+                          {(course.cover_horizontal || course.cover_vertical) && (
+                            <div className="absolute inset-0 bg-black/45 z-10" />
+                          )}
+                          <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors z-10" />
                           <button 
                             onClick={(e) => {
                               e.stopPropagation();
@@ -981,12 +1000,12 @@ export function DashboardClient({
                             <Star className={`w-3.5 h-3.5 ${course.is_featured === 1 ? 'fill-yellow-400 text-yellow-400' : 'text-white'}`} />
                           </button>
                           
-                          <div className="flex-grow flex items-center justify-center text-center select-none py-2">
+                          <div className="flex-grow flex items-center justify-center text-center select-none py-2 relative z-20">
                             <span className="text-sm font-black tracking-tight text-white leading-tight drop-shadow-md">
                               {course.title.split(' - ')[0].toUpperCase()}
                             </span>
                           </div>
-                          <div className="flex justify-between items-center text-[8px] font-semibold text-white/50 tracking-wider uppercase">
+                          <div className="flex justify-between items-center text-[8px] font-semibold text-white/70 tracking-wider uppercase relative z-20">
                             <span>{course.total_lessons || 0} aulas</span>
                           </div>
                         </div>
