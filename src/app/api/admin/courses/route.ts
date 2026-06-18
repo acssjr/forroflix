@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { getDB } from '@/lib/db';
 import { verifyJWT } from '@/lib/auth';
 import { cookies } from 'next/headers';
@@ -37,6 +37,7 @@ export async function GET(request: Request) {
       .bind(courseId)
       .all<any>();
 
+    const allLessonsToSync: any[] = [];
     const modules: any[] = [];
     if (dbModules) {
       for (const mod of dbModules) {
@@ -45,8 +46,9 @@ export async function GET(request: Request) {
           .bind(mod.id)
           .all<any>();
 
-        // Sincronizar durações zeradas em segundo plano
-        syncZeroDurationLessons(dbLessons || []);
+        if (dbLessons) {
+          allLessonsToSync.push(...dbLessons);
+        }
 
         modules.push({
           id: mod.id,
@@ -64,6 +66,16 @@ export async function GET(request: Request) {
           }))
         });
       }
+    }
+
+    if (allLessonsToSync.length > 0) {
+      after(async () => {
+        try {
+          await syncZeroDurationLessons(allLessonsToSync);
+        } catch (err) {
+          console.error('[API SYNC] Error in background sync:', err);
+        }
+      });
     }
 
     return NextResponse.json({
@@ -303,6 +315,14 @@ export async function PATCH(request: Request) {
 
       if (!id) {
         return NextResponse.json({ error: 'ID do curso é obrigatório' }, { status: 400 });
+      }
+
+      if (!title?.trim()) {
+        return NextResponse.json({ error: 'Título do curso é obrigatório' }, { status: 400 });
+      }
+
+      if (!slug?.trim()) {
+        return NextResponse.json({ error: 'Slug do curso é obrigatório' }, { status: 400 });
       }
 
       const featured = is_featured ? 1 : 0;

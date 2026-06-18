@@ -26,18 +26,23 @@ export async function syncZeroDurationLessons(lessons: LessonToSync[]) {
   const db = getDB();
 
   // Executa a sincronização em paralelo (sem travar a thread principal se rodar em background)
-  Promise.all(
+  return Promise.all(
     zeroDurationLessons.map(async (lesson) => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
       try {
         const res = await fetch(
           `https://video.bunnycdn.com/library/${libraryId}/videos/${lesson.video_id}`,
           {
+            signal: controller.signal,
             headers: {
               'AccessKey': apiKey,
               'accept': 'application/json',
             },
           }
         );
+        clearTimeout(timeoutId);
 
         if (res.ok) {
           const bunnyData = (await res.json()) as any;
@@ -55,10 +60,11 @@ export async function syncZeroDurationLessons(lessons: LessonToSync[]) {
             );
           }
         }
-      } catch (err) {
+      } catch (err: any) {
+        clearTimeout(timeoutId);
         console.warn(
           `[BUNNY SYNC] Erro ao sincronizar duração da aula ${lesson.id}:`,
-          err
+          err.name === 'AbortError' ? 'Timeout de requisição (30s) excedido' : err
         );
       }
     })

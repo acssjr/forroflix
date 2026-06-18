@@ -612,6 +612,11 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
   const handleSaveModuleMetadata = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingModule) return;
+    const trimmedTitle = editModuleTitle.trim();
+    if (!trimmedTitle) {
+      alert('O título do módulo é obrigatório.');
+      return;
+    }
     setEditModuleLoading(true);
     try {
       const res = await fetch('/api/admin/courses', {
@@ -620,7 +625,7 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
         body: JSON.stringify({
           type: 'module_metadata',
           id: editingModule.id,
-          title: editModuleTitle,
+          title: trimmedTitle,
           cover_vertical: editModuleCoverVertical || null,
           cover_vertical_position: editModuleCoverVerticalPosition,
         })
@@ -633,7 +638,7 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
         if (m.id === editingModule.id) {
           return {
             ...m,
-            title: editModuleTitle,
+            title: trimmedTitle,
             cover_vertical: editModuleCoverVertical || null,
             cover_vertical_position: editModuleCoverVerticalPosition,
           };

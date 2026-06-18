@@ -5,6 +5,7 @@ import { verifyJWT } from '@/lib/auth';
 import { MOCK_COURSES_DATA } from '@/lib/mock-data';
 import { CourseViewer } from '@/components/course-viewer';
 import { syncZeroDurationLessons } from '@/lib/sync-duration';
+import { after } from 'next/server';
  
 interface DBCourse {
   id: string;
@@ -115,7 +116,15 @@ export default async function CoursePage({ params }: PageProps) {
       favoriteLessonIds = favoritesRes.results ? favoritesRes.results.map((f) => f.lesson_id) : [];
  
       // Sincronizar durações zeradas em segundo plano
-      syncZeroDurationLessons(lessonsList);
+      if (lessonsList.length > 0) {
+        after(async () => {
+          try {
+            await syncZeroDurationLessons(lessonsList);
+          } catch (err) {
+            console.error('[Page Sync] Error in background sync:', err);
+          }
+        });
+      }
 
       // Pré-indexar aulas por module_id para agrupamento eficiente O(N + M)
       const lessonsByModule: Record<string, Lesson[]> = {};

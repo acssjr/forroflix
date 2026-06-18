@@ -100,6 +100,34 @@ try {
     // A coluna já existe
   }
 
+  try {
+    db.exec(`ALTER TABLE courses ADD COLUMN cover_background TEXT;`);
+    console.log('Coluna cover_background adicionada ao SQLite local.');
+  } catch (e) {
+    // A coluna já existe
+  }
+
+  try {
+    db.exec(`ALTER TABLE courses ADD COLUMN cover_background_position TEXT DEFAULT '50% 50%';`);
+    console.log('Coluna cover_background_position adicionada ao SQLite local.');
+  } catch (e) {
+    // A coluna já existe
+  }
+
+  try {
+    db.exec(`ALTER TABLE modules ADD COLUMN cover_vertical TEXT;`);
+    console.log('Coluna cover_vertical adicionada à tabela modules no SQLite local.');
+  } catch (e) {
+    // A coluna já existe
+  }
+
+  try {
+    db.exec(`ALTER TABLE modules ADD COLUMN cover_vertical_position TEXT DEFAULT '50% 50%';`);
+    console.log('Coluna cover_vertical_position adicionada à tabela modules no SQLite local.');
+  } catch (e) {
+    // A coluna já existe
+  }
+
   db.close();
   console.log('Migrações locais concluídas.');
 } catch (err) {
