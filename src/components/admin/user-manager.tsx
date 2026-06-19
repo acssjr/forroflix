@@ -87,13 +87,17 @@ export function UserManager({ currentUserId, initialUsersList = [] }: UserManage
       setEditLoading(true);
       setEditError(null);
 
+      const isSelfEdit = editingUser.id === currentUserId;
       const payload: any = {
         userId: editingUser.id,
         fullName: editFullName,
-        username: editUsername,
-        role: editRole,
-        subscription_active: editSubscriptionActive
+        username: editUsername
       };
+
+      if (!isSelfEdit) {
+        payload.role = editRole;
+        payload.subscription_active = editSubscriptionActive;
+      }
 
       if (editPassword) {
         payload.password = editPassword;
@@ -260,7 +264,7 @@ export function UserManager({ currentUserId, initialUsersList = [] }: UserManage
 
       // Atualizar estado local
       setUsers(prev => 
-        prev.map(u => u.id === userId ? { ...u, ...data.updated } : u)
+        prev.map(u => u.id === userId ? { ...u, ...data.user } : u)
       );
 
       setSuccessMessage('Usuário atualizado com sucesso!');

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -21,16 +21,22 @@ export function LoginForm() {
   const [userNotFound, setUserNotFound] = useState(false);
   const [userInfo, setUserInfo] = useState<{ name: string } | null>(null);
 
-  const checkUser = async (userVal: string) => {
+  const lookupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lookupRequestRef = useRef(0);
+
+  const checkUser = async (userVal: string, requestId: number) => {
     const cleanUsername = userVal.toLowerCase().trim();
     if (cleanUsername.length < 2 || isSignUp) {
-      setUserFound(false);
-      setUserNotFound(false);
-      setUserInfo(null);
-      setCheckingUser(false);
+      if (requestId === lookupRequestRef.current) {
+        setUserFound(false);
+        setUserNotFound(false);
+        setUserInfo(null);
+        setCheckingUser(false);
+      }
       return;
     }
 
+    if (requestId !== lookupRequestRef.current) return;
     setCheckingUser(true);
     setUserNotFound(false);
 
@@ -41,6 +47,9 @@ export function LoginForm() {
         body: JSON.stringify({ username: cleanUsername }),
       });
       const data = await response.json();
+      
+      if (requestId !== lookupRequestRef.current) return;
+
       if (data.exists) {
         setUserFound(true);
         setUserNotFound(false);
@@ -53,11 +62,15 @@ export function LoginForm() {
       }
     } catch (err) {
       console.error('Erro ao verificar usuário:', err);
-      setUserFound(false);
-      setUserNotFound(false);
-      setUserInfo(null);
+      if (requestId === lookupRequestRef.current) {
+        setUserFound(false);
+        setUserNotFound(false);
+        setUserInfo(null);
+      }
     } finally {
-      setCheckingUser(false);
+      if (requestId === lookupRequestRef.current) {
+        setCheckingUser(false);
+      }
     }
   };
 
@@ -69,11 +82,15 @@ export function LoginForm() {
     setUserInfo(null);
     setMessage(null);
 
+    if (lookupTimerRef.current) {
+      clearTimeout(lookupTimerRef.current);
+    }
+    const requestId = ++lookupRequestRef.current;
+
     if (clean.length >= 2) {
-      const timer = setTimeout(() => {
-        checkUser(clean);
+      lookupTimerRef.current = setTimeout(() => {
+        checkUser(clean, requestId);
       }, 150);
-      return () => clearTimeout(timer);
     }
   };
 

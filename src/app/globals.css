@@ -182,7 +182,7 @@
 }
 
 /* Animações de Login e Transições de PIN */
-@keyframes scaleInLogin {
+@keyframes scale-in-login {
   from {
     opacity: 0;
     transform: scale(0.95) translateY(10px);
@@ -194,10 +194,10 @@
 }
 
 .animate-scale-in-login {
-  animation: scaleInLogin 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: scale-in-login 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-@keyframes slideInFromRight {
+@keyframes slide-in-from-right {
   from {
     opacity: 0;
     transform: translateX(20px);
@@ -209,10 +209,10 @@
 }
 
 .animate-slide-in {
-  animation: slideInFromRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: slide-in-from-right 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-@keyframes pulseGreen {
+@keyframes pulse-green {
   0%, 100% {
     opacity: 1;
     transform: scale(1);
@@ -224,5 +224,5 @@
 }
 
 .animate-pulse-slow {
-  animation: pulseGreen 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  animation: pulse-green 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
