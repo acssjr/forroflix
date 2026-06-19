@@ -334,8 +334,8 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
       setUploading(true);
       const value = bulkSubmoduleName.trim() || null;
 
-      // Executar requisições de atualização em paralelo
-      await Promise.all(
+      // Executar requisições de atualização em paralelo com allSettled
+      const results = await Promise.allSettled(
         idsToUpdate.map(async (id) => {
           const res = await fetch('/api/admin/courses', {
             method: 'PATCH',
@@ -349,28 +349,64 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
           if (!res.ok) {
             throw new Error(`Erro ao atualizar aula ${id}`);
           }
+          return id;
         })
       );
 
-      // Atualizar o estado local
-      setModules(prev => prev.map(m => {
-        return {
-          ...m,
-          lessons: m.lessons.map(l => {
-            if (idsToUpdate.includes(l.id)) {
-              return {
-                ...l,
-                submodule: value
-              };
-            }
-            return l;
-          })
-        };
-      }));
+      const successfulIds: string[] = [];
+      const failedIds: string[] = [];
 
-      setBulkSubmoduleOpen(false);
-      setBulkSubmoduleName('');
-      setSelectedLessons({});
+      results.forEach((result, idx) => {
+        if (result.status === 'fulfilled') {
+          successfulIds.push(result.value);
+        } else {
+          failedIds.push(idsToUpdate[idx]);
+        }
+      });
+
+      // Atualizar o estado local apenas para os que tiveram sucesso
+      if (successfulIds.length > 0) {
+        setModules(prev => prev.map(m => {
+          return {
+            ...m,
+            lessons: m.lessons.map(l => {
+              if (successfulIds.includes(l.id)) {
+                return {
+                  ...l,
+                  submodule: value
+                };
+              }
+              return l;
+            })
+          };
+        }));
+      }
+
+      // Se houveram falhas, alertar o usuário exibindo os títulos das aulas
+      if (failedIds.length > 0) {
+        const failedTitles = failedIds.map(id => {
+          for (const m of modules) {
+            const lesson = m.lessons.find(l => l.id === id);
+            if (lesson) return lesson.title;
+          }
+          return id;
+        });
+        alert(`Algumas atualizações falharam (${failedIds.length}/${idsToUpdate.length}). As seguintes aulas não puderam ser atualizadas:\n- ${failedTitles.join('\n- ')}`);
+      }
+
+      // Remover apenas os IDs de sucesso do estado selecionado
+      setSelectedLessons(prev => {
+        const next = { ...prev };
+        successfulIds.forEach(id => {
+          delete next[id];
+        });
+        return next;
+      });
+
+      if (failedIds.length === 0) {
+        setBulkSubmoduleOpen(false);
+        setBulkSubmoduleName('');
+      }
     } catch (err: any) {
       alert(err.message || 'Erro ao aplicar submódulo em lote.');
     } finally {
