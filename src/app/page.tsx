@@ -207,8 +207,10 @@ export default async function Home({ searchParams }: PageProps) {
           progress_percent: prog.total > 0 ? Math.round((prog.completed / prog.total) * 100) : 0,
           cover_vertical: c.cover_vertical || null,
           cover_horizontal: c.cover_horizontal || null,
+          cover_background: c.cover_background || null,
           cover_vertical_position: c.cover_vertical_position || '50% 50%',
           cover_horizontal_position: c.cover_horizontal_position || '50% 50%',
+          cover_background_position: c.cover_background_position || '50% 50%',
           is_featured: c.is_featured || 0,
           hide_title: c.hide_title || 0
         };

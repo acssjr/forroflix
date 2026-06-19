@@ -39,6 +39,8 @@ interface Module {
   id: string;
   title: string;
   position: number;
+  cover_vertical?: string | null;
+  cover_vertical_position?: string | null;
   lessons: Lesson[];
 }
 
@@ -78,6 +80,21 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
   const [editingLessonId, setEditingLessonId] = useState<string | null>(null);
   const [editingLessonTitle, setEditingLessonTitle] = useState('');
   const [editingLessonDescription, setEditingLessonDescription] = useState('');
+
+  // Estados para Modal de Edição de Módulo (Metadados/Capa)
+  const [editingModule, setEditingModule] = useState<Module | null>(null);
+  const [editModuleTitle, setEditModuleTitle] = useState('');
+  const [editModuleCoverVertical, setEditModuleCoverVertical] = useState('');
+  const [editModuleCoverVerticalPosition, setEditModuleCoverVerticalPosition] = useState('50% 50%');
+  const [editModuleLoading, setEditModuleLoading] = useState(false);
+
+  useEffect(() => {
+    if (editingModule) {
+      setEditModuleTitle(editingModule.title || '');
+      setEditModuleCoverVertical(editingModule.cover_vertical || '');
+      setEditModuleCoverVerticalPosition(editingModule.cover_vertical_position || '50% 50%');
+    }
+  }, [editingModule]);
 
   // Estados para Controle de Drag and Drop
   const [draggedItem, setDraggedItem] = useState<{
@@ -591,6 +608,53 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
     setDropIndicator(null);
   };
 
+  // Salvar metadados do módulo (Capa, Título)
+  const handleSaveModuleMetadata = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingModule) return;
+    const trimmedTitle = editModuleTitle.trim();
+    if (!trimmedTitle) {
+      alert('O título do módulo é obrigatório.');
+      return;
+    }
+    setEditModuleLoading(true);
+    try {
+      const res = await fetch('/api/admin/courses', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'module_metadata',
+          id: editingModule.id,
+          title: trimmedTitle,
+          cover_vertical: editModuleCoverVertical || null,
+          cover_vertical_position: editModuleCoverVerticalPosition,
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao salvar metadados do módulo.');
+
+      setModules(prev => prev.map(m => {
+        if (m.id === editingModule.id) {
+          return {
+            ...m,
+            title: trimmedTitle,
+            cover_vertical: editModuleCoverVertical || null,
+            cover_vertical_position: editModuleCoverVerticalPosition,
+          };
+        }
+        return m;
+      }));
+
+      setEditingModule(null);
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || 'Erro ao salvar metadados do módulo.');
+    } finally {
+      setEditModuleLoading(false);
+    }
+  };
+
   // Renomear Módulo via PATCH API
   const handleRenameModule = async (e: React.FormEvent, moduleId: string) => {
     e.preventDefault();
@@ -956,88 +1020,66 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                           : 'bg-secondary/40 border-b border-border/60 hover:bg-secondary/60'
                       }`}
                     >
-                      {editingModuleId === mod.id ? (
-                        <form onSubmit={(e) => handleRenameModule(e, mod.id)} className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="text"
-                            value={editingModuleTitle}
-                            onChange={(e) => setEditingModuleTitle(e.target.value)}
-                            className="bg-card border border-red-600/30 rounded-xl px-3 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-red-600 text-sm font-semibold max-w-xs"
-                            autoFocus
-                            onKeyDown={(e) => {
-                              if (e.key === 'Escape') setEditingModuleId(null);
+                      <h3 className="font-bold text-foreground text-base flex items-center gap-2 group select-none">
+                        <GripVertical 
+                          className="w-4 h-4 text-muted-foreground/60 hover:text-foreground mr-0.5 shrink-0 cursor-grab" 
+                          onClick={(e) => e.stopPropagation()}
+                          onMouseDown={() => setDraggableModuleId(mod.id)}
+                          onMouseUp={() => setDraggableModuleId(null)}
+                        />
+                        
+                        {moduleLessons.length > 0 && (
+                          <Checkbox
+                            checked={isAllModuleLessonsSelected}
+                            indeterminate={isSomeModuleLessonsSelected}
+                            onCheckedChange={() => {
+                              toggleSelectAllModuleLessons(moduleLessons, isAllModuleLessonsSelected);
                             }}
-                          />
-                          <Button size="sm" variant="ghost" type="submit" className="h-8 w-8 p-0 text-green-500 hover:text-green-400 hover:bg-secondary rounded-lg">
-                            <Check className="w-4 h-4" />
-                          </Button>
-                          <Button size="sm" variant="ghost" onClick={() => setEditingModuleId(null)} className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg">
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </form>
-                      ) : (
-                        <h3 className="font-bold text-foreground text-base flex items-center gap-2 group select-none">
-                          <GripVertical 
-                            className="w-4 h-4 text-muted-foreground/60 hover:text-foreground mr-0.5 shrink-0 cursor-grab" 
                             onClick={(e) => e.stopPropagation()}
-                            onMouseDown={() => setDraggableModuleId(mod.id)}
-                            onMouseUp={() => setDraggableModuleId(null)}
+                            title="Selecionar todas as aulas deste módulo"
                           />
-                          
-                          {moduleLessons.length > 0 && (
-                            <Checkbox
-                              checked={isAllModuleLessonsSelected}
-                              indeterminate={isSomeModuleLessonsSelected}
-                              onCheckedChange={() => {
-                                toggleSelectAllModuleLessons(moduleLessons, isAllModuleLessonsSelected);
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                              title="Selecionar todas as aulas deste módulo"
-                            />
-                          )}
+                        )}
 
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleModuleCollapse(mod.id);
-                            }}
-                            className="p-1 hover:bg-secondary rounded-lg text-muted-foreground hover:text-foreground transition-colors shrink-0 cursor-pointer"
-                            title={isCollapsed ? "Expandir Módulo" : "Colapsar Módulo"}
-                          >
-                            {isCollapsed ? (
-                              <ChevronRight className="w-4 h-4" />
-                            ) : (
-                              <ChevronDown className="w-4 h-4" />
-                            )}
-                          </button>
-                          
-                          <span className="w-1.5 h-5 bg-red-600 rounded-full shrink-0"></span>
-                          <span className="truncate">{mod.title}</span>
-                          
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingModuleId(mod.id);
-                              setEditingModuleTitle(mod.title);
-                            }}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-muted-foreground hover:text-red-500 rounded-lg cursor-pointer shrink-0"
-                            title="Renomear Módulo"
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                          </button>
-                          
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteModule(mod.id, mod.title);
-                            }}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-muted-foreground hover:text-red-500 rounded-lg cursor-pointer shrink-0"
-                            title="Excluir Módulo"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </h3>
-                      )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleModuleCollapse(mod.id);
+                          }}
+                          className="p-1 hover:bg-secondary rounded-lg text-muted-foreground hover:text-foreground transition-colors shrink-0 cursor-pointer"
+                          title={isCollapsed ? "Expandir Módulo" : "Colapsar Módulo"}
+                        >
+                          {isCollapsed ? (
+                            <ChevronRight className="w-4 h-4" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4" />
+                          )}
+                        </button>
+                        
+                        <span className="w-1.5 h-5 bg-red-600 rounded-full shrink-0"></span>
+                        <span className="truncate">{mod.title}</span>
+                        
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingModule(mod);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-muted-foreground hover:text-red-500 rounded-lg cursor-pointer shrink-0"
+                          title="Editar Módulo"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteModule(mod.id, mod.title);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-muted-foreground hover:text-red-500 rounded-lg cursor-pointer shrink-0"
+                          title="Excluir Módulo"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </h3>
                       <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                         {moduleLessons.length > 1 && (
                           <div className="flex items-center bg-secondary/50 border border-border/80 rounded-xl p-0.5 shadow-sm">
@@ -1588,6 +1630,209 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
             window.location.reload();
           }}
         />
+      )}
+
+      {/* Modal - Editar Detalhes do Módulo */}
+      {editingModule && (
+        <div 
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setEditingModule(null);
+          }}
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 md:p-10 animate-modal-backdrop"
+        >
+          <div 
+            className="bg-card border border-border w-full max-w-lg flex flex-col rounded-3xl overflow-hidden shadow-2xl animate-modal-content text-left my-auto"
+            style={{ maxHeight: '80vh' }}
+          >
+            <div className="p-6 border-b border-border bg-secondary/60 flex justify-between items-center shrink-0">
+              <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                <Pencil className="w-5 h-5 text-primary" />
+                Editar Detalhes do Módulo
+              </h3>
+              <button 
+                onClick={() => setEditingModule(null)}
+                className="text-muted-foreground hover:text-foreground text-xs font-semibold cursor-pointer"
+              >
+                Fechar
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveModuleMetadata} className="p-6 space-y-4 overflow-y-auto min-h-0 flex-grow">
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Nome do Módulo</label>
+                <input 
+                  type="text" 
+                  required
+                  value={editModuleTitle}
+                  onChange={(e) => setEditModuleTitle(e.target.value)}
+                  placeholder="Ex: Passo Básico Universitário"
+                  className="w-full bg-secondary border border-border rounded-xl px-4 py-3 text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-xs"
+                />
+              </div>
+
+              {/* Capa Vertical (4:5) */}
+              <div className="space-y-2 text-left">
+                <label className="block text-xs font-semibold text-muted-foreground">Capa do Módulo (Proporção 4:5)</label>
+                
+                {editModuleCoverVertical ? (
+                  <div className="space-y-2">
+                    <div className="space-y-1.5">
+                      <span className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Ajuste de Enquadramento (Arrastar Imagem)</span>
+                      <div 
+                        className="relative w-full max-w-[130px] aspect-[4/5] mx-auto rounded-2xl overflow-hidden border border-border bg-secondary shadow-inner select-none cursor-move group"
+                        onMouseDown={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const initialX = e.clientX;
+                          const initialY = e.clientY;
+                          const currentPos = editModuleCoverVerticalPosition || '50% 50%';
+                          const [currXPct, currYPct] = currentPos.split(' ').map(val => parseFloat(val) || 50);
+
+                          const handleMouseMove = (moveEvent: MouseEvent) => {
+                            const deltaX = moveEvent.clientX - initialX;
+                            const deltaY = moveEvent.clientY - initialY;
+                            const newX = Math.max(0, Math.min(100, currXPct - (deltaX / rect.width) * 100));
+                            const newY = Math.max(0, Math.min(100, currYPct - (deltaY / rect.height) * 100));
+                            setEditModuleCoverVerticalPosition(`${newX.toFixed(1)}% ${newY.toFixed(1)}%`);
+                          };
+
+                          const handleMouseUp = () => {
+                            window.removeEventListener('mousemove', handleMouseMove);
+                            window.removeEventListener('mouseup', handleMouseUp);
+                          };
+
+                          window.addEventListener('mousemove', handleMouseMove);
+                          window.addEventListener('mouseup', handleMouseUp);
+                        }}
+                        onTouchStart={(e) => {
+                          const touch = e.touches[0];
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const initialX = touch.clientX;
+                          const initialY = touch.clientY;
+                          const currentPos = editModuleCoverVerticalPosition || '50% 50%';
+                          const [currXPct, currYPct] = currentPos.split(' ').map(val => parseFloat(val) || 50);
+
+                          const handleTouchMove = (moveEvent: TouchEvent) => {
+                            const moveTouch = moveEvent.touches[0];
+                            const deltaX = moveTouch.clientX - initialX;
+                            const deltaY = moveTouch.clientY - initialY;
+                            const newX = Math.max(0, Math.min(100, currXPct - (deltaX / rect.width) * 100));
+                            const newY = Math.max(0, Math.min(100, currYPct - (deltaY / rect.height) * 100));
+                            setEditModuleCoverVerticalPosition(`${newX.toFixed(1)}% ${newY.toFixed(1)}%`);
+                          };
+
+                          const handleTouchEnd = () => {
+                            window.removeEventListener('touchmove', handleTouchMove);
+                            window.removeEventListener('touchend', handleTouchEnd);
+                          };
+
+                          window.addEventListener('touchmove', handleTouchMove, { passive: true });
+                          window.addEventListener('touchend', handleTouchEnd);
+                        }}
+                      >
+                        <img 
+                          src={editModuleCoverVertical} 
+                          alt="" 
+                          className="w-full h-full object-cover pointer-events-none"
+                          style={{ objectPosition: editModuleCoverVerticalPosition || '50% 50%' }}
+                        />
+                        <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[9px] font-black pointer-events-none p-3 text-center leading-tight">
+                          <span>Arraste a imagem para enquadrar</span>
+                          <span className="text-[8px] text-white/75 mt-1 font-semibold">{editModuleCoverVerticalPosition || '50% 50%'}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex justify-center gap-2">
+                      <label className="text-[10px] bg-secondary border border-border text-foreground hover:bg-primary/15 hover:text-primary font-bold px-3 py-1.5 rounded-lg cursor-pointer transition-all">
+                        Alterar Foto
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          className="hidden" 
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onload = (event) => {
+                                setEditModuleCoverVertical(event.target?.result as string);
+                                setEditModuleCoverVerticalPosition('50% 50%');
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                      </label>
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          setEditModuleCoverVertical('');
+                          setEditModuleCoverVerticalPosition('50% 50%');
+                        }}
+                        className="text-[10px] bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white font-bold px-3 py-1.5 rounded-lg cursor-pointer transition-all"
+                      >
+                        Remover
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <label 
+                    className="flex flex-col items-center justify-center border-2 border-dashed border-border hover:border-primary/45 rounded-2xl p-4 cursor-pointer bg-secondary/30 hover:bg-primary/5 transition-all group select-none max-w-[200px] mx-auto"
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const file = e.dataTransfer.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          setEditModuleCoverVertical(event.target?.result as string);
+                          setEditModuleCoverVerticalPosition('50% 50%');
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  >
+                    <Plus className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors mb-2" />
+                    <span className="text-[11px] font-bold text-muted-foreground group-hover:text-primary transition-colors">Enviar Capa (4:5)</span>
+                    <span className="text-[9px] text-muted-foreground/60 mt-1">Clique ou arraste a imagem aqui</span>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            setEditModuleCoverVertical(event.target?.result as string);
+                            setEditModuleCoverVerticalPosition('50% 50%');
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setEditingModule(null)}
+                  className="border-border hover:bg-muted text-muted-foreground"
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={editModuleLoading}
+                  className="bg-primary hover:bg-primary/95 text-primary-foreground font-bold px-6"
+                >
+                  {editModuleLoading ? 'Salvando...' : 'Salvar Alterações'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </>
   );

@@ -35,8 +35,10 @@ interface CourseItem {
   progress_percent: number;
   cover_vertical?: string | null;
   cover_horizontal?: string | null;
+  cover_background?: string | null;
   cover_vertical_position?: string | null;
   cover_horizontal_position?: string | null;
+  cover_background_position?: string | null;
   is_featured?: number;
   hide_title?: number;
 }
@@ -112,8 +114,10 @@ export function DashboardClient({
   const [editGradient, setEditGradient] = useState('');
   const [editCoverVertical, setEditCoverVertical] = useState('');
   const [editCoverHorizontal, setEditCoverHorizontal] = useState('');
+  const [editCoverBackground, setEditCoverBackground] = useState('');
   const [editCoverVerticalPosition, setEditCoverVerticalPosition] = useState('50% 50%');
   const [editCoverHorizontalPosition, setEditCoverHorizontalPosition] = useState('50% 50%');
+  const [editCoverBackgroundPosition, setEditCoverBackgroundPosition] = useState('50% 50%');
   const [editIsFeatured, setEditIsFeatured] = useState(false);
   const [editHideTitle, setEditHideTitle] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
@@ -128,8 +132,10 @@ export function DashboardClient({
       setEditGradient(metadataEditCourse.thumbnail_gradient || 'from-red-600 to-red-600');
       setEditCoverVertical(metadataEditCourse.cover_vertical || '');
       setEditCoverHorizontal(metadataEditCourse.cover_horizontal || '');
+      setEditCoverBackground(metadataEditCourse.cover_background || '');
       setEditCoverVerticalPosition(metadataEditCourse.cover_vertical_position || '50% 50%');
       setEditCoverHorizontalPosition(metadataEditCourse.cover_horizontal_position || '50% 50%');
+      setEditCoverBackgroundPosition(metadataEditCourse.cover_background_position || '50% 50%');
       setEditIsFeatured(metadataEditCourse.is_featured === 1);
       setEditHideTitle(metadataEditCourse.hide_title === 1);
       setEditError(null);
@@ -181,8 +187,10 @@ export function DashboardClient({
           thumbnail_gradient: editGradient,
           cover_vertical: editCoverVertical || null,
           cover_horizontal: editCoverHorizontal || null,
+          cover_background: editCoverBackground || null,
           cover_vertical_position: editCoverVerticalPosition,
           cover_horizontal_position: editCoverHorizontalPosition,
+          cover_background_position: editCoverBackgroundPosition,
           is_featured: editIsFeatured ? 1 : 0,
           hide_title: editHideTitle ? 1 : 0
         })
@@ -200,8 +208,10 @@ export function DashboardClient({
             thumbnail_gradient: editGradient,
             cover_vertical: editCoverVertical || null,
             cover_horizontal: editCoverHorizontal || null,
+            cover_background: editCoverBackground || null,
             cover_vertical_position: editCoverVerticalPosition,
             cover_horizontal_position: editCoverHorizontalPosition,
+            cover_background_position: editCoverBackgroundPosition,
             is_featured: editIsFeatured ? 1 : 0,
             hide_title: editHideTitle ? 1 : 0
           };
@@ -517,23 +527,24 @@ export function DashboardClient({
                               className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.015]" 
                               style={{ objectPosition: featuredCourse.cover_horizontal_position || '50% 50%' }}
                             />
-                            {/* Conteúdo flutuante em Glassmorphism */}
-                            <div className="relative z-20 p-6 md:p-8 text-left text-white flex flex-col justify-center h-full w-full md:max-w-xl">
-                              <div className="bg-[#07070a]/55 backdrop-blur-md border border-white/10 p-5 md:p-6 rounded-2xl md:rounded-3xl space-y-4 max-w-[90%] md:max-w-[420px] shadow-2xl relative">
-                                {!featuredCourse.hide_title && (
-                                  <div className="space-y-1.5">
-                                    <h3 className="text-xl md:text-2xl font-black tracking-tight leading-tight text-white drop-shadow-md">
-                                      {featuredCourse.title}
-                                    </h3>
-                                    <p className="text-[10px] md:text-xs text-white/75 line-clamp-2 leading-relaxed">
-                                      {featuredCourse.description || 'Aulas exclusivas do Forroflix.'}
-                                    </p>
-                                  </div>
-                                )}
-                                <div className="bg-primary group-hover:bg-primary/95 text-white font-bold text-[10px] md:text-xs flex items-center justify-center gap-2 px-4 py-2 rounded-xl shadow-lg shadow-primary/20 transition-all w-fit duration-200">
-                                  <Play className="w-3.5 h-3.5 fill-current" />
-                                  ACESSAR
+                            {/* Esmaecimento escuro bem leve à esquerda (não chega ao centro) */}
+                            <div className="absolute inset-y-0 left-0 w-[50%] md:w-[40%] bg-gradient-to-r from-black/80 via-black/35 to-transparent z-10 pointer-events-none" />
+                            
+                            {/* Conteúdo flutuante sobre a imagem */}
+                            <div className="relative z-20 p-6 md:p-8 lg:p-10 text-left text-white flex flex-col justify-center h-full w-full md:max-w-md space-y-4">
+                              {!featuredCourse.hide_title && (
+                                <div className="space-y-1.5">
+                                  <h3 className="text-xl md:text-2xl font-black tracking-tight leading-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)]">
+                                    {featuredCourse.title}
+                                  </h3>
+                                  <p className="text-[10px] md:text-xs text-white/90 line-clamp-2 leading-relaxed drop-shadow-[0_1.5px_4px_rgba(0,0,0,0.8)]">
+                                    {featuredCourse.description || 'Aulas exclusivas do Forroflix.'}
+                                  </p>
                                 </div>
+                              )}
+                              <div className="bg-primary group-hover:bg-primary/95 text-white font-bold text-[10px] md:text-xs flex items-center justify-center gap-2 px-4 py-2 rounded-xl shadow-lg shadow-primary/20 transition-all w-fit duration-200">
+                                <Play className="w-3.5 h-3.5 fill-current" />
+                                ACESSAR
                               </div>
                             </div>
                           </>
@@ -1664,6 +1675,149 @@ export function DashboardClient({
                           reader.onload = (event) => {
                             setEditCoverHorizontal(event.target?.result as string);
                             setEditCoverHorizontalPosition('50% 50%');
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
+                )}
+              </div>
+
+              {/* Imagem de Fundo da Trilha (Fundo Desfocado) */}
+              <div className="space-y-2 text-left">
+                <label className="block text-xs font-semibold text-muted-foreground">Imagem de Fundo da Trilha (Fundo Desfocado da Página do Aluno)</label>
+                
+                {editCoverBackground ? (
+                  <div className="space-y-2">
+                    <div className="space-y-1.5">
+                      <span className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Ajuste de Enquadramento (Arrastar Imagem)</span>
+                      <div 
+                        className="relative w-full max-w-[320px] aspect-[7/2] mx-auto rounded-2xl overflow-hidden border border-border bg-secondary shadow-inner select-none cursor-move group"
+                        onMouseDown={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const initialX = e.clientX;
+                          const initialY = e.clientY;
+                          const currentPos = editCoverBackgroundPosition || '50% 50%';
+                          const [currXPct, currYPct] = currentPos.split(' ').map(val => parseFloat(val) || 50);
+
+                          const handleMouseMove = (moveEvent: MouseEvent) => {
+                            const deltaX = moveEvent.clientX - initialX;
+                            const deltaY = moveEvent.clientY - initialY;
+                            const newX = Math.max(0, Math.min(100, currXPct - (deltaX / rect.width) * 100));
+                            const newY = Math.max(0, Math.min(100, currYPct - (deltaY / rect.height) * 100));
+                            setEditCoverBackgroundPosition(`${newX.toFixed(1)}% ${newY.toFixed(1)}%`);
+                          };
+
+                          const handleMouseUp = () => {
+                            window.removeEventListener('mousemove', handleMouseMove);
+                            window.removeEventListener('mouseup', handleMouseUp);
+                          };
+
+                          window.addEventListener('mousemove', handleMouseMove);
+                          window.addEventListener('mouseup', handleMouseUp);
+                        }}
+                        onTouchStart={(e) => {
+                          const touch = e.touches[0];
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const initialX = touch.clientX;
+                          const initialY = touch.clientY;
+                          const currentPos = editCoverBackgroundPosition || '50% 50%';
+                          const [currXPct, currYPct] = currentPos.split(' ').map(val => parseFloat(val) || 50);
+
+                          const handleTouchMove = (moveEvent: TouchEvent) => {
+                            const moveTouch = moveEvent.touches[0];
+                            const deltaX = moveTouch.clientX - initialX;
+                            const deltaY = moveTouch.clientY - initialY;
+                            const newX = Math.max(0, Math.min(100, currXPct - (deltaX / rect.width) * 100));
+                            const newY = Math.max(0, Math.min(100, currYPct - (deltaY / rect.height) * 100));
+                            setEditCoverBackgroundPosition(`${newX.toFixed(1)}% ${newY.toFixed(1)}%`);
+                          };
+
+                          const handleTouchEnd = () => {
+                            window.removeEventListener('touchmove', handleTouchMove);
+                            window.removeEventListener('touchend', handleTouchEnd);
+                          };
+
+                          window.addEventListener('touchmove', handleTouchMove, { passive: true });
+                          window.addEventListener('touchend', handleTouchEnd);
+                        }}
+                      >
+                        <img 
+                          src={editCoverBackground} 
+                          alt="" 
+                          className="w-full h-full object-cover pointer-events-none"
+                          style={{ objectPosition: editCoverBackgroundPosition || '50% 50%' }}
+                        />
+                        <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[9px] font-black pointer-events-none p-3 text-center leading-tight">
+                          <span>Arraste a imagem para enquadrar</span>
+                          <span className="text-[8px] text-white/75 mt-1 font-semibold">{editCoverBackgroundPosition || '50% 50%'}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex justify-center gap-2">
+                      <label className="text-[10px] bg-secondary border border-border text-foreground hover:bg-primary/15 hover:text-primary font-bold px-3 py-1.5 rounded-lg cursor-pointer transition-all">
+                        Alterar Foto
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          className="hidden" 
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onload = (event) => {
+                                setEditCoverBackground(event.target?.result as string);
+                                setEditCoverBackgroundPosition('50% 50%');
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                      </label>
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          setEditCoverBackground('');
+                          setEditCoverBackgroundPosition('50% 50%');
+                        }}
+                        className="text-[10px] bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white font-bold px-3 py-1.5 rounded-lg cursor-pointer transition-all"
+                      >
+                        Remover
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <label 
+                    className="flex flex-col items-center justify-center border-2 border-dashed border-border hover:border-primary/45 rounded-2xl p-4 cursor-pointer bg-secondary/30 hover:bg-primary/5 transition-all group select-none max-w-[320px] mx-auto"
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const file = e.dataTransfer.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          setEditCoverBackground(event.target?.result as string);
+                          setEditCoverBackgroundPosition('50% 50%');
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  >
+                    <Plus className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors mb-2" />
+                    <span className="text-[11px] font-bold text-muted-foreground group-hover:text-primary transition-colors">Enviar Fundo da Trilha</span>
+                    <span className="text-[9px] text-muted-foreground/60 mt-1">Clique para buscar ou arraste o arquivo aqui</span>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            setEditCoverBackground(event.target?.result as string);
+                            setEditCoverBackgroundPosition('50% 50%');
                           };
                           reader.readAsDataURL(file);
                         }

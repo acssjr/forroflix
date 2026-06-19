@@ -4,6 +4,8 @@ import { getDB } from '@/lib/db';
 import { verifyJWT } from '@/lib/auth';
 import { MOCK_COURSES_DATA } from '@/lib/mock-data';
 import { CourseViewer } from '@/components/course-viewer';
+import { syncZeroDurationLessons } from '@/lib/sync-duration';
+import { after } from 'next/server';
  
 interface DBCourse {
   id: string;
@@ -11,6 +13,12 @@ interface DBCourse {
   description: string | null;
   slug: string;
   thumbnail_gradient: string;
+  cover_vertical: string | null;
+  cover_horizontal: string | null;
+  cover_background: string | null;
+  cover_vertical_position: string | null;
+  cover_horizontal_position: string | null;
+  cover_background_position: string | null;
 }
 
 interface DBModule {
@@ -19,8 +27,10 @@ interface DBModule {
   title: string;
   description: string | null;
   position: number;
+  cover_vertical: string | null;
+  cover_vertical_position: string | null;
 }
-
+ 
 interface DBLesson {
   id: string;
   module_id: string;
@@ -29,7 +39,7 @@ interface DBLesson {
   duration_seconds: number;
   position: number;
 }
-
+ 
 interface Lesson {
   id: string;
   title: string;
@@ -37,11 +47,13 @@ interface Lesson {
   duration_seconds: number;
   position: number;
 }
-
+ 
 interface Module {
   id: string;
   title: string;
   position: number;
+  cover_vertical: string | null;
+  cover_vertical_position: string | null;
   lessons: Lesson[];
 }
 
@@ -102,6 +114,17 @@ export default async function CoursePage({ params }: PageProps) {
       const lessonsList = lessonsRes.results || [];
       completedLessonIds = progressRes.results ? progressRes.results.map((p) => p.lesson_id) : [];
       favoriteLessonIds = favoritesRes.results ? favoritesRes.results.map((f) => f.lesson_id) : [];
+ 
+      // Sincronizar durações zeradas em segundo plano
+      if (lessonsList.length > 0) {
+        after(async () => {
+          try {
+            await syncZeroDurationLessons(lessonsList);
+          } catch (err) {
+            console.error('[Page Sync] Error in background sync:', err);
+          }
+        });
+      }
 
       // Pré-indexar aulas por module_id para agrupamento eficiente O(N + M)
       const lessonsByModule: Record<string, Lesson[]> = {};
@@ -117,15 +140,17 @@ export default async function CoursePage({ params }: PageProps) {
           position: les.position,
         });
       }
-
+ 
       // Agrupar aulas nos módulos correspondentes
       modulesWithLessons = dbModules.map(mod => ({
         id: mod.id,
         title: mod.title,
         position: mod.position,
+        cover_vertical: mod.cover_vertical || null,
+        cover_vertical_position: mod.cover_vertical_position || '50% 50%',
         lessons: lessonsByModule[mod.id] || []
       }));
- 
+  
       const rawPullZone = process.env.BUNNY_STREAM_PULL_ZONE || process.env.BUNNY_STREAM_LIBRARY_ID || '';
       pullZone = rawPullZone.startsWith('vz-') ? rawPullZone.substring(3) : rawPullZone;
       loadFromDbSuccess = true;
@@ -133,7 +158,7 @@ export default async function CoursePage({ params }: PageProps) {
   } catch (err) {
     console.warn('[D1] Erro ao carregar trilha na D1, tentando fallback dos mocks.', err);
   }
-
+ 
   if (loadFromDbSuccess && dbCourse) {
     return (
       <CourseViewer
@@ -143,6 +168,12 @@ export default async function CoursePage({ params }: PageProps) {
           description: dbCourse.description || '',
           slug: dbCourse.slug,
           thumbnail_gradient: dbCourse.thumbnail_gradient,
+          cover_vertical: dbCourse.cover_vertical || null,
+          cover_horizontal: dbCourse.cover_horizontal || null,
+          cover_background: dbCourse.cover_background || null,
+          cover_vertical_position: dbCourse.cover_vertical_position || '50% 50%',
+          cover_horizontal_position: dbCourse.cover_horizontal_position || '50% 50%',
+          cover_background_position: dbCourse.cover_background_position || '50% 50%',
         }}
         modules={modulesWithLessons}
         completedLessonIds={completedLessonIds}

@@ -16,6 +16,8 @@ interface Module {
   id: string;
   title: string;
   position: number;
+  cover_vertical?: string | null;
+  cover_vertical_position?: string | null;
   lessons: Lesson[];
 }
 
@@ -25,6 +27,12 @@ interface Course {
   description: string;
   slug: string;
   thumbnail_gradient: string;
+  cover_vertical?: string | null;
+  cover_horizontal?: string | null;
+  cover_background?: string | null;
+  cover_vertical_position?: string | null;
+  cover_horizontal_position?: string | null;
+  cover_background_position?: string | null;
 }
 
 interface CourseViewerProps {
