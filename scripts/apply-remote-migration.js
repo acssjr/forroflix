@@ -22,14 +22,14 @@ try {
 
   accountId = env.CLOUDFLARE_ACCOUNT_ID;
   apiToken = env.CLOUDFLARE_API_TOKEN;
-  databaseId = env.CLOUDFLARE_DATABASE_ID || '21bc1280-e5b2-4c71-824a-714ef977f166';
+  databaseId = env.CLOUDFLARE_DATABASE_ID;
 } catch (err) {
   console.error('Erro ao carregar o arquivo .env:', err.message);
   process.exit(1);
 }
 
-if (!accountId || !apiToken) {
-  console.error("Faltam as variáveis de ambiente CLOUDFLARE_ACCOUNT_ID ou CLOUDFLARE_API_TOKEN no .env.");
+if (!accountId || !apiToken || !databaseId) {
+  console.error("Faltam as variáveis de ambiente CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN ou CLOUDFLARE_DATABASE_ID no .env.");
   process.exit(1);
 }
 
@@ -105,11 +105,14 @@ async function runMigration() {
     { name: "modules.cover_vertical_position", sql: `ALTER TABLE modules ADD COLUMN cover_vertical_position TEXT DEFAULT '50% 50%';` },
     // 5. Adicionar nova coluna username em users
     { name: "users.username", sql: `ALTER TABLE users ADD COLUMN username TEXT;` },
-    { name: "users.idx_users_username", sql: `CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username);` },
-    // 6. Migrar dados nulos de username de forma retroativa
+    // 6. Migrar dados nulos de username de forma retroativa (deve rodar ANTES do índice único para evitar colisões na migração)
     { name: "users.username_migration_email", sql: `UPDATE users SET username = LOWER(SUBSTR(email, 1, INSTR(email, '@') - 1)) WHERE username IS NULL AND email LIKE '%@%';` },
-    { name: "users.username_migration_id", sql: `UPDATE users SET username = LOWER(id) WHERE username IS NULL;` }
+    { name: "users.username_migration_id", sql: `UPDATE users SET username = LOWER(id) WHERE username IS NULL;` },
+    // 7. Criar índice único após backfill de dados
+    { name: "users.idx_users_username", sql: `CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username);` }
   ];
+
+  let failedQueriesCount = 0;
 
   for (const q of queries) {
     try {
@@ -126,13 +129,19 @@ async function runMigration() {
         console.log(`[INFO] ${q.name} já existente/aplicada. Pulando.`);
       } else {
         console.error(`[ERRO] Falha ao aplicar ${q.name}: ${e.message}`);
+        failedQueriesCount++;
       }
     }
+  }
+
+  if (failedQueriesCount > 0) {
+    throw new Error(`Falha nas migrações: ${failedQueriesCount} query(ies) inesperada(s) falhou(aram).`);
   }
 
   console.log('Migrações na D1 concluídas!');
 }
 
 runMigration().catch(err => {
-  console.error('Erro fatal nas migrações:', err);
+  console.error('Erro fatal nas migrações:', err.message || err);
+  process.exit(1);
 });

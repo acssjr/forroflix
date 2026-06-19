@@ -53,7 +53,7 @@ export function LoginForm() {
       if (data.exists) {
         setUserFound(true);
         setUserNotFound(false);
-        setUserInfo({ name: data.name });
+        setUserInfo({ name: cleanUsername });
         setMessage(null);
       } else {
         setUserFound(false);

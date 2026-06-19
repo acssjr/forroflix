@@ -12,6 +12,9 @@ export async function POST(request: Request) {
     }
 
     const cleanUsername = username.toLowerCase().trim();
+    if (cleanUsername.length < 2) {
+      return NextResponse.json({ error: 'O nome de usuário deve ter pelo menos 2 caracteres' }, { status: 400 });
+    }
     if (!/^[a-z0-9_.-]+$/.test(cleanUsername)) {
       return NextResponse.json({ error: 'O nome de usuário deve conter apenas letras minúsculas, números, sublinhados, pontos ou traços' }, { status: 400 });
     }
