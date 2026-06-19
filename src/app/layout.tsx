@@ -32,6 +32,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://iframe.mediadelivery.net" />
         <link rel="preconnect" href="https://vz-f9c6bcce-051.b-cdn.net" />
         <script
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: `
               try {

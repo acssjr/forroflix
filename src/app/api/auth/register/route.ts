@@ -5,23 +5,35 @@ import { cookies } from 'next/headers';
 
 export async function POST(request: Request) {
   try {
-    const { email, password, full_name } = await request.json();
+    const { username, password, full_name } = await request.json();
 
-    if (!email || !password) {
-      return NextResponse.json({ error: 'E-mail e senha são obrigatórios' }, { status: 400 });
+    if (!username || !password) {
+      return NextResponse.json({ error: 'Usuário e senha são obrigatórios' }, { status: 400 });
+    }
+
+    const cleanUsername = username.toLowerCase().trim();
+    if (cleanUsername.length < 2) {
+      return NextResponse.json({ error: 'O nome de usuário deve ter pelo menos 2 caracteres' }, { status: 400 });
+    }
+    if (!/^[a-z0-9_.-]+$/.test(cleanUsername)) {
+      return NextResponse.json({ error: 'O nome de usuário deve conter apenas letras minúsculas, números, sublinhados, pontos ou traços' }, { status: 400 });
+    }
+
+    if (!/^\d{4}$/.test(password)) {
+      return NextResponse.json({ error: 'A senha deve ser um PIN de 4 dígitos' }, { status: 400 });
     }
 
     const db = getDB();
-    const cleanEmail = email.toLowerCase().trim();
+    const generatedEmail = `${cleanUsername}@forroflix.com`;
 
-    // 1. Verificar se o e-mail já existe cadastrado
+    // 1. Verificar se o username ou e-mail já existe cadastrado
     const { results: existingUsers } = await db
-      .prepare('SELECT id FROM users WHERE email = ?')
-      .bind(cleanEmail)
+      .prepare('SELECT id FROM users WHERE username = ? OR email = ?')
+      .bind(cleanUsername, generatedEmail)
       .all();
 
     if (existingUsers && existingUsers.length > 0) {
-      return NextResponse.json({ error: 'Este e-mail já está em uso' }, { status: 400 });
+      return NextResponse.json({ error: 'Este nome de usuário já está em uso' }, { status: 400 });
     }
 
     // 2. Criar novo ID e encriptar a senha
@@ -37,14 +49,15 @@ export async function POST(request: Request) {
 
     // 3. Inserir no Cloudflare D1
     await db
-      .prepare('INSERT INTO users (id, email, password_hash, full_name, role, subscription_active) VALUES (?, ?, ?, ?, ?, ?)')
-      .bind(id, cleanEmail, passwordHash, full_name || '', role, subscriptionActive)
+      .prepare('INSERT INTO users (id, email, username, password_hash, full_name, role, subscription_active) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .bind(id, generatedEmail, cleanUsername, passwordHash, full_name || '', role, subscriptionActive)
       .run();
 
     // 4. Iniciar sessão automática do usuário recém-criado
     const sessionToken = await signJWT({
       id,
-      email: cleanEmail,
+      email: generatedEmail,
+      username: cleanUsername,
       role,
       subscription_active: subscriptionActive === 1
     });
@@ -61,7 +74,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       user: {
         id,
-        email: cleanEmail,
+        email: generatedEmail,
+        username: cleanUsername,
         full_name: full_name || '',
         role,
         subscription_active: subscriptionActive === 1

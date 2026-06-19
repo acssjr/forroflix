@@ -2,21 +2,38 @@ import { NextResponse } from 'next/server';
 import { getDB } from '@/lib/db';
 import { verifyPassword, signJWT } from '@/lib/auth';
 import { cookies } from 'next/headers';
+import { rateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: Request) {
   try {
-    const { email, password } = await request.json();
+    const { username, password } = await request.json();
 
-    if (!email || !password) {
-      return NextResponse.json({ error: 'E-mail e senha são obrigatórios' }, { status: 400 });
+    if (!username || !password) {
+      return NextResponse.json({ error: 'Usuário e senha são obrigatórios' }, { status: 400 });
+    }
+
+    const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
+    const cleanUsername = username.toLowerCase().trim();
+    const rateLimitKey = `login:${ip}:${cleanUsername}`;
+
+    const limiter = rateLimit(rateLimitKey, 5, 60 * 1000); // 5 tentativas por minuto por IP/usuário
+    if (!limiter.success) {
+      return NextResponse.json(
+        { error: 'Muitas tentativas de login. Tente novamente mais tarde.' },
+        { status: 429 }
+      );
+    }
+
+    if (!/^\d{4}$/.test(password)) {
+      return NextResponse.json({ error: 'A senha deve ser um PIN de 4 dígitos' }, { status: 400 });
     }
 
     const db = getDB();
     
     // Buscar usuário no Cloudflare D1
     const { results } = await db
-      .prepare('SELECT * FROM users WHERE email = ?')
-      .bind(email.toLowerCase().trim())
+      .prepare('SELECT * FROM users WHERE username = ? OR email = ?')
+      .bind(cleanUsername, cleanUsername)
       .all<any>();
 
     const user = results[0];
@@ -35,6 +52,7 @@ export async function POST(request: Request) {
     const sessionToken = await signJWT({
       id: user.id,
       email: user.email,
+      username: user.username,
       role: user.role,
       subscription_active: user.subscription_active === 1
     });
@@ -53,6 +71,7 @@ export async function POST(request: Request) {
       user: {
         id: user.id,
         email: user.email,
+        username: user.username,
         full_name: user.full_name,
         role: user.role,
         subscription_active: user.subscription_active === 1

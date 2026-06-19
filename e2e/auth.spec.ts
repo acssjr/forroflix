@@ -17,21 +17,20 @@ test.describe('Autenticação Forroflix E2E', () => {
         db.exec(schemaSql);
       }
       
-      const passwordHash = bcrypt.hashSync('senha123forro', 10);
+      const passwordHash = bcrypt.hashSync('1234', 10);
       
       db.prepare('DELETE FROM users WHERE email = ?').run('aluno@forroflix.com.br');
       db.prepare('DELETE FROM users WHERE email = ?').run('admin@forroflix.com');
 
       db.prepare(`
-        INSERT INTO users (id, email, password_hash, full_name, role, subscription_active)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run('user-student-test', 'aluno@forroflix.com.br', passwordHash, 'Aluno Teste', 'student', 1);
+        INSERT INTO users (id, email, username, password_hash, full_name, role, subscription_active)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run('user-student-test', 'aluno@forroflix.com.br', 'aluno', passwordHash, 'Aluno Teste', 'student', 1);
 
-      const adminHash = bcrypt.hashSync('admin123', 10);
       db.prepare(`
-        INSERT INTO users (id, email, password_hash, full_name, role, subscription_active)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run('user-admin-test', 'admin@forroflix.com', adminHash, 'Admin Teste', 'admin', 1);
+        INSERT INTO users (id, email, username, password_hash, full_name, role, subscription_active)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run('user-admin-test', 'admin@forroflix.com', 'admin', passwordHash, 'Admin Teste', 'admin', 1);
     } finally {
       db.close();
     }
@@ -39,13 +38,16 @@ test.describe('Autenticação Forroflix E2E', () => {
 
   test('Deve exibir a tela de login para usuário não autenticado', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('input[type="email"]')).toBeVisible();
+    await expect(page.locator('input[id="username"]')).toBeVisible();
   });
 
   test('Deve autenticar com sucesso usando credenciais válidas', async ({ page }) => {
     await page.goto('/login');
-    await page.fill('input[type="email"]', 'aluno@forroflix.com.br');
-    await page.fill('input[type="password"]', 'senha123forro');
+    await page.fill('input[id="username"]', 'aluno');
+    
+    // Aguardar até que a etapa 2 (senha/PIN) apareça por conta do fetch de busca do usuário
+    await expect(page.locator('input[id="password"]')).toBeVisible({ timeout: 5000 });
+    await page.fill('input[id="password"]', '1234');
     await page.click('button[type="submit"]');
 
     // Após o login com sucesso, deve redirecionar para a home
@@ -53,3 +55,4 @@ test.describe('Autenticação Forroflix E2E', () => {
     await expect(page.locator('text=FORROFLIX')).toBeVisible();
   });
 });
+
