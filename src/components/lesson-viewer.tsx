@@ -198,18 +198,32 @@ export function LessonViewer({
 
   // Carregar as anotações do banco de dados quando a lição ativa muda
   useEffect(() => {
+    const controller = new AbortController();
+    setNotes([]);
+
     const fetchNotes = async () => {
       try {
-        const res = await fetch(`/api/notes?lessonId=${currentActiveLesson.id}`);
+        const res = await fetch(`/api/notes?lessonId=${currentActiveLesson.id}`, {
+          signal: controller.signal,
+        });
         if (res.ok) {
           const data = await res.json();
           setNotes(data.notes || []);
+        } else {
+          setNotes([]);
         }
-      } catch (err) {
-        console.error('Erro ao buscar notas da aula:', err);
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          console.error('Erro ao buscar notas da aula:', err);
+          setNotes([]);
+        }
       }
     };
     fetchNotes();
+
+    return () => {
+      controller.abort();
+    };
   }, [currentActiveLesson.id]);
 
   const handleAddNote = async (e: React.FormEvent) => {

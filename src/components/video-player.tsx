@@ -44,6 +44,7 @@ export function VideoPlayer({
   const playerRef = useRef<any>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const playerJsRef = useRef<any>(null);
+  const pendingSeekRef = useRef<number | null>(null);
  
   const abortControllerRef = useRef<AbortController | null>(null);
   const isMountedRef = useRef<boolean>(true);
@@ -131,6 +132,15 @@ export function VideoPlayer({
           const player = new (window as any).playerjs.Player(iframeRef.current);
           playerJsRef.current = player;
           player.on('ready', () => {
+            if (pendingSeekRef.current !== null) {
+              try {
+                player.setCurrentTime(pendingSeekRef.current);
+                player.play();
+                pendingSeekRef.current = null;
+              } catch (e) {
+                console.error('Error seeking pending time via playerjs:', e);
+              }
+            }
             player.on('timeupdate', (data: any) => {
               if (data && onProgressRef.current) {
                 onProgressRef.current(data.seconds, data.duration);
@@ -184,16 +194,19 @@ export function VideoPlayer({
   useEffect(() => {
     if (seekTrigger) {
       const { seconds } = seekTrigger;
+      pendingSeekRef.current = seconds;
       if (playUrl?.includes('playlist.m3u8')) {
         if (playerRef.current) {
           playerRef.current.currentTime = seconds;
           playerRef.current.play();
+          pendingSeekRef.current = null;
         }
       } else {
         if (playerJsRef.current) {
           try {
             playerJsRef.current.setCurrentTime(seconds);
             playerJsRef.current.play();
+            pendingSeekRef.current = null;
           } catch (e) {
             console.error('Error seeking via playerjs:', e);
           }
@@ -263,6 +276,13 @@ export function VideoPlayer({
             title={lessonTitle || 'Vídeoaula'}
             className="w-full h-full object-cover"
             playsInline
+            onCanPlay={() => {
+              if (pendingSeekRef.current !== null && playerRef.current) {
+                playerRef.current.currentTime = pendingSeekRef.current;
+                playerRef.current.play();
+                pendingSeekRef.current = null;
+              }
+            }}
             onDurationChange={(d) => {
               if (d && !isNaN(d) && d > 0 && onDurationLoadedRef.current) {
                 onDurationLoadedRef.current(Math.round(d));
