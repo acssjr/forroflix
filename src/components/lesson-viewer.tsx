@@ -1002,7 +1002,7 @@ export function LessonViewer({
                 if (groupedResults.length === 0) {
                   return (
                     <div className="text-center py-12 text-muted-foreground text-xs font-medium">
-                      Nenhuma aula encontrada para "{searchQuery}"
+                      Nenhuma aula encontrada para {'"'}{searchQuery}{'"'}
                     </div>
                   );
                 }

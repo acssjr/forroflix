@@ -1335,7 +1335,7 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
               if (groupedResults.length === 0) {
                 return (
                   <div className="text-center py-12 text-muted-foreground text-xs font-medium border border-dashed border-border rounded-3xl bg-card/10">
-                    Nenhuma aula encontrada para "{searchQuery}"
+                    Nenhuma aula encontrada para {'"'}{searchQuery}{'"'}
                   </div>
                 );
               }
