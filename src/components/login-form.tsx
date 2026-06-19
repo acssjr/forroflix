@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, Sparkles, LogIn } from 'lucide-react';
+import { AlertCircle, LogIn } from 'lucide-react';
 
 export function LoginForm() {
   const router = useRouter();
@@ -57,46 +57,7 @@ export function LoginForm() {
     }
   };
 
-  const handleDemoAccess = async () => {
-    setLoading(true);
-    setMessage(null);
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: 'aluno@forroflix.com.br',
-          password: 'senha123forro',
-        }),
-      });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        const registerRes = await fetch('/api/auth/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: 'aluno@forroflix.com.br',
-            password: 'senha123forro',
-            full_name: 'Aluno de Teste Forroflix'
-          }),
-        });
-
-        const registerData = await registerRes.json();
-        if (!registerRes.ok) {
-          throw new Error(registerData.error || 'Erro ao criar conta de demonstração.');
-        }
-      }
-
-      router.push('/');
-      router.refresh();
-    } catch (err: any) {
-      setMessage(`Modo de testes: ${err.message}. Tente cadastrar uma nova conta.`);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="bg-[#0b0b11]/90 backdrop-blur-md p-8 md:p-10 border border-slate-900 shadow-2xl rounded-3xl w-full max-w-md relative z-10">
@@ -182,17 +143,7 @@ export function LoginForm() {
             {loading ? 'Processando...' : isSignUp ? 'Cadastrar' : 'Entrar'}
           </Button>
 
-          {!isSignUp && (
-            <Button
-              type="button"
-              onClick={handleDemoAccess}
-              variant="outline"
-              className="w-full border-slate-800 hover:bg-slate-900 text-slate-400 font-semibold gap-2 py-3.5"
-            >
-              <Sparkles className="w-4 h-4 text-red-600" />
-              Acessar como Convidado
-            </Button>
-          )}
+
         </div>
       </form>
 

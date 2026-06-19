@@ -10,6 +10,7 @@ import {
   Sun, Moon, Loader2, Plus, FolderPlus, Pencil
 } from 'lucide-react';
 import { CourseEditor } from './admin/course-editor';
+import { UserManager } from './admin/user-manager';
 
 interface FavoriteLesson {
   id: string;
@@ -96,6 +97,7 @@ export function DashboardClient({
   const [editingCourseId, setEditingCourseId] = useState<string | null>(initialEditingCourseId);
   const [editingCourseData, setEditingCourseData] = useState<{ title: string; slug: string; modules: any[] } | null>(null);
   const [loadingCourse, setLoadingCourse] = useState(false);
+  const [adminActiveSubTab, setAdminActiveSubTab] = useState<'courses' | 'users'>('courses');
 
   // States for course creation modal inside settings tab
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -953,9 +955,35 @@ export function DashboardClient({
                 )
               ) : (
                 <div className="space-y-6">
-                  {/* Cabeçalho do Painel Admin */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-6">
-                    <div className="text-left space-y-1">
+                  {/* Navegação de Sub-Abas do Admin */}
+                  <div className="flex gap-2 p-1 bg-slate-900/40 border border-border/40 rounded-2xl w-fit">
+                    <button
+                      onClick={() => setAdminActiveSubTab('courses')}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        adminActiveSubTab === 'courses'
+                          ? 'bg-primary text-primary-foreground shadow-md'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-slate-900/60'
+                      }`}
+                    >
+                      Cursos & Aulas
+                    </button>
+                    <button
+                      onClick={() => setAdminActiveSubTab('users')}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        adminActiveSubTab === 'users'
+                          ? 'bg-primary text-primary-foreground shadow-md'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-slate-900/60'
+                      }`}
+                    >
+                      Usuários & Acessos
+                    </button>
+                  </div>
+
+                  {adminActiveSubTab === 'courses' ? (
+                    <div className="space-y-6 animate-fade-in">
+                      {/* Cabeçalho do Painel Admin */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-6">
+                        <div className="text-left space-y-1">
                       <h2 className="text-xl font-black text-foreground">Painel do Criador</h2>
                       <p className="text-xs text-muted-foreground">
                         Gerencie os cursos, módulos e envie novas vídeoaulas para seus alunos.
@@ -1058,6 +1086,12 @@ export function DashboardClient({
                   {courses.length === 0 && (
                     <div className="py-12 text-center text-muted-foreground text-xs">
                       Nenhum curso cadastrado ainda. Comece criando um!
+                    </div>
+                  )}
+                    </div>
+                  ) : (
+                    <div className="animate-fade-in">
+                      <UserManager currentUserId={user.id} />
                     </div>
                   )}
                 </div>
