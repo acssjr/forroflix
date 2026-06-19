@@ -132,7 +132,12 @@ try {
     db.exec(`ALTER TABLE lessons ADD COLUMN submodule TEXT;`);
     console.log('Coluna submodule adicionada à tabela lessons no SQLite local.');
   } catch (e) {
-    // A coluna já existe
+    if (e && e.message && (e.message.includes('duplicate column name') || e.message.includes('already exists'))) {
+      // A coluna já existe
+    } else {
+      console.error('Erro fatal ao adicionar coluna submodule:', e);
+      throw e;
+    }
   }
 
   // Adicionar coluna username e fazer migração de dados retroativa

@@ -31,7 +31,6 @@ export async function GET(request: Request) {
         ln.*,
         u.full_name,
         u.username,
-        u.email,
         u.role
       FROM lesson_notes ln
       JOIN users u ON ln.user_id = u.id
@@ -48,7 +47,10 @@ export async function GET(request: Request) {
     notesQuery += ` ORDER BY ln.watched_seconds ASC, ln.created_at DESC`;
 
     const notesRes = await db.prepare(notesQuery).bind(...params).all<any>();
-    const notes = notesRes.results || [];
+    const notes = (notesRes.results || []).map((note: any) => ({
+      ...note,
+      is_owner: sessionUser ? note.user_id === sessionUser.id : false,
+    }));
 
     return NextResponse.json({ notes });
   } catch (error: any) {
@@ -94,7 +96,6 @@ export async function POST(request: Request) {
           ln.*,
           u.full_name,
           u.username,
-          u.email,
           u.role
         FROM lesson_notes ln
         JOIN users u ON ln.user_id = u.id
@@ -103,7 +104,12 @@ export async function POST(request: Request) {
       .bind(noteId)
       .first<any>();
 
-    return NextResponse.json({ note: noteRes });
+    const note = noteRes ? {
+      ...noteRes,
+      is_owner: true,
+    } : null;
+
+    return NextResponse.json({ note });
   } catch (error: any) {
     console.error('Erro na rota POST /api/notes:', error);
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });

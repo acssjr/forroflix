@@ -842,7 +842,7 @@ export function LessonViewer({
               {notes.length > 0 ? (
                 <div className="space-y-3.5 mt-6 pt-4 border-t border-border/60 max-h-[400px] overflow-y-auto pr-1">
                   {notes.map((note) => {
-                    const isOwner = note.email === userEmail;
+                    const isOwner = !!note.is_owner;
                     const canDelete = isOwner || isAdmin;
                     
                     return (

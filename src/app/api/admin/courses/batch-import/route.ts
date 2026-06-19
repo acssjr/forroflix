@@ -166,7 +166,7 @@ export async function POST(request: Request) {
         let submoduleName = null;
         const cleanTitle = file.title.replace(/^\d+(?:\.\d+)?\s*-\s*/, '');
         const titleParts = cleanTitle.split(/\s*-\s*/);
-        if (titleParts.length >= 2) {
+        if (titleParts.length >= 3) {
           submoduleName = titleParts[titleParts.length - 2].trim();
         }
 

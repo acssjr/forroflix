@@ -74,9 +74,9 @@ CREATE TABLE IF NOT EXISTS lesson_notes (
     id TEXT PRIMARY KEY,
     lesson_id TEXT REFERENCES lessons(id) ON DELETE CASCADE NOT NULL,
     user_id TEXT REFERENCES users(id) ON DELETE CASCADE NOT NULL,
-    watched_seconds INTEGER NOT NULL,
+    watched_seconds INTEGER NOT NULL CHECK(watched_seconds >= 0),
     content TEXT NOT NULL,
-    is_public INTEGER DEFAULT 1, -- 0 = Privada, 1 = Pública
+    is_public INTEGER DEFAULT 1 CHECK(is_public IN (0, 1)), -- 0 = Privada, 1 = Pública
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
