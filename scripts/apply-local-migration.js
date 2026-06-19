@@ -128,6 +128,13 @@ try {
     // A coluna já existe
   }
 
+  try {
+    db.exec(`ALTER TABLE lessons ADD COLUMN submodule TEXT;`);
+    console.log('Coluna submodule adicionada à tabela lessons no SQLite local.');
+  } catch (e) {
+    // A coluna já existe
+  }
+
   // Adicionar coluna username e fazer migração de dados retroativa
   try {
     db.exec(`ALTER TABLE users ADD COLUMN username TEXT;`);
@@ -152,6 +159,22 @@ try {
   // 2. Criar índice único após garantir que todos os campos estão preenchidos de forma única
   db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username);`);
   console.log('Índice único idx_users_username criado com sucesso no SQLite local.');
+
+  // 3. Criar tabela de anotações e índices
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS lesson_notes (
+      id TEXT PRIMARY KEY,
+      lesson_id TEXT REFERENCES lessons(id) ON DELETE CASCADE NOT NULL,
+      user_id TEXT REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+      watched_seconds INTEGER NOT NULL,
+      content TEXT NOT NULL,
+      is_public INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_lesson_notes_lesson_id ON lesson_notes(lesson_id);`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_lesson_notes_user_id ON lesson_notes(user_id);`);
+  console.log('Tabela lesson_notes e seus índices criados ou já existentes no SQLite local.');
 
   db.close();
   console.log('Migrações locais concluídas.');

@@ -33,6 +33,7 @@ interface Lesson {
   video_id: string;
   position: number;
   description?: string;
+  submodule?: string | null;
 }
 
 interface Module {
@@ -54,6 +55,7 @@ interface CourseEditorProps {
 
 export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules, onBack }: CourseEditorProps) {
   const [modules, setModules] = useState<Module[]>(initialModules);
+  const [searchQuery, setSearchQuery] = useState('');
   
   // Estados para Modal de Módulo
   const [showModuleModal, setShowModuleModal] = useState(false);
@@ -66,6 +68,7 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
   const [activeModuleId, setActiveModuleId] = useState<string | null>(null);
   const [lessonTitle, setLessonTitle] = useState('');
   const [lessonDescription, setLessonDescription] = useState('');
+  const [lessonSubmodule, setLessonSubmodule] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // Estados do Upload
@@ -80,6 +83,7 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
   const [editingLessonId, setEditingLessonId] = useState<string | null>(null);
   const [editingLessonTitle, setEditingLessonTitle] = useState('');
   const [editingLessonDescription, setEditingLessonDescription] = useState('');
+  const [editingLessonSubmodule, setEditingLessonSubmodule] = useState('');
 
   // Estados para Modal de Edição de Módulo (Metadados/Capa)
   const [editingModule, setEditingModule] = useState<Module | null>(null);
@@ -122,6 +126,8 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
   const [selectedLessons, setSelectedLessons] = useState<Record<string, boolean>>({});
   const [isSorting, setIsSorting] = useState(false);
   const [bulkMoveDropdownOpen, setBulkMoveDropdownOpen] = useState(false);
+  const [bulkSubmoduleOpen, setBulkSubmoduleOpen] = useState(false);
+  const [bulkSubmoduleName, setBulkSubmoduleName] = useState('');
 
   const toggleModuleCollapse = (moduleId: string) => {
     setCollapsedModules(prev => ({
@@ -139,6 +145,9 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
 
   const clearSelection = () => {
     setSelectedLessons({});
+    setBulkMoveDropdownOpen(false);
+    setBulkSubmoduleOpen(false);
+    setBulkSubmoduleName('');
   };
 
   const toggleSelectAllModuleLessons = (moduleLessons: Lesson[], isAllSelected: boolean) => {
@@ -160,14 +169,15 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
     const handleOutsideClick = () => {
       setMovingLessonId(null);
       setBulkMoveDropdownOpen(false);
+      setBulkSubmoduleOpen(false);
     };
-    if (movingLessonId || bulkMoveDropdownOpen) {
+    if (movingLessonId || bulkMoveDropdownOpen || bulkSubmoduleOpen) {
       window.addEventListener('click', handleOutsideClick);
     }
     return () => {
       window.removeEventListener('click', handleOutsideClick);
     };
-  }, [movingLessonId, bulkMoveDropdownOpen]);
+  }, [movingLessonId, bulkMoveDropdownOpen, bulkSubmoduleOpen]);
 
   // Auto-scroll suave da página durante o drag and drop
   useEffect(() => {
@@ -313,6 +323,59 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
     setBulkMoveDropdownOpen(false);
 
     await saveNewOrder(updated);
+  };
+
+  // Definir submódulo em lote
+  const applyBulkSubmodule = async () => {
+    const idsToUpdate = Object.keys(selectedLessons).filter(id => selectedLessons[id]);
+    if (idsToUpdate.length === 0) return;
+
+    try {
+      setUploading(true);
+      const value = bulkSubmoduleName.trim() || null;
+
+      // Executar requisições de atualização em paralelo
+      await Promise.all(
+        idsToUpdate.map(async (id) => {
+          const res = await fetch('/api/admin/courses', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'lesson',
+              id,
+              submodule: value
+            })
+          });
+          if (!res.ok) {
+            throw new Error(`Erro ao atualizar aula ${id}`);
+          }
+        })
+      );
+
+      // Atualizar o estado local
+      setModules(prev => prev.map(m => {
+        return {
+          ...m,
+          lessons: m.lessons.map(l => {
+            if (idsToUpdate.includes(l.id)) {
+              return {
+                ...l,
+                submodule: value
+              };
+            }
+            return l;
+          })
+        };
+      }));
+
+      setBulkSubmoduleOpen(false);
+      setBulkSubmoduleName('');
+      setSelectedLessons({});
+    } catch (err: any) {
+      alert(err.message || 'Erro ao aplicar submódulo em lote.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   // Excluir aulas selecionadas em lote
@@ -701,7 +764,8 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
           type: 'lesson',
           id: lessonId,
           title: editingLessonTitle,
-          description: editingLessonDescription
+          description: editingLessonDescription,
+          submodule: editingLessonSubmodule ? editingLessonSubmodule.trim() : null
         })
       });
 
@@ -718,7 +782,8 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                 return { 
                   ...l, 
                   title: editingLessonTitle,
-                  description: editingLessonDescription
+                  description: editingLessonDescription,
+                  submodule: editingLessonSubmodule ? editingLessonSubmodule.trim() : null
                 };
               }
               return l;
@@ -851,7 +916,8 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
           title: lessonTitle,
           description: lessonDescription,
           position,
-          videoId
+          videoId,
+          submodule: lessonSubmodule || null
         })
       });
 
@@ -865,7 +931,8 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
         duration_seconds: 0, // Bunny transcodifica e atualiza a duração em background
         video_id: videoId,
         position,
-        description: lessonDescription
+        description: lessonDescription,
+        submodule: lessonSubmodule || null
       };
 
       setModules(prev => prev.map(m => {
@@ -880,6 +947,7 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
         setShowLessonModal(false);
         setLessonTitle('');
         setLessonDescription('');
+        setLessonSubmodule('');
         setSelectedFile(null);
         setUploading(false);
       }, 1500);
@@ -890,6 +958,262 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
       setUploading(false);
     }
   };
+  const renderLessonItem = (les: Lesson, mod: Module) => {
+    const isLesIndicatorBefore = draggedItem?.type === 'lesson' && dropIndicator?.type === 'lesson' && dropIndicator.targetId === les.id && dropIndicator.position === 'before';
+    const isLesIndicatorAfter = draggedItem?.type === 'lesson' && dropIndicator?.type === 'lesson' && dropIndicator.targetId === les.id && dropIndicator.position === 'after';
+
+    return (
+      <div key={les.id} className="space-y-1.5">
+        {isLesIndicatorBefore && searchQuery.trim() === '' && (
+          <div 
+            onDragOver={(e) => handleDragOverItem(e, 'lesson', les.id, mod.id)}
+            onDragLeave={handleDragLeaveItem}
+            onDrop={(e) => {
+              handleDropItem(e, 'lesson', les.id, mod.id);
+              setDraggableLessonId(null);
+            }}
+            className="h-[52px] border-2 border-dashed border-red-600/40 rounded-xl bg-red-600/[0.02] my-2 flex items-center justify-center gap-2 text-red-500/60 transition-all duration-300 ease-out animate-pulse shadow-[0_0_15px_rgba(229,9,20,0.02)]"
+          >
+            <Plus className="w-3.5 h-3.5 animate-bounce" />
+            <span className="text-[10px] font-bold uppercase tracking-wider">Mover Aula para cá</span>
+          </div>
+        )}
+        
+        <div 
+          draggable={draggableLessonId === les.id && searchQuery.trim() === ''}
+          onDragStart={(e) => handleDragStart(e, 'lesson', les.id, mod.id)}
+          onDragEnd={(e) => {
+            handleDragEnd(e);
+            setDraggableLessonId(null);
+          }}
+          onDragOver={(e) => searchQuery.trim() === '' ? handleDragOverItem(e, 'lesson', les.id, mod.id) : undefined}
+          onDragLeave={searchQuery.trim() === '' ? handleDragLeaveItem : undefined}
+          onDrop={(e) => {
+            if (searchQuery.trim() === '') {
+              handleDropItem(e, 'lesson', les.id, mod.id);
+              setDraggableLessonId(null);
+            }
+          }}
+          onClick={() => toggleLessonSelection(les.id)}
+          className={`flex flex-col md:flex-row md:items-center justify-between p-3.5 rounded-xl bg-card/50 border transition-all duration-250 gap-4 group select-none hover:cursor-pointer ${
+            searchQuery.trim() === '' ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
+          } ${
+            draggedItem?.id === les.id && draggedItem?.type === 'lesson' 
+              ? 'opacity-25 border-dashed border-red-600/35 bg-red-600/[0.01] shadow-none scale-[0.98]' 
+              : 'border-border/40 hover:bg-secondary/40 hover:border-red-600/10'
+          } ${
+            selectedLessons[les.id] ? 'border-red-600/30 bg-red-600/[0.01]' : ''
+          } ${
+            dropIndicator?.type === 'lesson' && dropIndicator.targetId === les.id && searchQuery.trim() === '' ? 'border-red-600/80 bg-red-600/[0.02] shadow-[0_0_15px_rgba(229,9,20,0.04)] scale-[1.01]' : ''
+          }`}
+        >
+          {editingLessonId === les.id ? (
+            <form onSubmit={(e) => handleRenameLesson(e, mod.id, les.id)} className="flex flex-col gap-3 flex-grow bg-muted/30 p-4 rounded-xl border border-border w-full" onClick={(e) => e.stopPropagation()}>
+              <div>
+                <label className="block text-[10px] font-semibold text-muted-foreground mb-1">Título da Aula</label>
+                <input
+                  type="text"
+                  value={editingLessonTitle}
+                  onChange={(e) => setEditingLessonTitle(e.target.value)}
+                  className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-red-600 text-xs font-semibold"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-muted-foreground mb-1">Submódulo</label>
+                <input
+                  type="text"
+                  value={editingLessonSubmodule}
+                  onChange={(e) => setEditingLessonSubmodule(e.target.value)}
+                  placeholder="Ex: Aviãozinho no condutor"
+                  className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-red-600 text-xs font-semibold"
+                />
+                {(() => {
+                  const modSubmodules = Array.from(
+                    new Set(
+                      mod.lessons
+                        .map((l) => l.submodule)
+                        .filter((s): s is string => typeof s === 'string' && s.trim() !== '')
+                    )
+                  );
+                  if (modSubmodules.length === 0) return null;
+                  return (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      <span className="text-[9px] font-medium text-muted-foreground mr-1 self-center">Sugestões:</span>
+                      {modSubmodules.map((sub, sidx) => (
+                        <button
+                          key={sidx}
+                          type="button"
+                          onClick={() => setEditingLessonSubmodule(sub)}
+                          className="text-[9px] bg-secondary/80 hover:bg-secondary text-foreground px-2 py-0.5 rounded-md font-semibold transition-colors cursor-pointer"
+                        >
+                          {sub}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-muted-foreground mb-1">Descrição da Aula</label>
+                <textarea
+                  value={editingLessonDescription}
+                  onChange={(e) => setEditingLessonDescription(e.target.value)}
+                  placeholder="Adicione instruções práticas..."
+                  rows={2}
+                  className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-red-600 text-xs resize-none"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button size="sm" variant="ghost" onClick={() => setEditingLessonId(null)} type="button" className="text-muted-foreground hover:text-foreground hover:bg-muted text-xs px-3.5 h-8">
+                  Cancelar
+                </Button>
+                <Button size="sm" type="submit" className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-3.5 h-8">
+                  Salvar
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <div className="flex items-center gap-3 flex-grow min-w-0">
+              <div 
+                className="p-1 shrink-0 flex items-center justify-center cursor-pointer hover:scale-105 transition-transform" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleLessonSelection(les.id);
+                }}
+              >
+                <Checkbox
+                  checked={!!selectedLessons[les.id]}
+                  title="Selecionar esta aula"
+                  className="pointer-events-auto"
+                />
+              </div>
+              {searchQuery.trim() === '' && (
+                <GripVertical 
+                  className="w-3.5 h-3.5 text-muted-foreground/60 hover:text-foreground cursor-grab shrink-0 mr-0.5" 
+                  onMouseDown={() => setDraggableLessonId(les.id)}
+                  onMouseUp={() => setDraggableLessonId(null)}
+                />
+              )}
+              <div className="bg-slate-100 dark:bg-slate-900 p-2 rounded-lg text-red-600 self-start shrink-0">
+                <Play className="w-3.5 h-3.5 fill-red-600" />
+              </div>
+              <div className="flex flex-col min-w-0 text-left">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-foreground text-xs font-semibold truncate">{les.title}</span>
+                  {les.submodule && (
+                    <span className="bg-red-600/10 border border-red-600/20 text-red-500 text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+                      {les.submodule}
+                    </span>
+                  )}
+                </div>
+                {les.description ? (
+                  <span className="text-muted-foreground text-[10px] font-medium mt-0.5 line-clamp-1">
+                    {les.description}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground/60 text-[9px] italic mt-0.5">Sem descrição</span>
+                )}
+              </div>
+              
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditingLessonId(les.id);
+                  setEditingLessonTitle(les.title);
+                  setEditingLessonDescription(les.description || '');
+                  setEditingLessonSubmodule(les.submodule || '');
+                }}
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-muted-foreground hover:text-red-500 rounded cursor-pointer self-start mt-0.5 shrink-0"
+                title="Editar Aula"
+              >
+                <Pencil className="w-3 h-3" />
+              </button>
+
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity self-start mt-0.5 shrink-0 relative">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMovingLessonId(movingLessonId === les.id ? null : les.id);
+                  }}
+                  className="p-1 text-muted-foreground hover:text-red-500 rounded cursor-pointer"
+                  title="Mover para outro módulo"
+                >
+                  <FolderInput className="w-3 h-3" />
+                </button>
+                
+                {movingLessonId === les.id && (
+                  <div 
+                    className="absolute right-0 mt-1 w-56 bg-popover border border-border rounded-xl shadow-2xl z-50 p-2 space-y-1 animate-in fade-in slide-in-from-top-1 duration-150"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="px-2 py-1.5 border-b border-border text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-left">
+                      Mover para Módulo:
+                    </div>
+                    <div className="max-h-40 overflow-y-auto space-y-0.5">
+                      {modules
+                        .filter(m => m.id !== mod.id)
+                        .map(m => (
+                          <button
+                            key={m.id}
+                            onClick={() => moveLessonToModule(les.id, mod.id, m.id)}
+                            className="w-full text-left px-2 py-1.5 rounded-lg text-xs font-semibold text-foreground hover:bg-red-600/10 hover:text-red-500 transition-colors truncate cursor-pointer"
+                          >
+                            {m.title}
+                          </button>
+                        ))}
+                      {modules.length <= 1 && (
+                        <div className="px-2 py-1.5 text-[10px] text-muted-foreground/60 italic text-left">
+                          Nenhum outro módulo
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteLesson(les.id, les.title, mod.id);
+                }}
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-muted-foreground hover:text-red-500 rounded cursor-pointer self-start mt-0.5 shrink-0"
+                title="Excluir Aula"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+          <div className="flex items-center gap-4 text-[10px] text-muted-foreground font-semibold font-mono shrink-0" onClick={(e) => e.stopPropagation()}>
+            {les.video_id ? (
+              <span className="text-green-600 dark:text-green-400 bg-green-500/10 border border-green-500/20 px-2 py-0.5 rounded flex items-center gap-1">
+                <CheckCircle className="w-3 h-3" />
+                Vídeo Ativo
+              </span>
+            ) : (
+              <span className="text-yellow-600 dark:text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 px-2 py-0.5 rounded flex items-center gap-1">
+                Aguardando Vídeo
+              </span>
+            )}
+            <span>ID: {les.video_id ? les.video_id.substring(0, 8) : 'n/a'}...</span>
+          </div>
+        </div>
+
+        {isLesIndicatorAfter && searchQuery.trim() === '' && (
+          <div 
+            onDragOver={(e) => handleDragOverItem(e, 'lesson', les.id, mod.id)}
+            onDragLeave={handleDragLeaveItem}
+            onDrop={(e) => {
+              handleDropItem(e, 'lesson', les.id, mod.id);
+              setDraggableLessonId(null);
+            }}
+            className="h-[52px] border-2 border-dashed border-red-600/40 rounded-xl bg-red-600/[0.02] my-2 flex items-center justify-center gap-2 text-red-500/60 transition-all duration-300 ease-out animate-pulse shadow-[0_0_15px_rgba(229,9,20,0.02)]"
+          />
+        )}
+      </div>
+    );
+  };
+
   const selectedCount = Object.keys(selectedLessons).filter(id => selectedLessons[id]).length;
 
   return (
@@ -948,9 +1272,106 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
           <p className="text-sm text-muted-foreground mt-1">Crie módulos organizados e envie as vídeoaulas para preencher sua área de membros.</p>
         </div>
 
+        {/* Search Bar */}
+        <div className="relative max-w-md">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Pesquisar por nome da aula ou submódulo..."
+            className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-xs text-foreground focus:outline-none focus:border-red-600 transition-colors placeholder:text-muted-foreground/60 shadow-inner"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs font-semibold cursor-pointer p-0.5 rounded hover:bg-secondary"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
         {/* Lista de Módulos */}
         <div className="space-y-6">
-          {modules.length === 0 ? (
+          {searchQuery.trim() !== '' ? (
+            (() => {
+              const query = searchQuery.toLowerCase().trim();
+              const matchingResults: { module: Module; lesson: Lesson }[] = [];
+              modules.forEach((mod) => {
+                mod.lessons.forEach((les) => {
+                  const titleMatch = les.title.toLowerCase().includes(query);
+                  const submoduleMatch = les.submodule ? les.submodule.toLowerCase().includes(query) : false;
+                  if (titleMatch || submoduleMatch) {
+                    matchingResults.push({ module: mod, lesson: les });
+                  }
+                });
+              });
+
+              const groupedResults: {
+                module: Module;
+                submoduleGroups: { name: string; lessons: Lesson[] }[];
+                flatLessons: Lesson[];
+              }[] = [];
+
+              matchingResults.forEach(({ module, lesson }) => {
+                let modGroup = groupedResults.find((x) => x.module.id === module.id);
+                if (!modGroup) {
+                  modGroup = { module, submoduleGroups: [], flatLessons: [] };
+                  groupedResults.push(modGroup);
+                }
+
+                if (lesson.submodule) {
+                  let subGroup = modGroup.submoduleGroups.find((x) => x.name === lesson.submodule);
+                  if (!subGroup) {
+                    subGroup = { name: lesson.submodule, lessons: [] };
+                    modGroup.submoduleGroups.push(subGroup);
+                  }
+                  subGroup.lessons.push(lesson);
+                } else {
+                  modGroup.flatLessons.push(lesson);
+                }
+              });
+
+              if (groupedResults.length === 0) {
+                return (
+                  <div className="text-center py-12 text-muted-foreground text-xs font-medium border border-dashed border-border rounded-3xl bg-card/10">
+                    Nenhuma aula encontrada para "{searchQuery}"
+                  </div>
+                );
+              }
+
+              return (
+                <div className="space-y-6">
+                  {groupedResults.map(({ module, submoduleGroups, flatLessons }) => (
+                    <div key={module.id} className="border border-border bg-card/20 rounded-2xl p-5 text-left space-y-4">
+                      <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-wider border-b border-border pb-2">
+                        <FolderOpen className="w-4 h-4 text-red-500 shrink-0" />
+                        <span>Módulo: {module.title}</span>
+                      </div>
+
+                      <div className="space-y-2">
+                        {/* Aulas sem submódulo */}
+                        {flatLessons.map((les) => renderLessonItem(les, module))}
+
+                        {/* Aulas agrupadas por submódulo */}
+                        {submoduleGroups.map((sg) => (
+                          <div key={sg.name} className="ml-6 pl-3.5 border-l-2 border-red-600/20 space-y-2 text-left">
+                            <div className="flex items-center gap-2 px-2.5 py-1 text-[11px] font-bold text-foreground bg-secondary/35 rounded-lg w-fit">
+                              <FolderOpen className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                              <span>Submódulo: {sg.name}</span>
+                            </div>
+                            <div className="space-y-1.5 pt-0.5">
+                              {sg.lessons.map((les) => renderLessonItem(les, module))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()
+          ) : modules.length === 0 ? (
             <div className="border border-dashed border-border rounded-3xl p-12 text-center flex flex-col items-center justify-center gap-4 bg-card/10">
               <FolderOpen className="w-12 h-12 text-muted-foreground/40" />
               <div className="space-y-1">
@@ -1001,17 +1422,19 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                   >
                     {/* Módulo Header */}
                     <div 
-                      draggable={draggableModuleId === mod.id}
+                      draggable={draggableModuleId === mod.id && searchQuery.trim() === ''}
                       onDragStart={(e) => handleDragStart(e, 'module', mod.id)}
                       onDragEnd={(e) => {
                         handleDragEnd(e);
                         setDraggableModuleId(null);
                       }}
-                      onDragOver={(e) => handleDragOverItem(e, 'module', mod.id)}
-                      onDragLeave={handleDragLeaveItem}
+                      onDragOver={(e) => searchQuery.trim() === '' ? handleDragOverItem(e, 'module', mod.id) : undefined}
+                      onDragLeave={searchQuery.trim() === '' ? handleDragLeaveItem : undefined}
                       onDrop={(e) => {
-                        handleDropItem(e, 'module', mod.id);
-                        setDraggableModuleId(null);
+                        if (searchQuery.trim() === '') {
+                          handleDropItem(e, 'module', mod.id);
+                          setDraggableModuleId(null);
+                        }
                       }}
                       onClick={() => toggleModuleCollapse(mod.id)}
                       className={`p-5 flex items-center justify-between cursor-pointer select-none transition-all duration-200 ${
@@ -1021,23 +1444,30 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                       }`}
                     >
                       <h3 className="font-bold text-foreground text-base flex items-center gap-2 group select-none">
-                        <GripVertical 
-                          className="w-4 h-4 text-muted-foreground/60 hover:text-foreground mr-0.5 shrink-0 cursor-grab" 
-                          onClick={(e) => e.stopPropagation()}
-                          onMouseDown={() => setDraggableModuleId(mod.id)}
-                          onMouseUp={() => setDraggableModuleId(null)}
-                        />
+                        {searchQuery.trim() === '' && (
+                          <GripVertical 
+                            className="w-4 h-4 text-muted-foreground/60 hover:text-foreground mr-0.5 shrink-0 cursor-grab" 
+                            onClick={(e) => e.stopPropagation()}
+                            onMouseDown={() => setDraggableModuleId(mod.id)}
+                            onMouseUp={() => setDraggableModuleId(null)}
+                          />
+                        )}
                         
                         {moduleLessons.length > 0 && (
-                          <Checkbox
-                            checked={isAllModuleLessonsSelected}
-                            indeterminate={isSomeModuleLessonsSelected}
-                            onCheckedChange={() => {
+                          <div 
+                            onClick={(e) => {
+                              e.stopPropagation();
                               toggleSelectAllModuleLessons(moduleLessons, isAllModuleLessonsSelected);
                             }}
-                            onClick={(e) => e.stopPropagation()}
-                            title="Selecionar todas as aulas deste módulo"
-                          />
+                            className="p-1 cursor-pointer shrink-0"
+                          >
+                            <Checkbox
+                              checked={isAllModuleLessonsSelected}
+                              indeterminate={isSomeModuleLessonsSelected}
+                              title="Selecionar todas as aulas deste módulo"
+                              className="pointer-events-none"
+                            />
+                          </div>
                         )}
 
                         <button
@@ -1149,210 +1579,7 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                             <p className="text-muted-foreground text-xs italic font-medium">Este módulo não possui nenhuma aula ativa ainda. Arraste uma aula para cá.</p>
                           </div>
                         ) : (
-                          mod.lessons.map(les => {
-                            const isLesIndicatorBefore = draggedItem?.type === 'lesson' && dropIndicator?.type === 'lesson' && dropIndicator.targetId === les.id && dropIndicator.position === 'before';
-                            const isLesIndicatorAfter = draggedItem?.type === 'lesson' && dropIndicator?.type === 'lesson' && dropIndicator.targetId === les.id && dropIndicator.position === 'after';
-
-                            return (
-                              <div key={les.id} className="space-y-1.5">
-                                {isLesIndicatorBefore && (
-                                  <div 
-                                    onDragOver={(e) => handleDragOverItem(e, 'lesson', les.id, mod.id)}
-                                    onDragLeave={handleDragLeaveItem}
-                                    onDrop={(e) => {
-                                      handleDropItem(e, 'lesson', les.id, mod.id);
-                                      setDraggableLessonId(null);
-                                    }}
-                                    className="h-[52px] border-2 border-dashed border-red-600/40 rounded-xl bg-red-600/[0.02] my-2 flex items-center justify-center gap-2 text-red-500/60 transition-all duration-300 ease-out animate-pulse shadow-[0_0_15px_rgba(229,9,20,0.02)]"
-                                  >
-                                    <Plus className="w-3.5 h-3.5 animate-bounce" />
-                                    <span className="text-[10px] font-bold uppercase tracking-wider">Mover Aula para cá</span>
-                                  </div>
-                                )}
-                                
-                                <div 
-                                  draggable={draggableLessonId === les.id}
-                                  onDragStart={(e) => handleDragStart(e, 'lesson', les.id, mod.id)}
-                                  onDragEnd={(e) => {
-                                    handleDragEnd(e);
-                                    setDraggableLessonId(null);
-                                  }}
-                                  onDragOver={(e) => handleDragOverItem(e, 'lesson', les.id, mod.id)}
-                                  onDragLeave={handleDragLeaveItem}
-                                  onDrop={(e) => {
-                                    handleDropItem(e, 'lesson', les.id, mod.id);
-                                    setDraggableLessonId(null);
-                                  }}
-                                  onClick={() => toggleLessonSelection(les.id)}
-                                  className={`flex flex-col md:flex-row md:items-center justify-between p-3.5 rounded-xl bg-card/50 border transition-all duration-250 gap-4 group cursor-grab active:cursor-grabbing select-none hover:cursor-pointer ${
-                                    draggedItem?.id === les.id && draggedItem?.type === 'lesson' 
-                                      ? 'opacity-25 border-dashed border-red-600/35 bg-red-600/[0.01] shadow-none scale-[0.98]' 
-                                      : 'border-border/40 hover:bg-secondary/40 hover:border-red-600/10'
-                                  } ${
-                                    selectedLessons[les.id] ? 'border-red-600/30 bg-red-600/[0.01]' : ''
-                                  } ${
-                                    dropIndicator?.type === 'lesson' && dropIndicator.targetId === les.id ? 'border-red-600/80 bg-red-600/[0.02] shadow-[0_0_15px_rgba(229,9,20,0.04)] scale-[1.01]' : ''
-                                  }`}
-                                >
-                                  {editingLessonId === les.id ? (
-                                    <form onSubmit={(e) => handleRenameLesson(e, mod.id, les.id)} className="flex flex-col gap-3 flex-grow bg-muted/30 p-4 rounded-xl border border-border w-full" onClick={(e) => e.stopPropagation()}>
-                                      <div>
-                                        <label className="block text-[10px] font-semibold text-muted-foreground mb-1">Título da Aula</label>
-                                        <input
-                                          type="text"
-                                          value={editingLessonTitle}
-                                          onChange={(e) => setEditingLessonTitle(e.target.value)}
-                                          className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-red-600 text-xs font-semibold"
-                                          autoFocus
-                                        />
-                                      </div>
-                                      <div>
-                                        <label className="block text-[10px] font-semibold text-muted-foreground mb-1">Descrição da Aula</label>
-                                        <textarea
-                                          value={editingLessonDescription}
-                                          onChange={(e) => setEditingLessonDescription(e.target.value)}
-                                          placeholder="Adicione instruções práticas..."
-                                          rows={2}
-                                          className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-red-600 text-xs resize-none"
-                                        />
-                                      </div>
-                                      <div className="flex justify-end gap-2">
-                                        <Button size="sm" variant="ghost" onClick={() => setEditingLessonId(null)} type="button" className="text-muted-foreground hover:text-foreground hover:bg-muted text-xs px-3.5 h-8">
-                                          Cancelar
-                                        </Button>
-                                        <Button size="sm" type="submit" className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-3.5 h-8">
-                                          Salvar
-                                        </Button>
-                                      </div>
-                                    </form>
-                                  ) : (
-                                    <div className="flex items-center gap-3 flex-grow min-w-0">
-                                      <Checkbox
-                                        checked={!!selectedLessons[les.id]}
-                                        onCheckedChange={() => {
-                                          toggleLessonSelection(les.id);
-                                        }}
-                                        onClick={(e) => e.stopPropagation()}
-                                        title="Selecionar esta aula"
-                                      />
-                                      <GripVertical 
-                                        className="w-3.5 h-3.5 text-muted-foreground/60 hover:text-foreground cursor-grab shrink-0 mr-0.5" 
-                                        onMouseDown={() => setDraggableLessonId(les.id)}
-                                        onMouseUp={() => setDraggableLessonId(null)}
-                                      />
-                                      <div className="bg-slate-100 dark:bg-slate-900 p-2 rounded-lg text-red-600 self-start shrink-0">
-                                        <Play className="w-3.5 h-3.5 fill-red-600" />
-                                      </div>
-                                      <div className="flex flex-col min-w-0 text-left">
-                                        <span className="text-foreground text-xs font-semibold truncate">{les.title}</span>
-                                        {les.description ? (
-                                          <span className="text-muted-foreground text-[10px] font-medium mt-0.5 line-clamp-1">
-                                            {les.description}
-                                          </span>
-                                        ) : (
-                                          <span className="text-muted-foreground/60 text-[9px] italic mt-0.5">Sem descrição</span>
-                                        )}
-                                      </div>
-                                      
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setEditingLessonId(les.id);
-                                          setEditingLessonTitle(les.title);
-                                          setEditingLessonDescription(les.description || '');
-                                        }}
-                                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-muted-foreground hover:text-red-500 rounded cursor-pointer self-start mt-0.5 shrink-0"
-                                        title="Editar Aula"
-                                      >
-                                        <Pencil className="w-3 h-3" />
-                                      </button>
-
-                                      <div className="opacity-0 group-hover:opacity-100 transition-opacity self-start mt-0.5 shrink-0 relative">
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setMovingLessonId(movingLessonId === les.id ? null : les.id);
-                                          }}
-                                          className="p-1 text-muted-foreground hover:text-red-500 rounded cursor-pointer"
-                                          title="Mover para outro módulo"
-                                        >
-                                          <FolderInput className="w-3 h-3" />
-                                        </button>
-                                        
-                                        {movingLessonId === les.id && (
-                                          <div 
-                                            className="absolute right-0 mt-1 w-56 bg-popover border border-border rounded-xl shadow-2xl z-50 p-2 space-y-1 animate-in fade-in slide-in-from-top-1 duration-150"
-                                            onClick={(e) => e.stopPropagation()}
-                                          >
-                                            <div className="px-2 py-1.5 border-b border-border text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-left">
-                                              Mover para Módulo:
-                                            </div>
-                                            <div className="max-h-40 overflow-y-auto space-y-0.5">
-                                              {modules
-                                                .filter(m => m.id !== mod.id)
-                                                .map(m => (
-                                                  <button
-                                                    key={m.id}
-                                                    onClick={() => moveLessonToModule(les.id, mod.id, m.id)}
-                                                    className="w-full text-left px-2 py-1.5 rounded-lg text-xs font-semibold text-foreground hover:bg-red-600/10 hover:text-red-500 transition-colors truncate cursor-pointer"
-                                                  >
-                                                    {m.title}
-                                                  </button>
-                                                ))}
-                                              {modules.length <= 1 && (
-                                                <div className="px-2 py-1.5 text-[10px] text-muted-foreground/60 italic text-left">
-                                                  Nenhum outro módulo
-                                                </div>
-                                              )}
-                                            </div>
-                                          </div>
-                                        )}
-                                      </div>
-
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleDeleteLesson(les.id, les.title, mod.id);
-                                        }}
-                                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-muted-foreground hover:text-red-500 rounded cursor-pointer self-start mt-0.5 shrink-0"
-                                        title="Excluir Aula"
-                                      >
-                                        <Trash2 className="w-3 h-3" />
-                                      </button>
-                                    </div>
-                                  )}
-                                  <div className="flex items-center gap-4 text-[10px] text-muted-foreground font-semibold font-mono shrink-0" onClick={(e) => e.stopPropagation()}>
-                                    {les.video_id ? (
-                                      <span className="text-green-600 dark:text-green-400 bg-green-500/10 border border-green-500/20 px-2 py-0.5 rounded flex items-center gap-1">
-                                        <CheckCircle className="w-3 h-3" />
-                                        Vídeo Ativo
-                                      </span>
-                                    ) : (
-                                      <span className="text-yellow-600 dark:text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 px-2 py-0.5 rounded flex items-center gap-1">
-                                        Aguardando Vídeo
-                                      </span>
-                                    )}
-                                    <span>ID: {les.video_id ? les.video_id.substring(0, 8) : 'n/a'}...</span>
-                                  </div>
-                                </div>
-
-                                {isLesIndicatorAfter && (
-                                  <div 
-                                    onDragOver={(e) => handleDragOverItem(e, 'lesson', les.id, mod.id)}
-                                    onDragLeave={handleDragLeaveItem}
-                                    onDrop={(e) => {
-                                      handleDropItem(e, 'lesson', les.id, mod.id);
-                                      setDraggableLessonId(null);
-                                    }}
-                                    className="h-[52px] border-2 border-dashed border-red-600/40 rounded-xl bg-red-600/[0.02] my-2 flex items-center justify-center gap-2 text-red-500/60 transition-all duration-300 ease-out animate-pulse shadow-[0_0_15px_rgba(229,9,20,0.02)]"
-                                  >
-                                    <Plus className="w-3.5 h-3.5 animate-bounce" />
-                                    <span className="text-[10px] font-bold uppercase tracking-wider">Mover Aula para cá</span>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })
+                          mod.lessons.map(les => renderLessonItem(les, mod))
                         )}
                       </div>
                     )}
@@ -1420,6 +1647,82 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
                       {m.title}
                     </button>
                   ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Botão de Definir Submódulo em Lote */}
+          <div className="relative">
+            <Button
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                setBulkSubmoduleOpen(!bulkSubmoduleOpen);
+              }}
+              className="bg-red-650/10 hover:bg-red-650/20 text-red-500 font-bold border border-red-650/20 gap-1.5 h-8.5 rounded-xl cursor-pointer text-[11px]"
+            >
+              <FolderOpen className="w-3.5 h-3.5" />
+              Submódulo...
+            </Button>
+
+            {bulkSubmoduleOpen && (
+              <div 
+                className="absolute bottom-full mb-2 right-0 w-64 bg-popover border border-border rounded-xl shadow-2xl p-3.5 space-y-2 z-50 animate-in fade-in slide-in-from-bottom-1 duration-150"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-left">
+                  Definir Submódulo em Lote:
+                </div>
+                <input
+                  type="text"
+                  placeholder="Nome do submódulo (ou vazio para remover)"
+                  value={bulkSubmoduleName}
+                  onChange={(e) => setBulkSubmoduleName(e.target.value)}
+                  className="w-full bg-background border border-border rounded-lg px-2.5 py-1 text-foreground focus:outline-none focus:ring-1 focus:ring-red-600 text-xs font-semibold"
+                />
+                {(() => {
+                  const allCourseSubmodules = Array.from(
+                    new Set(
+                      modules
+                        .flatMap((m) => m.lessons)
+                        .map((l) => l.submodule)
+                        .filter((s): s is string => typeof s === 'string' && s.trim() !== '')
+                    )
+                  );
+                  if (allCourseSubmodules.length === 0) return null;
+                  return (
+                    <div className="mt-1 flex flex-wrap gap-1 max-h-24 overflow-y-auto">
+                      <span className="text-[9px] font-medium text-muted-foreground mr-1 self-center">Sugestões:</span>
+                      {allCourseSubmodules.map((sub, sidx) => (
+                        <button
+                          key={sidx}
+                          type="button"
+                          onClick={() => setBulkSubmoduleName(sub)}
+                          className="text-[9px] bg-secondary/85 hover:bg-secondary text-foreground px-1.5 py-0.5 rounded font-bold transition-colors cursor-pointer"
+                        >
+                          {sub}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
+                <div className="flex justify-end gap-1.5 pt-1">
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => setBulkSubmoduleOpen(false)} 
+                    className="text-[10px] h-7 px-2 font-semibold"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    onClick={applyBulkSubmodule}
+                    className="bg-red-600 hover:bg-red-700 text-white font-bold text-[10px] h-7 px-2.5"
+                  >
+                    Aplicar
+                  </Button>
                 </div>
               </div>
             )}
@@ -1528,6 +1831,47 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
               </div>
 
               <div>
+                <label className="block text-sm font-semibold text-muted-foreground mb-1.5">Submódulo (Opcional)</label>
+                <input 
+                  type="text" 
+                  disabled={uploading}
+                  value={lessonSubmodule}
+                  onChange={(e) => setLessonSubmodule(e.target.value)}
+                  placeholder="Ex: Aviãozinho no condutor"
+                  className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground placeholder-muted-foreground focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 text-sm disabled:opacity-50"
+                />
+                {(() => {
+                  const activeMod = modules.find((m) => m.id === activeModuleId);
+                  const activeModSubmodules = activeMod
+                    ? Array.from(
+                        new Set(
+                          activeMod.lessons
+                            .map((l) => l.submodule)
+                            .filter((s): s is string => typeof s === 'string' && s.trim() !== '')
+                        )
+                      )
+                    : [];
+                  if (activeModSubmodules.length === 0) return null;
+                  return (
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      <span className="text-[10px] font-semibold text-muted-foreground mr-1 self-center">Sugestões de Submódulos:</span>
+                      {activeModSubmodules.map((sub, sidx) => (
+                        <button
+                          key={sidx}
+                          type="button"
+                          disabled={uploading}
+                          onClick={() => setLessonSubmodule(sub)}
+                          className="text-[10px] bg-secondary/80 hover:bg-secondary text-foreground px-2.5 py-1 rounded-lg font-bold transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          {sub}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <div>
                 <label className="block text-sm font-semibold text-muted-foreground mb-1.5">Descrição da Aula (Opcional)</label>
                 <textarea 
                   disabled={uploading}
@@ -1624,10 +1968,32 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
           moduleId={activeModuleId}
           moduleTitle={activeModuleId ? modules.find(m => m.id === activeModuleId)?.title : null}
           isOpen={showBatchModal}
-          onClose={() => setShowBatchModal(false)}
-          onUploadCompleted={() => {
-            // Recarregar os dados da página/D1 quando o upload for concluído
-            window.location.reload();
+          onClose={async () => {
+            setShowBatchModal(false);
+            try {
+              const res = await fetch(`/api/admin/courses?courseId=${courseId}`);
+              if (res.ok) {
+                const data = await res.json();
+                if (data && data.modules) {
+                  setModules(data.modules);
+                }
+              }
+            } catch (err) {
+              console.error('Erro ao recarregar módulos após upload em lote:', err);
+            }
+          }}
+          onUploadCompleted={async () => {
+            try {
+              const res = await fetch(`/api/admin/courses?courseId=${courseId}`);
+              if (res.ok) {
+                const data = await res.json();
+                if (data && data.modules) {
+                  setModules(data.modules);
+                }
+              }
+            } catch (err) {
+              console.error('Erro ao recarregar módulos após upload em lote:', err);
+            }
           }}
         />
       )}

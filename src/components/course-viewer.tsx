@@ -10,6 +10,7 @@ interface Lesson {
   video_id: string;
   duration_seconds: number;
   position: number;
+  submodule?: string | null;
 }
 
 interface Module {
@@ -120,6 +121,7 @@ export function CourseViewer({
         favoriteLessonIds={favoriteIds}
         setFavoriteIds={setFavoriteIds}
         userEmail={userEmail}
+        isAdmin={isAdmin}
         isSubscribed={isSubscribed}
         onBackToTrail={handleBackToTrail}
         onSelectLesson={handleSelectLesson}

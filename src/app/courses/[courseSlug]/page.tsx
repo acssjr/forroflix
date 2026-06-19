@@ -38,6 +38,7 @@ interface DBLesson {
   video_id: string | null;
   duration_seconds: number;
   position: number;
+  submodule?: string | null;
 }
  
 interface Lesson {
@@ -46,6 +47,7 @@ interface Lesson {
   video_id: string;
   duration_seconds: number;
   position: number;
+  submodule?: string | null;
 }
  
 interface Module {
@@ -100,7 +102,7 @@ export default async function CoursePage({ params }: PageProps) {
       const [modulesRes, lessonsRes, progressRes, favoritesRes] = await Promise.all([
         db.prepare('SELECT * FROM modules WHERE course_id = ? ORDER BY position ASC').bind(dbCourse.id).all<DBModule>(),
         db.prepare(`
-          SELECT l.id, l.title, l.video_id, l.duration_seconds, l.position, l.module_id 
+          SELECT l.id, l.title, l.video_id, l.duration_seconds, l.position, l.module_id, l.submodule 
           FROM lessons l
           JOIN modules m ON l.module_id = m.id
           WHERE m.course_id = ?
@@ -138,6 +140,7 @@ export default async function CoursePage({ params }: PageProps) {
           video_id: les.video_id || '',
           duration_seconds: les.duration_seconds || 0,
           position: les.position,
+          submodule: les.submodule || null,
         });
       }
  

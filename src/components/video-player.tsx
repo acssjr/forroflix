@@ -21,6 +21,7 @@ interface VideoPlayerProps {
   onProgress?: (currentTime: number, duration: number) => void;
   onEnded?: () => void;
   replayTrigger?: number;
+  seekTrigger?: { seconds: number; ts: number } | null;
 }
 
 export function VideoPlayer({ 
@@ -34,6 +35,7 @@ export function VideoPlayer({
   onProgress,
   onEnded,
   replayTrigger = 0,
+  seekTrigger = null,
 }: VideoPlayerProps) {
   const [playUrl, setPlayUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -177,6 +179,28 @@ export function VideoPlayer({
       }
     }
   }, [replayTrigger, playUrl]);
+
+  // Efeito para buscar/seek a minutagem do vídeo ao acionar o seekTrigger
+  useEffect(() => {
+    if (seekTrigger) {
+      const { seconds } = seekTrigger;
+      if (playUrl?.includes('playlist.m3u8')) {
+        if (playerRef.current) {
+          playerRef.current.currentTime = seconds;
+          playerRef.current.play();
+        }
+      } else {
+        if (playerJsRef.current) {
+          try {
+            playerJsRef.current.setCurrentTime(seconds);
+            playerJsRef.current.play();
+          } catch (e) {
+            console.error('Error seeking via playerjs:', e);
+          }
+        }
+      }
+    }
+  }, [seekTrigger, playUrl]);
  
   // Bloquear clique direito sobre o player
   const handleContextMenu = (e: React.MouseEvent) => {
