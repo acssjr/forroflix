@@ -128,6 +128,37 @@ try {
     // A coluna já existe
   }
 
+  // Adicionar coluna username e fazer migração de dados retroativa
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN username TEXT;`);
+    console.log('Coluna username adicionada à tabela users no SQLite local.');
+  } catch (e) {
+    // A coluna já existe
+  }
+
+  try {
+    db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username);`);
+    console.log('Índice único idx_users_username criado com sucesso no SQLite local.');
+  } catch (e) {
+    // O índice já existe
+  }
+
+  try {
+    db.exec(`
+      UPDATE users 
+      SET username = LOWER(SUBSTR(email, 1, INSTR(email, '@') - 1)) 
+      WHERE username IS NULL AND email LIKE '%@%';
+    `);
+    db.exec(`
+      UPDATE users 
+      SET username = LOWER(id) 
+      WHERE username IS NULL;
+    `);
+    console.log('Usernames nulos preenchidos retroativamente no SQLite local.');
+  } catch (e) {
+    console.error('Erro ao preencher usernames nulos no SQLite local:', e.message);
+  }
+
   db.close();
   console.log('Migrações locais concluídas.');
 } catch (err) {

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { GET, PATCH, POST } from '@/app/api/admin/users/route';
+import { GET, PATCH, POST, DELETE } from '@/app/api/admin/users/route';
 import { getDB } from '@/lib/db';
 
 let mockSessionToken = 'admin-valid-token';
@@ -39,15 +39,15 @@ describe('Integração: Rota API /api/admin/users', () => {
     
     // Inserir um administrador
     await db.prepare(`
-      INSERT INTO users (id, email, password_hash, full_name, role, subscription_active)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).bind('admin-id-123', 'admin@forroflix.com', 'hashed', 'Admin User', 'admin', 1).run();
+      INSERT INTO users (id, email, username, password_hash, full_name, role, subscription_active)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).bind('admin-id-123', 'admin@forroflix.com', 'admin', 'hashed', 'Admin User', 'admin', 1).run();
 
     // Inserir um estudante comum
     await db.prepare(`
-      INSERT INTO users (id, email, password_hash, full_name, role, subscription_active)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).bind('student-id-456', 'student@forroflix.com', 'hashed', 'Student User', 'student', 0).run();
+      INSERT INTO users (id, email, username, password_hash, full_name, role, subscription_active)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).bind('student-id-456', 'student@forroflix.com', 'student', 'hashed', 'Student User', 'student', 0).run();
   });
 
   afterEach(() => {
@@ -112,7 +112,7 @@ describe('Integração: Rota API /api/admin/users', () => {
 
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
-      expect(data.updated.subscription_active).toBe(1);
+      expect(data.user.subscription_active).toBe(1);
 
       // Verificar persistência no banco
       const db = getDB();
@@ -137,7 +137,7 @@ describe('Integração: Rota API /api/admin/users', () => {
 
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
-      expect(data.updated.role).toBe('admin');
+      expect(data.user.role).toBe('admin');
 
       // Verificar persistência no banco
       const db = getDB();
@@ -161,7 +161,7 @@ describe('Integração: Rota API /api/admin/users', () => {
       const data = await response.json();
 
       expect(response.status).toBe(400);
-      expect(data.error).toContain('Não é permitido alterar as próprias permissões');
+      expect(data.error).toContain('Não é permitido alterar o seu próprio papel administrativo');
     });
 
     it('Deve barrar com 403 se um aluno tentar fazer PATCH nas permissões de outro usuário', async () => {
@@ -207,8 +207,8 @@ describe('Integração: Rota API /api/admin/users', () => {
   describe('POST - Cadastro de Usuários pelo Admin', () => {
     it('Deve permitir que o administrador crie um novo usuário', async () => {
       const payload = {
-        email: 'novo-aluno@forroflix.com',
-        password: 'senha-secreta-123',
+        username: 'novoaluno',
+        password: '1234',
         fullName: 'Novo Aluno Teste',
         role: 'student',
         subscriptionActive: 1
@@ -225,22 +225,22 @@ describe('Integração: Rota API /api/admin/users', () => {
 
       expect(response.status).toBe(201);
       expect(data.success).toBe(true);
-      expect(data.user.email).toBe('novo-aluno@forroflix.com');
+      expect(data.user.username).toBe('novoaluno');
       expect(data.user.role).toBe('student');
       expect(data.user.subscription_active).toBe(1);
 
       // Verificar persistência no banco
       const db = getDB();
-      const dbUser = await db.prepare('SELECT email, role, subscription_active FROM users WHERE id = ?').bind(data.user.id).first<any>();
+      const dbUser = await db.prepare('SELECT username, role, subscription_active FROM users WHERE id = ?').bind(data.user.id).first<any>();
       expect(dbUser).toBeDefined();
       expect(dbUser.role).toBe('student');
       expect(dbUser.subscription_active).toBe(1);
     });
 
-    it('Deve retornar 400 se tentarmos criar um usuário com e-mail já existente', async () => {
+    it('Deve retornar 400 se tentarmos criar um usuário com username já existente', async () => {
       const payload = {
-        email: 'student@forroflix.com',
-        password: 'outra-senha',
+        username: 'student',
+        password: '1234',
         fullName: 'Usuário Duplicado'
       };
 
@@ -276,6 +276,103 @@ describe('Integração: Rota API /api/admin/users', () => {
 
       expect(response.status).toBe(403);
       expect(data.error).toBe('Acesso negado');
+    });
+  });
+
+  describe('PATCH - Redefinição de Senha (PIN) e Username', () => {
+    it('Deve permitir que o administrador mude o username e o nome completo do aluno', async () => {
+      const payload = {
+        userId: 'student-id-456',
+        username: 'alunonovo',
+        fullName: 'Nome Atualizado Aluno'
+      };
+
+      const request = new Request('http://localhost/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const response = await PATCH(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.success).toBe(true);
+      expect(data.user.username).toBe('alunonovo');
+      expect(data.user.full_name).toBe('Nome Atualizado Aluno');
+
+      // Verificar persistência no banco
+      const db = getDB();
+      const userRes = await db.prepare('SELECT username, full_name FROM users WHERE id = ?').bind('student-id-456').first<any>();
+      expect(userRes.username).toBe('alunonovo');
+      expect(userRes.full_name).toBe('Nome Atualizado Aluno');
+    });
+
+    it('Deve permitir que o administrador redefina o PIN do aluno', async () => {
+      const payload = {
+        userId: 'student-id-456',
+        password: '9999'
+      };
+
+      const request = new Request('http://localhost/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const response = await PATCH(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.success).toBe(true);
+
+      // Verificar persistência da hash no banco
+      const db = getDB();
+      const userRes = await db.prepare('SELECT password_hash FROM users WHERE id = ?').bind('student-id-456').first<any>();
+      expect(userRes.password_hash).toBe('hashed_9999'); // mock hashPassword concatena hashed_
+    });
+  });
+
+  describe('DELETE - Exclusão de Membros', () => {
+    it('Deve permitir que o administrador exclua um aluno do sistema', async () => {
+      const request = new Request('http://localhost/api/admin/users?userId=student-id-456', {
+        method: 'DELETE'
+      });
+
+      const response = await DELETE(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.success).toBe(true);
+
+      // Verificar se foi excluído do banco
+      const db = getDB();
+      const userRes = await db.prepare('SELECT id FROM users WHERE id = ?').bind('student-id-456').first<any>();
+      expect(userRes).toBeNull();
+    });
+
+    it('Deve impedir que o administrador exclua a própria conta', async () => {
+      const request = new Request('http://localhost/api/admin/users?userId=admin-id-123', {
+        method: 'DELETE'
+      });
+
+      const response = await DELETE(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(400);
+      expect(data.error).toContain('Não é permitido excluir a própria conta');
+    });
+
+    it('Deve retornar 404 se tentar excluir um usuário inexistente', async () => {
+      const request = new Request('http://localhost/api/admin/users?userId=inexistente-id', {
+        method: 'DELETE'
+      });
+
+      const response = await DELETE(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(404);
+      expect(data.error).toBe('Usuário não encontrado');
     });
   });
 });

@@ -102,7 +102,13 @@ async function runMigration() {
     { name: "courses.cover_background_position", sql: `ALTER TABLE courses ADD COLUMN cover_background_position TEXT DEFAULT '50% 50%';` },
     // 4. Adicionar novas colunas em modules
     { name: "modules.cover_vertical", sql: `ALTER TABLE modules ADD COLUMN cover_vertical TEXT;` },
-    { name: "modules.cover_vertical_position", sql: `ALTER TABLE modules ADD COLUMN cover_vertical_position TEXT DEFAULT '50% 50%';` }
+    { name: "modules.cover_vertical_position", sql: `ALTER TABLE modules ADD COLUMN cover_vertical_position TEXT DEFAULT '50% 50%';` },
+    // 5. Adicionar nova coluna username em users
+    { name: "users.username", sql: `ALTER TABLE users ADD COLUMN username TEXT;` },
+    { name: "users.idx_users_username", sql: `CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username);` },
+    // 6. Migrar dados nulos de username de forma retroativa
+    { name: "users.username_migration_email", sql: `UPDATE users SET username = LOWER(SUBSTR(email, 1, INSTR(email, '@') - 1)) WHERE username IS NULL AND email LIKE '%@%';` },
+    { name: "users.username_migration_id", sql: `UPDATE users SET username = LOWER(id) WHERE username IS NULL;` }
   ];
 
   for (const q of queries) {

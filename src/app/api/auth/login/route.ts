@@ -5,18 +5,23 @@ import { cookies } from 'next/headers';
 
 export async function POST(request: Request) {
   try {
-    const { email, password } = await request.json();
+    const { username, password } = await request.json();
 
-    if (!email || !password) {
-      return NextResponse.json({ error: 'E-mail e senha são obrigatórios' }, { status: 400 });
+    if (!username || !password) {
+      return NextResponse.json({ error: 'Usuário e senha são obrigatórios' }, { status: 400 });
+    }
+
+    if (!/^\d{4}$/.test(password)) {
+      return NextResponse.json({ error: 'A senha deve ser um PIN de 4 dígitos' }, { status: 400 });
     }
 
     const db = getDB();
     
+    const cleanUsername = username.toLowerCase().trim();
     // Buscar usuário no Cloudflare D1
     const { results } = await db
-      .prepare('SELECT * FROM users WHERE email = ?')
-      .bind(email.toLowerCase().trim())
+      .prepare('SELECT * FROM users WHERE username = ? OR email = ?')
+      .bind(cleanUsername, cleanUsername)
       .all<any>();
 
     const user = results[0];
@@ -35,6 +40,7 @@ export async function POST(request: Request) {
     const sessionToken = await signJWT({
       id: user.id,
       email: user.email,
+      username: user.username,
       role: user.role,
       subscription_active: user.subscription_active === 1
     });
@@ -53,6 +59,7 @@ export async function POST(request: Request) {
       user: {
         id: user.id,
         email: user.email,
+        username: user.username,
         full_name: user.full_name,
         role: user.role,
         subscription_active: user.subscription_active === 1

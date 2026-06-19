@@ -12,12 +12,15 @@ import {
   Check, 
   AlertCircle,
   Plus,
-  X
+  X,
+  Pencil,
+  Trash2
 } from 'lucide-react';
 
 interface UserType {
   id: string;
   email: string;
+  username?: string;
   full_name: string | null;
   role: 'student' | 'admin';
   subscription_active: number; // 0 ou 1
@@ -26,11 +29,12 @@ interface UserType {
 
 interface UserManagerProps {
   currentUserId: string;
+  initialUsersList?: UserType[];
 }
 
-export function UserManager({ currentUserId }: UserManagerProps) {
-  const [users, setUsers] = useState<UserType[]>([]);
-  const [loading, setLoading] = useState(true);
+export function UserManager({ currentUserId, initialUsersList = [] }: UserManagerProps) {
+  const [users, setUsers] = useState<UserType[]>(initialUsersList);
+  const [loading, setLoading] = useState(initialUsersList.length === 0);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
@@ -38,7 +42,7 @@ export function UserManager({ currentUserId }: UserManagerProps) {
 
   // Estados para modal de criação de usuário
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newEmail, setNewEmail] = useState('');
+  const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newFullName, setNewFullName] = useState('');
   const [newRole, setNewRole] = useState<'student' | 'admin'>('student');
@@ -46,9 +50,116 @@ export function UserManager({ currentUserId }: UserManagerProps) {
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
+  // Estados para modal de edição de usuário
+  const [editingUser, setEditingUser] = useState<UserType | null>(null);
+  const [editFullName, setEditFullName] = useState('');
+  const [editUsername, setEditUsername] = useState('');
+  const [editRole, setEditRole] = useState<'student' | 'admin'>('student');
+  const [editSubscriptionActive, setEditSubscriptionActive] = useState<number>(1);
+  const [editPassword, setEditPassword] = useState('');
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  // Estados para modal de exclusão de usuário
+  const [deletingUser, setDeletingUser] = useState<UserType | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const handleOpenEditModal = (user: UserType) => {
+    setEditingUser(user);
+    setEditFullName(user.full_name || '');
+    setEditUsername(user.username || '');
+    setEditRole(user.role);
+    setEditSubscriptionActive(user.subscription_active);
+    setEditPassword('');
+    setEditError(null);
+  };
+
+  const handleEditUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+
+    if (editPassword && !/^\d{4}$/.test(editPassword)) {
+      setEditError('A nova senha deve ser um PIN de 4 dígitos numéricos.');
+      return;
+    }
+
+    try {
+      setEditLoading(true);
+      setEditError(null);
+
+      const payload: any = {
+        userId: editingUser.id,
+        fullName: editFullName,
+        username: editUsername,
+        role: editRole,
+        subscription_active: editSubscriptionActive
+      };
+
+      if (editPassword) {
+        payload.password = editPassword;
+      }
+
+      const res = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Falha ao atualizar usuário');
+      }
+
+      setUsers(prev => 
+        prev.map(u => u.id === editingUser.id ? data.user : u)
+      );
+
+      setEditingUser(null);
+      setSuccessMessage('Membro atualizado com sucesso!');
+    } catch (err: any) {
+      setEditError(err.message || 'Erro ao atualizar dados.');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deletingUser) return;
+
+    try {
+      setDeleteLoading(true);
+      setError(null);
+
+      const res = await fetch(`/api/admin/users?userId=${deletingUser.id}`, {
+        method: 'DELETE'
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Falha ao excluir usuário');
+      }
+
+      setUsers(prev => prev.filter(u => u.id !== deletingUser.id));
+      setDeletingUser(null);
+      setSuccessMessage('Membro excluído com sucesso!');
+    } catch (err: any) {
+      setError(err.message || 'Erro ao excluir usuário.');
+      setDeletingUser(null);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   // Função para criar usuário via POST
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!/^\d{4}$/.test(newPassword)) {
+      setCreateError('A senha deve ser um PIN de 4 dígitos numéricos.');
+      return;
+    }
+
     try {
       setCreateLoading(true);
       setCreateError(null);
@@ -57,7 +168,7 @@ export function UserManager({ currentUserId }: UserManagerProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: newEmail,
+          username: newUsername,
           password: newPassword,
           fullName: newFullName,
           role: newRole,
@@ -75,7 +186,7 @@ export function UserManager({ currentUserId }: UserManagerProps) {
       setUsers(prev => [data.user, ...prev]);
 
       // Resetar form e fechar modal
-      setNewEmail('');
+      setNewUsername('');
       setNewPassword('');
       setNewFullName('');
       setNewRole('student');
@@ -90,8 +201,14 @@ export function UserManager({ currentUserId }: UserManagerProps) {
     }
   };
 
-  // Carregar lista de usuários
+  // Carregar lista de usuários se não pré-carregado
   useEffect(() => {
+    if (initialUsersList && initialUsersList.length > 0) {
+      setUsers(initialUsersList);
+      setLoading(false);
+      return;
+    }
+
     async function fetchUsers() {
       try {
         setLoading(true);
@@ -112,6 +229,7 @@ export function UserManager({ currentUserId }: UserManagerProps) {
     }
 
     fetchUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Limpar mensagem de sucesso após alguns segundos
@@ -158,7 +276,8 @@ export function UserManager({ currentUserId }: UserManagerProps) {
     const query = searchQuery.toLowerCase();
     const name = (user.full_name || '').toLowerCase();
     const email = user.email.toLowerCase();
-    return name.includes(query) || email.includes(query);
+    const username = (user.username || '').toLowerCase();
+    return name.includes(query) || email.includes(query) || username.includes(query);
   });
 
   // Formatar data de criação
@@ -218,7 +337,7 @@ export function UserManager({ currentUserId }: UserManagerProps) {
           <Search className="absolute left-3 w-4 h-4 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Buscar por nome ou e-mail..."
+            placeholder="Buscar por nome, usuário ou email..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-4 py-2 bg-slate-950 border border-border/60 rounded-xl text-xs font-medium text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 transition-colors"
@@ -253,6 +372,7 @@ export function UserManager({ currentUserId }: UserManagerProps) {
                   <th className="px-6 py-4 hidden md:table-cell">Cadastro</th>
                   <th className="px-6 py-4">Permissão</th>
                   <th className="px-6 py-4 text-center">Status de Acesso</th>
+                  <th className="px-6 py-4 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/30">
@@ -279,7 +399,7 @@ export function UserManager({ currentUserId }: UserManagerProps) {
                               {user.full_name || 'Usuário Sem Nome'}
                             </span>
                             <span className="text-[10px] text-muted-foreground/75 truncate max-w-[150px] sm:max-w-[200px]">
-                              {user.email}
+                              @{user.username || (user.email ? user.email.split('@')[0] : 'usuario')}
                             </span>
                           </div>
                           {isSelf && (
@@ -320,7 +440,7 @@ export function UserManager({ currentUserId }: UserManagerProps) {
                         </div>
                       </td>
 
-                      {/* Switch de status de assinatura */}
+                      {/* Switch de status de acesso */}
                       <td className="px-6 py-4 text-center">
                         <div className="flex items-center justify-center">
                           {isSelf ? (
@@ -358,6 +478,29 @@ export function UserManager({ currentUserId }: UserManagerProps) {
                           )}
                         </div>
                       </td>
+
+                      {/* Ações */}
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => handleOpenEditModal(user)}
+                            className="p-1.5 hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-lg transition-colors cursor-pointer"
+                            title="Editar Usuário"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          
+                          {!isSelf && (
+                            <button
+                              onClick={() => setDeletingUser(user)}
+                              className="p-1.5 hover:bg-red-500/10 text-muted-foreground hover:text-red-500 rounded-lg transition-colors cursor-pointer"
+                              title="Excluir Usuário"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   );
                 })}
@@ -377,7 +520,7 @@ export function UserManager({ currentUserId }: UserManagerProps) {
                 onClick={() => {
                   setShowCreateModal(false);
                   setCreateError(null);
-                  setNewEmail('');
+                  setNewUsername('');
                   setNewPassword('');
                   setNewFullName('');
                   setNewRole('student');
@@ -413,29 +556,35 @@ export function UserManager({ currentUserId }: UserManagerProps) {
 
               <div className="space-y-1">
                 <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                  E-mail de Acesso
+                  Usuário (username)
                 </label>
                 <input
-                  type="email"
+                  type="text"
                   required
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                  placeholder="aluno@exemplo.com"
+                  value={newUsername}
+                  onChange={(e) => setNewUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
+                  placeholder="username"
                   className="w-full bg-slate-950 border border-border/60 rounded-xl px-3.5 py-2.5 text-xs font-medium text-foreground placeholder:text-muted-foreground/35 focus:outline-none focus:border-primary/50 transition-colors"
                 />
               </div>
 
               <div className="space-y-1">
                 <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                  Senha Inicial
+                  Senha (PIN de 4 dígitos)
                 </label>
                 <input
                   type="password"
                   required
+                  maxLength={4}
+                  pattern="\d*"
+                  inputMode="numeric"
                   value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Defina uma senha"
-                  className="w-full bg-slate-950 border border-border/60 rounded-xl px-3.5 py-2.5 text-xs font-medium text-foreground placeholder:text-muted-foreground/35 focus:outline-none focus:border-primary/50 transition-colors"
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    setNewPassword(val);
+                  }}
+                  placeholder="••••"
+                  className="w-full bg-slate-950 border border-border/60 rounded-xl px-3.5 py-2.5 text-xs font-mono text-center tracking-[1.2em] text-foreground placeholder:text-muted-foreground/35 focus:outline-none focus:border-primary/50 transition-colors"
                 />
               </div>
 
@@ -496,6 +645,191 @@ export function UserManager({ currentUserId }: UserManagerProps) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para editar usuário */}
+      {editingUser && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#0b0b11] border border-border/80 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-scale-in text-left">
+            <div className="flex items-center justify-between p-6 border-b border-border/40">
+              <h3 className="text-sm font-black text-foreground">Editar Membro</h3>
+              <button 
+                onClick={() => {
+                  setEditingUser(null);
+                  setEditError(null);
+                }}
+                className="text-muted-foreground hover:text-foreground p-1 rounded-lg hover:bg-slate-900 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleEditUser} className="p-6 space-y-4">
+              {editError && (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 flex gap-2 text-xs text-red-500 items-start">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{editError}</span>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                  Nome Completo
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editFullName}
+                  onChange={(e) => setEditFullName(e.target.value)}
+                  placeholder="Nome do Aluno"
+                  className="w-full bg-slate-950 border border-border/60 rounded-xl px-3.5 py-2.5 text-xs font-medium text-foreground placeholder:text-muted-foreground/35 focus:outline-none focus:border-primary/50 transition-colors"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                  Nome de Usuário (username)
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editUsername}
+                  onChange={(e) => setEditUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
+                  placeholder="username"
+                  className="w-full bg-slate-950 border border-border/60 rounded-xl px-3.5 py-2.5 text-xs font-medium text-foreground placeholder:text-muted-foreground/35 focus:outline-none focus:border-primary/50 transition-colors"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                  Redefinir Senha (PIN de 4 dígitos)
+                </label>
+                <input
+                  type="password"
+                  maxLength={4}
+                  pattern="\d*"
+                  inputMode="numeric"
+                  value={editPassword}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    setEditPassword(val);
+                  }}
+                  placeholder="Deixe em branco para manter a mesma"
+                  className="w-full bg-slate-950 border border-border/60 rounded-xl px-3.5 py-2.5 text-xs font-mono text-center tracking-[1.2em] text-foreground placeholder:text-muted-foreground/35 focus:outline-none focus:border-primary/50 transition-colors"
+                />
+              </div>
+
+              {editingUser.id !== currentUserId ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                      Permissão
+                    </label>
+                    <select
+                      value={editRole}
+                      onChange={(e) => setEditRole(e.target.value as 'student' | 'admin')}
+                      className="w-full bg-slate-950 border border-border/60 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-200 focus:outline-none focus:border-primary/50 transition-colors cursor-pointer"
+                    >
+                      <option value="student">Aluno</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                      Assinatura
+                    </label>
+                    <select
+                      value={editSubscriptionActive}
+                      onChange={(e) => setEditSubscriptionActive(Number(e.target.value))}
+                      className="w-full bg-slate-950 border border-border/60 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-200 focus:outline-none focus:border-primary/50 transition-colors cursor-pointer"
+                    >
+                      <option value={1}>Ativa / Liberada</option>
+                      <option value={0}>Inativa / Bloqueada</option>
+                    </select>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 bg-slate-900/50 border border-border/40 rounded-xl text-[10px] text-muted-foreground font-semibold uppercase text-center">
+                  Você não pode alterar suas próprias permissões ou status de assinatura.
+                </div>
+              )}
+
+              <div className="pt-4 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingUser(null);
+                    setEditError(null);
+                  }}
+                  className="flex-1 py-3 border border-border hover:bg-slate-900 rounded-xl text-xs font-bold text-card-foreground transition-colors cursor-pointer text-center"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={editLoading}
+                  className="flex-1 py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl text-xs shadow-lg shadow-primary/10 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  {editLoading ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    'Salvar Alterações'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para confirmação de exclusão */}
+      {deletingUser && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#0b0b11] border border-border/80 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-scale-in text-left">
+            <div className="p-6 space-y-4">
+              <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center text-red-500 mx-auto">
+                <ShieldAlert className="w-6 h-6" />
+              </div>
+              <div className="text-center space-y-2">
+                <h3 className="text-sm font-black text-foreground">Excluir Conta do Membro</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Tem certeza que deseja excluir permanentemente o usuário <strong className="text-foreground">@{deletingUser.username || deletingUser.email.split('@')[0]}</strong>?
+                  Esta ação não pode ser desfeita.
+                </p>
+              </div>
+
+              <div className="pt-2 flex gap-3">
+                <button
+                  type="button"
+                  disabled={deleteLoading}
+                  onClick={() => setDeletingUser(null)}
+                  className="flex-1 py-3 border border-border hover:bg-slate-900 rounded-xl text-xs font-bold text-card-foreground transition-colors cursor-pointer text-center"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  disabled={deleteLoading}
+                  onClick={handleDeleteUser}
+                  className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs shadow-lg shadow-red-600/10 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  {deleteLoading ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Excluindo...
+                    </>
+                  ) : (
+                    'Confirmar Exclusão'
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -221,6 +221,27 @@ export default async function Home({ searchParams }: PageProps) {
     console.warn('[D1] Erro na home, exibindo catálogo simulado.', err);
   }
 
+  let initialUsersList: any[] = [];
+  if (user && user.role === 'admin') {
+    try {
+      const db = getDB();
+      const usersRes = await db
+        .prepare('SELECT id, email, username, full_name, role, subscription_active, created_at FROM users ORDER BY created_at DESC')
+        .all<any>();
+      initialUsersList = (usersRes.results || []).map((u: any) => ({
+        id: u.id || '',
+        email: u.email || '',
+        username: u.username || '',
+        full_name: u.full_name || '',
+        role: u.role || 'student',
+        subscription_active: u.subscription_active !== undefined ? Number(u.subscription_active) : 0,
+        created_at: u.created_at || ''
+      }));
+    } catch (e) {
+      console.error('Erro ao pré-carregar usuários:', e);
+    }
+  }
+
   const isAdmin = user.role === 'admin';
 
   return (
@@ -237,6 +258,7 @@ export default async function Home({ searchParams }: PageProps) {
       pullZone={pullZone}
       initialTab={initialTab as any}
       initialEditingCourseId={initialEditingCourseId}
+      initialUsersList={initialUsersList}
     />
   );
 }

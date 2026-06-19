@@ -70,6 +70,7 @@ interface DashboardClientProps {
   pullZone: string;
   initialTab?: 'catalog' | 'favorites' | 'progress' | 'settings';
   initialEditingCourseId?: string | null;
+  initialUsersList?: any[];
 }
 
 export function DashboardClient({
@@ -84,7 +85,8 @@ export function DashboardClient({
   isAdmin,
   pullZone,
   initialTab = 'catalog',
-  initialEditingCourseId = null
+  initialEditingCourseId = null,
+  initialUsersList = []
 }: DashboardClientProps) {
   const [activeTab, setActiveTab] = useState<'catalog' | 'favorites' | 'progress' | 'settings'>(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1091,7 +1093,7 @@ export function DashboardClient({
                     </div>
                   ) : (
                     <div className="animate-fade-in">
-                      <UserManager currentUserId={user.id} />
+                      <UserManager currentUserId={user.id} initialUsersList={initialUsersList} />
                     </div>
                   )}
                 </div>
