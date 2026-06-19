@@ -5,7 +5,11 @@ const path = require('path');
 // ou simplesmente requerendo dotenv caso exista
 let accountId, apiToken, databaseId;
 try {
-  const envContent = fs.readFileSync(path.join(__dirname, '..', '.env'), 'utf8');
+  let envPath = path.join(__dirname, '..', '.env.local');
+  if (!fs.existsSync(envPath)) {
+    envPath = path.join(__dirname, '..', '.env');
+  }
+  const envContent = fs.readFileSync(envPath, 'utf8');
   const env = {};
   envContent.split('\n').forEach(line => {
     const match = line.match(/^\s*([\w.-]+)\s*=\s*(.*)?\s*$/);
@@ -24,7 +28,7 @@ try {
   apiToken = env.CLOUDFLARE_API_TOKEN;
   databaseId = env.CLOUDFLARE_DATABASE_ID;
 } catch (err) {
-  console.error('Erro ao carregar o arquivo .env:', err.message);
+  console.error('Erro ao carregar o arquivo .env ou .env.local:', err.message);
   process.exit(1);
 }
 
@@ -103,13 +107,36 @@ async function runMigration() {
     // 4. Adicionar novas colunas em modules
     { name: "modules.cover_vertical", sql: `ALTER TABLE modules ADD COLUMN cover_vertical TEXT;` },
     { name: "modules.cover_vertical_position", sql: `ALTER TABLE modules ADD COLUMN cover_vertical_position TEXT DEFAULT '50% 50%';` },
+    // 4b. Adicionar novas colunas em lessons
+    { name: "lessons.submodule", sql: `ALTER TABLE lessons ADD COLUMN submodule TEXT;` },
     // 5. Adicionar nova coluna username em users
     { name: "users.username", sql: `ALTER TABLE users ADD COLUMN username TEXT;` },
     // 6. Migrar dados nulos de username de forma retroativa (deve rodar ANTES do índice único para evitar colisões na migração)
     { name: "users.username_migration_email", sql: `UPDATE users SET username = LOWER(SUBSTR(email, 1, INSTR(email, '@') - 1)) WHERE username IS NULL AND email LIKE '%@%';` },
     { name: "users.username_migration_id", sql: `UPDATE users SET username = LOWER(id) WHERE username IS NULL;` },
     // 7. Criar índice único após backfill de dados
-    { name: "users.idx_users_username", sql: `CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username);` }
+    { name: "users.idx_users_username", sql: `CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username);` },
+    // 8. Criar tabela de anotações e índices
+    {
+      name: "Tabela lesson_notes",
+      sql: `CREATE TABLE IF NOT EXISTS lesson_notes (
+        id TEXT PRIMARY KEY,
+        lesson_id TEXT REFERENCES lessons(id) ON DELETE CASCADE NOT NULL,
+        user_id TEXT REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+        watched_seconds INTEGER NOT NULL,
+        content TEXT NOT NULL,
+        is_public INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );`
+    },
+    {
+      name: "Índice idx_lesson_notes_lesson_id",
+      sql: `CREATE INDEX IF NOT EXISTS idx_lesson_notes_lesson_id ON lesson_notes(lesson_id);`
+    },
+    {
+      name: "Índice idx_lesson_notes_user_id",
+      sql: `CREATE INDEX IF NOT EXISTS idx_lesson_notes_user_id ON lesson_notes(user_id);`
+    }
   ];
 
   let failedQueriesCount = 0;

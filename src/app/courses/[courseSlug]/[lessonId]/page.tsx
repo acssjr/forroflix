@@ -67,7 +67,7 @@ export default async function LessonPage({ params }: PageProps) {
         // Obter todas as aulas do curso de uma vez só (Sem N+1)
         const { results: dbLessons } = await db
           .prepare(`
-            SELECT id, title, video_id, duration_seconds, position, module_id, description
+            SELECT id, title, video_id, duration_seconds, position, module_id, description, submodule
             FROM lessons
             WHERE module_id IN (${dbModules.map(() => '?').join(',')})
             ORDER BY position ASC
@@ -91,6 +91,7 @@ export default async function LessonPage({ params }: PageProps) {
               duration_seconds: l.duration_seconds || 0,
               video_id: l.video_id || '',
               position: l.position,
+              submodule: l.submodule || null,
             })),
           };
         });

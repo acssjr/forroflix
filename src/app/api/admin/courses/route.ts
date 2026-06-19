@@ -62,7 +62,8 @@ export async function GET(request: Request) {
             duration_seconds: l.duration_seconds || 0,
             video_id: l.video_id || '',
             position: l.position,
-            description: l.description || ''
+            description: l.description || '',
+            submodule: l.submodule || null
           }))
         });
       }
@@ -162,7 +163,7 @@ export async function POST(request: Request) {
 
     // 4. Inserir Aula
     if (type === 'lesson') {
-      const { moduleId, title, description, position, videoId, durationSeconds } = body;
+      const { moduleId, title, description, position, videoId, durationSeconds, submodule } = body;
 
       if (!moduleId || !title) {
         return NextResponse.json({ error: 'moduleId e título são obrigatórios' }, { status: 400 });
@@ -173,8 +174,8 @@ export async function POST(request: Request) {
       const duration = durationSeconds || 0;
 
       await db
-        .prepare('INSERT INTO lessons (id, module_id, title, description, position, video_id, duration_seconds) VALUES (?, ?, ?, ?, ?, ?, ?)')
-        .bind(id, moduleId, title, description || '', pos, videoId || null, duration)
+        .prepare('INSERT INTO lessons (id, module_id, title, description, position, video_id, duration_seconds, submodule) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+        .bind(id, moduleId, title, description || '', pos, videoId || null, duration, submodule || null)
         .run();
 
       return NextResponse.json({ success: true, id });
@@ -270,10 +271,10 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: true });
     }
 
-    // 4. Editar Aula (Título, Descrição e/ou uploadStatus)
+    // 4. Editar Aula (Título, Descrição, Submódulo e/ou uploadStatus)
     if (type === 'lesson') {
-      const { description, uploadStatus } = body;
-      if (title === undefined && description === undefined && uploadStatus === undefined) {
+      const { description, uploadStatus, submodule } = body;
+      if (title === undefined && description === undefined && uploadStatus === undefined && submodule === undefined) {
         return NextResponse.json({ error: 'Nenhum campo para atualizar informado' }, { status: 400 });
       }
 
@@ -291,6 +292,10 @@ export async function PATCH(request: Request) {
       if (uploadStatus !== undefined) {
         updates.push('upload_status = ?');
         params.push(uploadStatus);
+      }
+      if (submodule !== undefined) {
+        updates.push('submodule = ?');
+        params.push(submodule ? submodule.trim() : null);
       }
 
       // Adicionar id no fim

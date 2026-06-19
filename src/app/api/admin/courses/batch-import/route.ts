@@ -161,9 +161,18 @@ export async function POST(request: Request) {
         const lessonId = crypto.randomUUID();
         const lessonPosition = baseLessonPosition + fileIndex + 1;
 
+        // Auto-detect submodule from file title
+        // E.g., "010.1 - Aviãozinho no condutor - Dançando" -> Submodule: "Aviãozinho no condutor"
+        let submoduleName = null;
+        const cleanTitle = file.title.replace(/^\d+(?:\.\d+)?\s*-\s*/, '');
+        const titleParts = cleanTitle.split(/\s*-\s*/);
+        if (titleParts.length >= 3) {
+          submoduleName = titleParts[titleParts.length - 2].trim();
+        }
+
         dbStatements.push(
-          db.prepare('INSERT INTO lessons (id, module_id, title, position, video_id, upload_status) VALUES (?, ?, ?, ?, ?, ?)')
-            .bind(lessonId, moduleId, file.title, lessonPosition, file.videoId, 'pending')
+          db.prepare('INSERT INTO lessons (id, module_id, title, position, video_id, upload_status, submodule) VALUES (?, ?, ?, ?, ?, ?, ?)')
+            .bind(lessonId, moduleId, file.title, lessonPosition, file.videoId, 'pending', submoduleName)
         );
 
         responseUploads.push({

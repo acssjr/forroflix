@@ -33,3 +33,22 @@
 - [x] Envolver o card de curso inteiro do painel principal ("Seus Cursos de Forró") em um componente Next.js `<Link>` para torná-lo 100% clicável.
 - [x] Tornar toda a barra de cabeçalho do módulo clicável para colapsar/expandir, adicionando cursor `pointer` e impedindo propagação de eventos no GripVertical, renomear, checkboxes e botões de ação.
 - [x] Adicionar diferenciação de cor e contraste visual no cabeçalho de cada módulo (`bg-[#141420]`) em relação ao fundo padrão do container.
+
+## Ajustes de Pesquisa, Upload e Estilo
+- [x] Corrigir erros de JSX e imports de tipos no compilation check do TypeScript.
+- [x] Remover reload completo ao fechar/concluir o modal de upload em lote.
+- [x] Adicionar barra de pesquisa por nome da aula/submódulo no Aluno (`lesson-viewer.tsx`).
+- [x] Adicionar barra de pesquisa por nome da aula/submódulo no Admin (`course-editor.tsx`).
+- [x] Agrupar resultados da pesquisa por Módulo de origem nos dois painéis.
+- [x] Permitir buscar e listar submódulos inteiros pesquisando por seu nome.
+- [x] Substituir a aparência de caixa/card dos submódulos por uma tabulação com indicador em árvore (`border-l-2 ml-6`).
+
+## Nova Etapa: Transições, Anotações nos Vídeos & Melhores Controles de Submódulo
+- [ ] Implementar CSS keyframes e animações para Accordion (Base UI) no `globals.css` (slide suave para cima e para baixo).
+- [ ] Substituir o renderizador condicional `{isExpanded && ...}` dos submódulos no player por uma animação de Grid CSS (`grid-rows-[0fr]` para `grid-rows-[1fr]`) super fluida.
+- [ ] Criar a tabela `lesson_notes` no banco de dados local SQLite (`db/schema.sql` e `apply-local-migration.js`) e no Cloudflare D1 remoto (`apply-remote-migration.js`).
+- [ ] Criar os endpoints da API backend `/api/notes` (GET para listar, POST para criar, DELETE para deletar) com validação de permissões e segurança por usuário/admin.
+- [ ] Adicionar suporte a `seekTrigger` no `<VideoPlayer>` para receber minutagem e avançar/retroceder a reprodução.
+- [ ] Implementar a interface de Anotações em `lesson-viewer.tsx`: formulário para criar nota no tempo atual, opção pública/privada, listagem cronológica com busca/filtro e botões de pular para o tempo da nota.
+- [ ] Desenvolver lista de sugestões de submódulos existentes no modal de criação e formulário inline de edição de aulas em `course-editor.tsx` para evitar erros de digitação e duplicatas ao mover aulas.
+- [ ] Rodar validações locais, testes de compilação de produção e documentar os resultados.
