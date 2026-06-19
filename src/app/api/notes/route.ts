@@ -38,7 +38,7 @@ export async function GET(request: Request) {
       WHERE ln.lesson_id = ?
     `;
 
-    const params: string[] = [lessonId];
+    const params: any[] = [lessonId];
 
     if (sessionUser.role !== 'admin') {
       notesQuery += ` AND (ln.is_public = 1 OR ln.user_id = ?)`;
