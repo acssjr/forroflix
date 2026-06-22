@@ -110,17 +110,91 @@ class D1RESTDatabase implements D1Database {
   }
 }
 
-let localDbInstance: any = null;
+// Implementação do D1 via Turso (libsql)
+class TursoPreparedStatement implements D1PreparedStatement {
+  private params: any[] = [];
+  constructor(private client: any, private query: string) {}
 
-// Obter a instância do banco D1 (Binding nativo ou REST API fallback)
-export function getDB(): D1Database {
-  // Se estiver rodando na Cloudflare (Pages/Workers) ou no dev local com wrangler:
-  const db = (process.env as any).DB as D1Database;
-  if (db) {
-    return db;
+  bind(...values: any[]): D1PreparedStatement {
+    // Normalizar booleanos como inteiros 0/1 para compatibilidade SQLite
+    this.params.push(...values.map(v => typeof v === 'boolean' ? (v ? 1 : 0) : v));
+    return this;
   }
 
-  // Se estiver rodando localmente com SQLite (E2E ou Dev Local Offline)
+  async first<T = any>(colName?: string): Promise<T | null> {
+    const res = await this.client.execute({ sql: this.query, args: this.params });
+    if (res.rows && res.rows.length > 0) {
+      const firstRow = res.rows[0] as any;
+      return colName ? firstRow[colName] : firstRow;
+    }
+    return null;
+  }
+
+  async run<T = any>(): Promise<D1Result<T>> {
+    const res = await this.client.execute({ sql: this.query, args: this.params });
+    return {
+      results: (res.rows || []) as T[],
+      success: true,
+      meta: { changes: res.rowsAffected }
+    };
+  }
+
+  async all<T = any>(): Promise<D1Result<T>> {
+    const res = await this.client.execute({ sql: this.query, args: this.params });
+    return {
+      results: (res.rows || []) as T[],
+      success: true,
+      meta: { changes: res.rowsAffected }
+    };
+  }
+
+  get _internal() {
+    return {
+      query: this.query,
+      getParams: () => this.params
+    };
+  }
+}
+
+class TursoDatabase implements D1Database {
+  private client: any;
+  constructor(url: string, token: string) {
+    const { createClient } = require('@libsql/client');
+    this.client = createClient({ url, authToken: token });
+  }
+
+  prepare(query: string): D1PreparedStatement {
+    return new TursoPreparedStatement(this.client, query);
+  }
+
+  async batch<T = any>(statements: D1PreparedStatement[]): Promise<D1Result<T>[]> {
+    const stmts = statements.map(s => {
+      const internal = (s as any)._internal;
+      return {
+        sql: internal.query,
+        args: internal.getParams()
+      };
+    });
+    const res = await this.client.batch(stmts, 'write');
+    return res.map((r: any) => ({
+      results: (r.rows || []) as T[],
+      success: true,
+      meta: { changes: r.rowsAffected }
+    }));
+  }
+
+  async exec(query: string): Promise<D1ExecResult> {
+    const res = await this.client.execute(query);
+    return { count: res.rowsAffected, duration: 0 };
+  }
+}
+
+let localDbInstance: any = null;
+let tursoDbInstance: any = null;
+
+// Obter a instância do banco D1 (Binding nativo, Turso, SQLite local ou D1 REST)
+export function getDB(): D1Database {
+  // 1. Se estiver rodando localmente com SQLite (E2E ou Dev Local Offline)
   if (process.env.USE_LOCAL_SQLITE === 'true') {
     if (!localDbInstance) {
       try {
@@ -153,7 +227,8 @@ export function getDB(): D1Database {
               },
               _internal: {
                 stmt,
-                getParams: () => boundParams
+                getParams: () => boundParams,
+                query: sql
               }
             };
             return prepared;
@@ -189,14 +264,30 @@ export function getDB(): D1Database {
     if (localDbInstance) return localDbInstance;
   }
 
-  // Se estiver rodando na Vercel (onde process.env.DB não existe):
+  // 2. Se estiver rodando com credenciais do Turso (SQLite Serverless Edge)
+  const tursoUrl = process.env.TURSO_DATABASE_URL;
+  const tursoToken = process.env.TURSO_AUTH_TOKEN;
+  if (tursoUrl && tursoToken) {
+    if (!tursoDbInstance) {
+      tursoDbInstance = new TursoDatabase(tursoUrl, tursoToken);
+    }
+    return tursoDbInstance;
+  }
+
+  // 3. Se estiver rodando na Cloudflare (Pages/Workers) com o binding nativo de D1:
+  const db = (process.env as any).DB as D1Database;
+  if (db) {
+    return db;
+  }
+
+  // 4. Se estiver rodando na Vercel com fallback de API REST do D1:
   if (process.env.CLOUDFLARE_API_TOKEN) {
     return new D1RESTDatabase();
   }
 
-  // Fallback para desenvolvimento estático local básico caso nenhuma env esteja setada
+  // 5. Fallback básico para desenvolvimento estático offline
   console.warn(
-    "[D1] D1 não detectado via process.env.DB ou REST API. Usando mock local temporário."
+    "[D1] D1 não detectado via process.env.DB, REST API ou Turso. Usando mock local temporário."
   );
   
   return {
