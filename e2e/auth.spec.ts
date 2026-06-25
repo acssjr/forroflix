@@ -48,11 +48,9 @@ test.describe('Autenticação Forroflix E2E', () => {
     // Aguardar até que a verificação encontre o usuário cadastrado (evitando race condition)
     await expect(page.locator('text=Usuário encontrado')).toBeVisible({ timeout: 5000 });
     
-    // Preencher os 4 dígitos do PIN
-    await page.locator('input[aria-label="Dígito 1 do PIN"]').fill('1');
-    await page.locator('input[aria-label="Dígito 2 do PIN"]').fill('2');
-    await page.locator('input[aria-label="Dígito 3 do PIN"]').fill('3');
-    await page.locator('input[aria-label="Dígito 4 do PIN"]').fill('4');
+    // Preencher os 4 dígitos do PIN simulando digitação para evitar race conditions
+    await page.locator('input[aria-label="Dígito 1 do PIN"]').focus();
+    await page.keyboard.type('1234');
     
     // Opcionalmente clicar no botão se a navegação não iniciou automaticamente
     try {
