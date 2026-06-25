@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "code-quality": {
+      "source": "tursodatabase/turso",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/code-quality/SKILL.md",
+      "computedHash": "b318440f9a576bac7736bfb93d41efab712e1121ad2af228781bdc2d81465d01"
+    },
     "deploy-to-vercel": {
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",
