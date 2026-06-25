@@ -23,14 +23,13 @@ export default async function AdminPage() {
   let usersList: any[] = [];
 
   try {
-    // Buscar todos os cursos
-    const coursesRes = await db.prepare('SELECT * FROM courses ORDER BY created_at DESC').all<any>();
-    courses = coursesRes.results || [];
+    // Buscar todos os cursos e usuários em paralelo (async-parallel)
+    const [coursesRes, usersRes] = await Promise.all([
+      db.prepare('SELECT * FROM courses ORDER BY created_at DESC').all<any>(),
+      db.prepare('SELECT id, email, username, full_name, role, subscription_active, created_at FROM users ORDER BY created_at DESC').all<any>()
+    ]);
 
-    // Buscar lista de usuários
-    const usersRes = await db
-      .prepare('SELECT id, email, username, full_name, role, subscription_active, created_at FROM users ORDER BY created_at DESC')
-      .all<any>();
+    courses = coursesRes.results || [];
     
     usersList = (usersRes.results || []).map((u: any) => ({
       id: u.id || '',

@@ -24,6 +24,12 @@ export async function GET(request: Request) {
 
     const db = getDB();
 
+    // Validar existência da aula
+    const lesson = await db.prepare('SELECT id FROM lessons WHERE id = ?').bind(lessonId).first();
+    if (!lesson) {
+      return NextResponse.json({ error: 'Aula não encontrada' }, { status: 404 });
+    }
+
     // Buscar observações da aula
     // Se for admin, vê todas. Se for aluno, vê todas as públicas ou as suas próprias privadas.
     let notesQuery = `
@@ -78,6 +84,28 @@ export async function POST(request: Request) {
     }
 
     const db = getDB();
+
+    // Validar anotação vazia ou muito longa
+    const trimmedContent = content.trim();
+    if (!trimmedContent) {
+      return NextResponse.json({ error: 'A anotação não pode estar vazia' }, { status: 400 });
+    }
+    if (trimmedContent.length > 1000) {
+      return NextResponse.json({ error: 'A anotação não pode ter mais de 1000 caracteres' }, { status: 400 });
+    }
+
+    // Validar tempo do vídeo não negativo
+    const roundedSeconds = Math.round(watchedSeconds);
+    if (roundedSeconds < 0) {
+      return NextResponse.json({ error: 'O tempo do vídeo não pode ser negativo' }, { status: 400 });
+    }
+
+    // Validar existência da aula
+    const lesson = await db.prepare('SELECT id FROM lessons WHERE id = ?').bind(lessonId).first();
+    if (!lesson) {
+      return NextResponse.json({ error: 'Aula não encontrada' }, { status: 404 });
+    }
+
     const noteId = crypto.randomUUID();
     const isPublicVal = isPublic ? 1 : 0;
 
@@ -86,7 +114,7 @@ export async function POST(request: Request) {
         INSERT INTO lesson_notes (id, lesson_id, user_id, watched_seconds, content, is_public)
         VALUES (?, ?, ?, ?, ?, ?)
       `)
-      .bind(noteId, lessonId, sessionUser.id, Math.round(watchedSeconds), content.trim(), isPublicVal)
+      .bind(noteId, lessonId, sessionUser.id, roundedSeconds, trimmedContent, isPublicVal)
       .run();
 
     // Buscar a nota recém-criada juntando o usuário para retornar um objeto completo ao frontend

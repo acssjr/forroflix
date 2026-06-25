@@ -29,21 +29,22 @@ export default async function AdminCoursePage({ params }: PageProps) {
   let modulesWithLessons: any[] = [];
 
   try {
-    const courseRes = await db.prepare('SELECT * FROM courses WHERE id = ?').bind(courseId).all<any>();
+    // Buscar detalhes do curso, módulos e aulas em paralelo (async-parallel)
+    const [courseRes, modulesRes, lessonsRes] = await Promise.all([
+      db.prepare('SELECT * FROM courses WHERE id = ?').bind(courseId).all<any>(),
+      db.prepare('SELECT * FROM modules WHERE course_id = ? ORDER BY position ASC').bind(courseId).all<any>(),
+      db.prepare(`
+        SELECT l.id, l.title, l.video_id, l.duration_seconds, l.position, l.module_id, l.submodule, l.description 
+        FROM lessons l
+        JOIN modules m ON l.module_id = m.id
+        WHERE m.course_id = ?
+        ORDER BY l.position ASC
+      `).bind(courseId).all<any>()
+    ]);
+
     dbCourse = courseRes.results?.[0];
 
     if (dbCourse) {
-      const [modulesRes, lessonsRes] = await Promise.all([
-        db.prepare('SELECT * FROM modules WHERE course_id = ? ORDER BY position ASC').bind(courseId).all<any>(),
-        db.prepare(`
-          SELECT l.id, l.title, l.video_id, l.duration_seconds, l.position, l.module_id, l.submodule, l.description 
-          FROM lessons l
-          JOIN modules m ON l.module_id = m.id
-          WHERE m.course_id = ?
-          ORDER BY l.position ASC
-        `).bind(courseId).all<any>()
-      ]);
-
       const dbModules = modulesRes.results || [];
       const lessonsList = lessonsRes.results || [];
 

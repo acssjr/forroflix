@@ -108,7 +108,7 @@ test.describe('Resiliência de Rede e UI Rollback', () => {
     await page.goto('/admin/courses/course-test-e2e');
 
     // Verificar ordem inicial
-    const lessonElements = page.locator('.text-slate-300.truncate');
+    const lessonElements = page.locator('span.text-foreground.truncate');
     await expect(lessonElements.nth(0)).toHaveText('Aula 1');
     await expect(lessonElements.nth(1)).toHaveText('Aula 2');
 
@@ -245,7 +245,7 @@ test.describe('Resiliência de Rede e UI Rollback', () => {
     await page.goto('/admin/courses/course-test-e2e');
 
     // Abrir o modal de upload em lote no nível do módulo (evitando o input webkitdirectory global)
-    await page.locator('div[draggable="true"]').filter({ has: page.locator('h3', { hasText: 'Módulo 1' }) }).locator('text=Upload em Lote').click();
+    await page.locator('div.bg-card').filter({ has: page.locator('h3', { hasText: 'Módulo 1' }) }).locator('text=Upload em Lote').click();
 
     // Carregar o arquivo na dropzone
     const fileChooserPromise = page.waitForEvent('filechooser');

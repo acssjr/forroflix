@@ -284,7 +284,7 @@ export function DashboardClient({
                     if (!featuredCourse) return null;
                     return (
                       <div 
-                        className="relative rounded-3xl overflow-hidden border border-border shadow-md dark:shadow-2xl min-h-[260px] md:aspect-[7/2] w-full flex items-center justify-start group cursor-pointer hover:border-primary/20 hover:shadow-lg dark:hover:shadow-[0_0_35px_rgba(229,9,20,0.06)] hover:scale-[1.005] transition-all duration-300"
+                        className="relative rounded-3xl overflow-hidden border border-border shadow-md dark:shadow-2xl min-h-[260px] md:aspect-[7/2] w-full flex items-center justify-start group cursor-pointer hover:border-primary/20 hover:shadow-lg dark:hover:shadow-[0_0_35px_rgba(229,9,20,0.06)] transition-all duration-300"
                       >
                         <Link 
                           href={`/courses/${featuredCourse.slug}`}
@@ -295,7 +295,7 @@ export function DashboardClient({
                             <img 
                               src={featuredCourse.cover_horizontal} 
                               alt="" 
-                              className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-1015" 
+                              className="absolute inset-0 w-full h-full object-cover transition-transform duration-500" 
                               style={{ objectPosition: featuredCourse.cover_horizontal_position || '50% 50%' }}
                             />
                             <div className="absolute inset-y-0 left-0 w-[50%] md:w-[40%] bg-gradient-to-r from-black/80 via-black/35 to-transparent z-10 pointer-events-none" />

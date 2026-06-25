@@ -33,11 +33,23 @@ export default async function LessonPage({ params }: PageProps) {
   let favoriteLessonIds: string[] = [];
 
   try {
-    // 1. Buscar status de assinatura do usuário e detalhes do curso em paralelo
-    const [usersRes, coursesRes] = await Promise.all([
-      db.prepare('SELECT role, subscription_active FROM users WHERE id = ?').bind(sessionUser.id).all<any>(),
-      db.prepare('SELECT * FROM courses WHERE slug = ?').bind(courseSlug).all<any>()
+    // 1. Buscar status do usuário, curso, progresso, favoritos, módulos e aulas em um único round-trip (db.batch)
+    const batchRes = await db.batch<any>([
+      db.prepare('SELECT role, subscription_active FROM users WHERE id = ?').bind(sessionUser.id),
+      db.prepare('SELECT * FROM courses WHERE slug = ?').bind(courseSlug),
+      db.prepare('SELECT lesson_id FROM progress WHERE user_id = ? AND completed = 1').bind(sessionUser.id),
+      db.prepare('SELECT lesson_id FROM favorites WHERE user_id = ?').bind(sessionUser.id),
+      db.prepare('SELECT * FROM modules WHERE course_id = (SELECT id FROM courses WHERE slug = ?) ORDER BY position ASC').bind(courseSlug),
+      db.prepare(`
+        SELECT l.id, l.title, l.video_id, l.duration_seconds, l.position, l.module_id, l.description, l.submodule
+        FROM lessons l
+        JOIN modules m ON l.module_id = m.id
+        WHERE m.course_id = (SELECT id FROM courses WHERE slug = ?)
+        ORDER BY m.position ASC, l.position ASC
+      `).bind(courseSlug)
     ]);
+
+    const [usersRes, coursesRes, progressRes, favoritesRes, modulesRes, lessonsRes] = batchRes;
 
     const userProfile = usersRes.results[0];
     if (userProfile) {
@@ -52,30 +64,12 @@ export default async function LessonPage({ params }: PageProps) {
       courseId = dbCourse.id;
       thumbnailGradient = dbCourse.thumbnail_gradient || 'from-red-600 to-red-600';
 
-      // 2. Buscar módulos, progresso e favoritos em paralelo
-      const [modulesRes, progressRes, favoritesRes] = await Promise.all([
-        db.prepare('SELECT * FROM modules WHERE course_id = ? ORDER BY position ASC').bind(dbCourse.id).all<any>(),
-        db.prepare('SELECT lesson_id FROM progress WHERE user_id = ? AND completed = 1').bind(sessionUser.id).all<any>(),
-        db.prepare('SELECT lesson_id FROM favorites WHERE user_id = ?').bind(sessionUser.id).all<any>()
-      ]);
-
       const dbModules = modulesRes.results || [];
       completedLessonIds = progressRes.results ? progressRes.results.map((p) => p.lesson_id) : [];
       favoriteLessonIds = favoritesRes.results ? favoritesRes.results.map((f) => f.lesson_id) : [];
 
       if (dbModules && dbModules.length > 0) {
-        // Obter todas as aulas do curso de uma vez só (Sem N+1)
-        const { results: dbLessons } = await db
-          .prepare(`
-            SELECT id, title, video_id, duration_seconds, position, module_id, description, submodule
-            FROM lessons
-            WHERE module_id IN (${dbModules.map(() => '?').join(',')})
-            ORDER BY position ASC
-          `)
-          .bind(...dbModules.map(m => m.id))
-          .all<any>();
-
-        const lessonsList = dbLessons || [];
+        const lessonsList = lessonsRes.results || [];
 
         // Agrupar aulas nos módulos correspondentes e procurar a ativa
         modules = dbModules.map(mod => {

@@ -86,11 +86,23 @@ export default async function CoursePage({ params }: PageProps) {
   try {
     const db = getDB();
     
-    // 1. Buscar status de assinatura do usuário e detalhes do curso em paralelo
-    const [usersRes, coursesRes] = await Promise.all([
-      db.prepare('SELECT role, subscription_active FROM users WHERE id = ?').bind(sessionUser.id).all<{ role: string; subscription_active: number }>(),
-      db.prepare('SELECT * FROM courses WHERE slug = ?').bind(courseSlug).all<DBCourse>()
+    // 1. Buscar status do usuário, curso, progresso, favoritos, módulos e aulas em um único round-trip (db.batch)
+    const batchRes = await db.batch<any>([
+      db.prepare('SELECT role, subscription_active FROM users WHERE id = ?').bind(sessionUser.id),
+      db.prepare('SELECT * FROM courses WHERE slug = ?').bind(courseSlug),
+      db.prepare('SELECT lesson_id FROM progress WHERE user_id = ? AND completed = 1').bind(sessionUser.id),
+      db.prepare('SELECT lesson_id FROM favorites WHERE user_id = ?').bind(sessionUser.id),
+      db.prepare('SELECT * FROM modules WHERE course_id = (SELECT id FROM courses WHERE slug = ?) ORDER BY position ASC').bind(courseSlug),
+      db.prepare(`
+        SELECT l.id, l.title, l.video_id, l.duration_seconds, l.position, l.module_id, l.submodule 
+        FROM lessons l
+        JOIN modules m ON l.module_id = m.id
+        WHERE m.course_id = (SELECT id FROM courses WHERE slug = ?)
+        ORDER BY l.position ASC
+      `).bind(courseSlug)
     ]);
+
+    const [usersRes, coursesRes, progressRes, favoritesRes, modulesRes, lessonsRes] = batchRes;
 
     const userProfile = usersRes.results[0];
     isSubscribed = userProfile ? (userProfile.subscription_active === 1 || userProfile.role === 'admin') : false;
@@ -98,20 +110,6 @@ export default async function CoursePage({ params }: PageProps) {
     dbCourse = coursesRes.results[0];
  
     if (dbCourse) {
-      // 2. Buscar módulos, aulas, progresso de conclusão e favoritos do aluno em paralelo
-      const [modulesRes, lessonsRes, progressRes, favoritesRes] = await Promise.all([
-        db.prepare('SELECT * FROM modules WHERE course_id = ? ORDER BY position ASC').bind(dbCourse.id).all<DBModule>(),
-        db.prepare(`
-          SELECT l.id, l.title, l.video_id, l.duration_seconds, l.position, l.module_id, l.submodule 
-          FROM lessons l
-          JOIN modules m ON l.module_id = m.id
-          WHERE m.course_id = ?
-          ORDER BY l.position ASC
-        `).bind(dbCourse.id).all<DBLesson>(),
-        db.prepare('SELECT lesson_id FROM progress WHERE user_id = ? AND completed = 1').bind(sessionUser.id).all<{ lesson_id: string }>(),
-        db.prepare('SELECT lesson_id FROM favorites WHERE user_id = ?').bind(sessionUser.id).all<{ lesson_id: string }>()
-      ]);
-
       const dbModules = modulesRes.results || [];
       const lessonsList = lessonsRes.results || [];
       completedLessonIds = progressRes.results ? progressRes.results.map((p) => p.lesson_id) : [];

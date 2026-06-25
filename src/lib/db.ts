@@ -124,7 +124,7 @@ class TursoPreparedStatement implements D1PreparedStatement {
   async first<T = any>(colName?: string): Promise<T | null> {
     const res = await this.client.execute({ sql: this.query, args: this.params });
     if (res.rows && res.rows.length > 0) {
-      const firstRow = res.rows[0] as any;
+      const firstRow = { ...res.rows[0] } as any;
       return colName ? firstRow[colName] : firstRow;
     }
     return null;
@@ -133,7 +133,7 @@ class TursoPreparedStatement implements D1PreparedStatement {
   async run<T = any>(): Promise<D1Result<T>> {
     const res = await this.client.execute({ sql: this.query, args: this.params });
     return {
-      results: (res.rows || []) as T[],
+      results: (res.rows || []).map((r: any) => ({ ...r })) as T[],
       success: true,
       meta: { changes: res.rowsAffected }
     };
@@ -142,7 +142,7 @@ class TursoPreparedStatement implements D1PreparedStatement {
   async all<T = any>(): Promise<D1Result<T>> {
     const res = await this.client.execute({ sql: this.query, args: this.params });
     return {
-      results: (res.rows || []) as T[],
+      results: (res.rows || []).map((r: any) => ({ ...r })) as T[],
       success: true,
       meta: { changes: res.rowsAffected }
     };
@@ -177,7 +177,7 @@ class TursoDatabase implements D1Database {
     });
     const res = await this.client.batch(stmts, 'write');
     return res.map((r: any) => ({
-      results: (r.rows || []) as T[],
+      results: (r.rows || []).map((row: any) => ({ ...row })) as T[],
       success: true,
       meta: { changes: r.rowsAffected }
     }));
@@ -238,11 +238,22 @@ export function getDB(): D1Database {
             const executeInTransaction = sqliteDb.transaction((stmts: any[]) => {
               for (const s of stmts) {
                 const internal = s._internal || s;
-                const info = internal.stmt.run(...internal.getParams());
-                results.push({
-                  success: true,
-                  meta: { changes: info.changes, last_row_id: info.lastInsertRowid }
-                });
+                const isReader = internal.stmt.reader;
+                if (isReader) {
+                  const rows = internal.stmt.all(...internal.getParams());
+                  results.push({
+                    success: true,
+                    results: (rows || []).map((row: any) => ({ ...row })),
+                    meta: {}
+                  });
+                } else {
+                  const info = internal.stmt.run(...internal.getParams());
+                  results.push({
+                    success: true,
+                    results: [],
+                    meta: { changes: info.changes, last_row_id: info.lastInsertRowid }
+                  });
+                }
               }
               return results;
             });

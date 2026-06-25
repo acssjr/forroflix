@@ -25,6 +25,13 @@ export async function toggleProgressAction(lessonId: string, completed: boolean)
     }
 
     const db = getDB();
+
+    // Validar existência da aula
+    const lesson = await db.prepare('SELECT id FROM lessons WHERE id = ?').bind(lessonId).first();
+    if (!lesson) {
+      return { error: 'Aula não encontrada' };
+    }
+
     const progressId = crypto.randomUUID();
     const completedInt = completed ? 1 : 0;
 
@@ -58,6 +65,12 @@ export async function toggleFavoriteAction(lessonId: string, favorited: boolean)
     }
 
     const db = getDB();
+
+    // Validar existência da aula
+    const lesson = await db.prepare('SELECT id FROM lessons WHERE id = ?').bind(lessonId).first();
+    if (!lesson) {
+      return { error: 'Aula não encontrada' };
+    }
 
     if (favorited) {
       const folderNameDefault = 'Favoritas do Coração';
@@ -118,6 +131,28 @@ export async function createNoteAction(lessonId: string, content: string, second
     }
 
     const db = getDB();
+
+    // Validar anotação vazia ou muito longa
+    const trimmedContent = content.trim();
+    if (!trimmedContent) {
+      return { error: 'A anotação não pode estar vazia' };
+    }
+    if (trimmedContent.length > 1000) {
+      return { error: 'A anotação não pode ter mais de 1000 caracteres' };
+    }
+
+    // Validar tempo do vídeo não negativo
+    const roundedSeconds = Math.round(seconds);
+    if (roundedSeconds < 0) {
+      return { error: 'O tempo do vídeo não pode ser negativo' };
+    }
+
+    // Validar existência da aula
+    const lesson = await db.prepare('SELECT id FROM lessons WHERE id = ?').bind(lessonId).first();
+    if (!lesson) {
+      return { error: 'Aula não encontrada' };
+    }
+
     const noteId = crypto.randomUUID();
     const isPublicVal = isPublic ? 1 : 0;
 
@@ -126,7 +161,7 @@ export async function createNoteAction(lessonId: string, content: string, second
         INSERT INTO lesson_notes (id, lesson_id, user_id, watched_seconds, content, is_public)
         VALUES (?, ?, ?, ?, ?, ?)
       `)
-      .bind(noteId, lessonId, sessionUser.id, Math.round(seconds), content.trim(), isPublicVal)
+      .bind(noteId, lessonId, sessionUser.id, roundedSeconds, trimmedContent, isPublicVal)
       .run();
 
     // Fetch the newly created note joining user metadata

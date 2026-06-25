@@ -131,6 +131,12 @@ export async function POST(request: Request) {
 
     const db = getDB();
 
+    // Validar existência da aula
+    const lesson = await db.prepare('SELECT id FROM lessons WHERE id = ?').bind(lessonId).first();
+    if (!lesson) {
+      return NextResponse.json({ error: 'Aula não encontrada' }, { status: 404 });
+    }
+
     // 1. Caso de uso A: Gerenciamento detalhado de Pastas (Instagram-style)
     if (folderName !== undefined) {
       const isGlobalVal = isGlobal ? 1 : 0;
