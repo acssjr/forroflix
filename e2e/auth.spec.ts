@@ -52,11 +52,10 @@ test.describe('Autenticação Forroflix E2E', () => {
     await page.locator('input[aria-label="Dígito 1 do PIN"]').focus();
     await page.keyboard.type('1234');
     
-    // Opcionalmente clicar no botão se a navegação não iniciou automaticamente
-    try {
-      await page.click('button[type="submit"]', { timeout: 1000 });
-    } catch (e) {
-      // Ignorar se já iniciou a navegação pelo envio automático
+    // Aguardar brevemente para verificar se a navegação já iniciou pelo envio automático
+    await page.waitForTimeout(500);
+    if (page.url().endsWith('/login')) {
+      await page.click('button[type="submit"]');
     }
 
     // Após o login com sucesso, deve redirecionar para a home

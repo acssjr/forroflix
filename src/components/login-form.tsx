@@ -121,7 +121,7 @@ export function LoginForm() {
     }
 
     // Auto-submit if PIN is complete (4 digits) and logging in
-    if (value && index === 3 && !isSignUp && userFound) {
+    if (value && index === 3 && !isSignUp && userFound && newPin.every(d => d)) {
       const fullPin = newPin.join('');
       handleSubmit(undefined, fullPin);
     }
@@ -135,10 +135,15 @@ export function LoginForm() {
 
   const handleSubmit = async (e?: React.FormEvent, overridePassword?: string) => {
     if (e) e.preventDefault();
+    
+    const activePassword = overridePassword !== undefined ? overridePassword : pin.join('');
+    if (!username.trim() || activePassword.length !== 4 || (isSignUp && !fullName.trim())) {
+      return;
+    }
+
     setLoading(true);
     setMessage(null);
 
-    const activePassword = overridePassword !== undefined ? overridePassword : pin.join('');
     const url = isSignUp ? '/api/auth/register' : '/api/auth/login';
     const body = isSignUp 
       ? { username, password: activePassword, full_name: fullName } 

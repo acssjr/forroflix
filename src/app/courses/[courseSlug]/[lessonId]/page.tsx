@@ -33,21 +33,23 @@ export default async function LessonPage({ params }: PageProps) {
   let favoriteLessonIds: string[] = [];
 
   try {
-    // 1. Buscar status do usuário, curso, progresso, favoritos, módulos e aulas em um único round-trip paralelo (async-parallel)
-    const [usersRes, coursesRes, progressRes, favoritesRes, modulesRes, lessonsRes] = await Promise.all([
-      db.prepare('SELECT role, subscription_active FROM users WHERE id = ?').bind(sessionUser.id).all<any>(),
-      db.prepare('SELECT * FROM courses WHERE slug = ?').bind(courseSlug).all<any>(),
-      db.prepare('SELECT lesson_id FROM progress WHERE user_id = ? AND completed = 1').bind(sessionUser.id).all<any>(),
-      db.prepare('SELECT lesson_id FROM favorites WHERE user_id = ?').bind(sessionUser.id).all<any>(),
-      db.prepare('SELECT * FROM modules WHERE course_id = (SELECT id FROM courses WHERE slug = ?) ORDER BY position ASC').bind(courseSlug).all<any>(),
+    // 1. Buscar status do usuário, curso, progresso, favoritos, módulos e aulas em um único round-trip (db.batch)
+    const batchRes = await db.batch<any>([
+      db.prepare('SELECT role, subscription_active FROM users WHERE id = ?').bind(sessionUser.id),
+      db.prepare('SELECT * FROM courses WHERE slug = ?').bind(courseSlug),
+      db.prepare('SELECT lesson_id FROM progress WHERE user_id = ? AND completed = 1').bind(sessionUser.id),
+      db.prepare('SELECT lesson_id FROM favorites WHERE user_id = ?').bind(sessionUser.id),
+      db.prepare('SELECT * FROM modules WHERE course_id = (SELECT id FROM courses WHERE slug = ?) ORDER BY position ASC').bind(courseSlug),
       db.prepare(`
         SELECT l.id, l.title, l.video_id, l.duration_seconds, l.position, l.module_id, l.description, l.submodule
         FROM lessons l
         JOIN modules m ON l.module_id = m.id
         WHERE m.course_id = (SELECT id FROM courses WHERE slug = ?)
         ORDER BY m.position ASC, l.position ASC
-      `).bind(courseSlug).all<any>()
+      `).bind(courseSlug)
     ]);
+
+    const [usersRes, coursesRes, progressRes, favoritesRes, modulesRes, lessonsRes] = batchRes;
 
     const userProfile = usersRes.results[0];
     if (userProfile) {
