@@ -88,11 +88,13 @@ export function CourseViewer({
     setActiveLessonId(lessonId);
     setViewMode('player');
     window.history.pushState(null, '', `/courses/${course.slug}/${lessonId}`);
+    window.scrollTo({ top: 0, behavior: 'instant' });
   };
 
   const handleBackToTrail = () => {
     setViewMode('trail');
     window.history.pushState(null, '', `/courses/${course.slug}`);
+    window.scrollTo({ top: 0, behavior: 'instant' });
   };
 
   const activeLesson = allLessons.find((l) => l.id === activeLessonId) || allLessons[0];
