@@ -1,8 +1,23 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { CourseTrail } from '@/components/course-trail';
-import { LessonViewer } from '@/components/lesson-viewer';
+import dynamic from 'next/dynamic';
+
+const CourseTrail = dynamic(
+  () => import('@/components/course-trail').then((mod) => mod.CourseTrail),
+  {
+    loading: () => <div className="min-h-screen bg-black flex items-center justify-center text-white text-lg">Carregando trilha...</div>,
+    ssr: false
+  }
+);
+
+const LessonViewer = dynamic(
+  () => import('@/components/lesson-viewer').then((mod) => mod.LessonViewer),
+  {
+    loading: () => <div className="min-h-screen bg-black flex items-center justify-center text-white text-lg">Carregando aula...</div>,
+    ssr: false
+  }
+);
 
 interface Lesson {
   id: string;

@@ -18,7 +18,10 @@ import {
   Menu,
   Star,
 } from 'lucide-react';
-import { FolderSelectorModal } from '@/components/folder-selector-modal';
+const FolderSelectorModal = dynamic(
+  () => import('@/components/folder-selector-modal').then((mod) => mod.FolderSelectorModal),
+  { ssr: false }
+);
 import { toggleProgressAction, toggleFavoriteAction } from '@/app/actions';
 import { NotesSection } from '@/components/lesson/NotesSection';
 import { LessonAccordion } from '@/components/lesson/LessonAccordion';

@@ -21,6 +21,13 @@ export async function POST(request: Request) {
     }
 
     const db = getDB();
+
+    // Validar existência da aula
+    const lesson = await db.prepare('SELECT id FROM lessons WHERE id = ?').bind(lessonId).first();
+    if (!lesson) {
+      return NextResponse.json({ error: 'Aula não encontrada' }, { status: 404 });
+    }
+
     const progressId = crypto.randomUUID();
     const completedInt = completed ? 1 : 0;
 
