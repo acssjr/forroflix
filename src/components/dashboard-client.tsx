@@ -234,14 +234,12 @@ export function DashboardClient({
               <User className="w-4 h-4" />
             </button>
             {isAdmin && (
-              <Link href="/admin">
-                <Button 
-                  variant="outline" 
-                  className="border-primary/20 hover:bg-primary/10 gap-1.5 text-[10px] py-1.5 px-3 rounded-xl cursor-pointer text-sidebar-foreground/70 hover:text-primary"
-                >
-                  <Settings className="w-3 h-3" />
-                  Admin
-                </Button>
+              <Link 
+                href="/admin"
+                className="inline-flex items-center justify-center border border-primary/20 hover:bg-primary/10 gap-1.5 text-[10px] py-1.5 px-3 rounded-xl cursor-pointer text-sidebar-foreground/70 hover:text-primary font-semibold transition-colors"
+              >
+                <Settings className="w-3 h-3" />
+                Admin
               </Link>
             )}
           </div>

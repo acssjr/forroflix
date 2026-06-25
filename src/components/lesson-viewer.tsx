@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useTransition, useOptimistic } from 'react';
+import { useState, useEffect, useRef, useTransition, useOptimistic } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 
@@ -136,6 +136,7 @@ export function LessonViewer({
   const [replayTrigger, setReplayTrigger] = useState(0);
   const [autoplayDisabled, setAutoplayDisabled] = useState(false);
   const [autoCompletedLessons, setAutoCompletedLessons] = useState<string[]>([]);
+  const autoCompletingLessonsRef = useRef<Set<string>>(new Set());
  
   useEffect(() => {
     setCurrentActiveLesson(activeLesson);
@@ -198,16 +199,26 @@ export function LessonViewer({
     const percentageWatched = (currentTime / duration) * 100;
     const isAlreadyCompleted = completedIds.includes(currentActiveLesson.id);
     const isAlreadyAutoCompleted = autoCompletedLessons.includes(currentActiveLesson.id);
+    const isAlreadyAutoCompleting = autoCompletingLessonsRef.current.has(currentActiveLesson.id);
 
-    if (percentageWatched >= 90 && !isAlreadyCompleted && !isAlreadyAutoCompleted) {
-      setAutoCompletedLessons((prev) => [...prev, currentActiveLesson.id]);
+    if (percentageWatched >= 90 && !isAlreadyCompleted && !isAlreadyAutoCompleted && !isAlreadyAutoCompleting) {
+      autoCompletingLessonsRef.current.add(currentActiveLesson.id);
       showToast('Aula concluída automaticamente (90% assistida)! 🎉', 'success');
       
       startTransition(async () => {
         setOptimisticCompletedIds({ lessonId: currentActiveLesson.id, completed: true });
-        const res = await toggleProgressAction(currentActiveLesson.id, true);
-        if (res.success) {
-          setCompletedIds((prev) => [...prev, currentActiveLesson.id]);
+        try {
+          const res = await toggleProgressAction(currentActiveLesson.id, true);
+          if (res.success) {
+            setCompletedIds((prev) => [...prev, currentActiveLesson.id]);
+            setAutoCompletedLessons((prev) => [...prev, currentActiveLesson.id]);
+          } else {
+            showToast(res.error || 'Erro ao registrar auto-conclusão', 'warning');
+            autoCompletingLessonsRef.current.delete(currentActiveLesson.id);
+          }
+        } catch (err) {
+          console.error(err);
+          autoCompletingLessonsRef.current.delete(currentActiveLesson.id);
         }
       });
     }

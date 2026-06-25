@@ -40,7 +40,8 @@ interface PageProps {
 
 export default async function Home({ searchParams }: PageProps) {
   const params = await searchParams;
-  const initialTab = (params.tab === 'settings' ? 'catalog' : params.tab) || 'catalog';
+  const allowedTabs = ['catalog', 'favorites', 'progress'];
+  const initialTab = (params.tab && allowedTabs.includes(params.tab)) ? params.tab : 'catalog';
 
   // 1. Verificar autenticação via cookie JWT
   const cookieStore = await cookies();

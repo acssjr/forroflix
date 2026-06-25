@@ -68,35 +68,34 @@ export async function toggleFavoriteAction(lessonId: string, favorited: boolean)
         .all<any>();
 
       let folderId = folderResults?.[0]?.id;
+      const statements = [];
+
       if (!folderId) {
         folderId = crypto.randomUUID();
-        await db
-          .prepare('INSERT INTO favorite_folders (id, user_id, name, course_id, is_global) VALUES (?, ?, ?, ?, ?)')
-          .bind(folderId, sessionUser.id, folderNameDefault, null, 1)
-          .run();
+        statements.push(
+          db.prepare('INSERT INTO favorite_folders (id, user_id, name, course_id, is_global) VALUES (?, ?, ?, ?, ?)')
+            .bind(folderId, sessionUser.id, folderNameDefault, null, 1)
+        );
       }
 
       const mappingId = crypto.randomUUID();
-      await db
-        .prepare('INSERT OR IGNORE INTO favorite_folder_lessons (id, user_id, folder_id, lesson_id) VALUES (?, ?, ?, ?)')
-        .bind(mappingId, sessionUser.id, folderId, lessonId)
-        .run();
+      statements.push(
+        db.prepare('INSERT OR IGNORE INTO favorite_folder_lessons (id, user_id, folder_id, lesson_id) VALUES (?, ?, ?, ?)')
+          .bind(mappingId, sessionUser.id, folderId, lessonId)
+      );
 
       const favId = crypto.randomUUID();
-      await db
-        .prepare('INSERT OR IGNORE INTO favorites (id, user_id, lesson_id) VALUES (?, ?, ?)')
-        .bind(favId, sessionUser.id, lessonId)
-        .run();
-    } else {
-      await db
-        .prepare('DELETE FROM favorites WHERE user_id = ? AND lesson_id = ?')
-        .bind(sessionUser.id, lessonId)
-        .run();
+      statements.push(
+        db.prepare('INSERT OR IGNORE INTO favorites (id, user_id, lesson_id) VALUES (?, ?, ?)')
+          .bind(favId, sessionUser.id, lessonId)
+      );
 
-      await db
-        .prepare('DELETE FROM favorite_folder_lessons WHERE user_id = ? AND lesson_id = ?')
-        .bind(sessionUser.id, lessonId)
-        .run();
+      await db.batch(statements);
+    } else {
+      await db.batch([
+        db.prepare('DELETE FROM favorites WHERE user_id = ? AND lesson_id = ?').bind(sessionUser.id, lessonId),
+        db.prepare('DELETE FROM favorite_folder_lessons WHERE user_id = ? AND lesson_id = ?').bind(sessionUser.id, lessonId)
+      ]);
     }
 
     return { success: true };

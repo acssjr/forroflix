@@ -360,10 +360,11 @@ export function AdminDashboardClient({
                     </p>
 
                     <div className="flex gap-2">
-                      <Link href={`/admin/courses/${course.id}`} className="flex-grow">
-                        <Button className="w-full bg-slate-900 hover:bg-slate-900/80 hover:text-red-500 text-slate-300 font-bold border border-slate-800 text-xs py-2 rounded-xl cursor-pointer">
-                          Editar Aulas
-                        </Button>
+                      <Link 
+                        href={`/admin/courses/${course.id}`} 
+                        className="flex-grow flex items-center justify-center w-full bg-slate-900 hover:bg-slate-900/80 hover:text-red-500 text-slate-300 font-bold border border-slate-800 text-xs py-2 rounded-xl cursor-pointer transition-colors"
+                      >
+                        Editar Aulas
                       </Link>
                       <Button 
                         onClick={() => setMetadataEditCourse(course)}

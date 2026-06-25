@@ -29,7 +29,7 @@ class D1RESTPreparedStatement implements D1PreparedStatement {
   constructor(private db: D1RESTDatabase, private query: string) {}
 
   bind(...values: any[]): D1PreparedStatement {
-    this.params.push(...values);
+    this.params = values;
     return this;
   }
 
@@ -117,7 +117,7 @@ class TursoPreparedStatement implements D1PreparedStatement {
 
   bind(...values: any[]): D1PreparedStatement {
     // Normalizar booleanos como inteiros 0/1 para compatibilidade SQLite
-    this.params.push(...values.map(v => typeof v === 'boolean' ? (v ? 1 : 0) : v));
+    this.params = values.map(v => typeof v === 'boolean' ? (v ? 1 : 0) : v);
     return this;
   }
 

@@ -59,6 +59,7 @@ export function NotesSection({
     setLoading(true);
 
     const fetchNotes = async () => {
+      let aborted = false;
       try {
         const res = await fetch(`/api/notes?lessonId=${lessonId}`, {
           signal: controller.signal,
@@ -70,12 +71,16 @@ export function NotesSection({
           setNotes([]);
         }
       } catch (err: any) {
-        if (err.name !== 'AbortError') {
+        if (err.name === 'AbortError') {
+          aborted = true;
+        } else {
           console.error('Erro ao buscar notas da aula:', err);
           setNotes([]);
         }
       } finally {
-        setLoading(false);
+        if (!aborted) {
+          setLoading(false);
+        }
       }
     };
     fetchNotes();

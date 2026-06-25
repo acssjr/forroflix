@@ -1,13 +1,35 @@
 const { createClient } = require('@libsql/client');
+const fs = require('fs');
+const path = require('path');
+
+// Load environment variables from .env.local if it exists
+const envPath = path.resolve(__dirname, '../.env.local');
+if (fs.existsSync(envPath)) {
+  const envConfig = fs.readFileSync(envPath, 'utf8');
+  envConfig.split('\n').forEach(line => {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith('#')) {
+      const [key, ...valueParts] = trimmed.split('=');
+      if (key && valueParts.length > 0) {
+        process.env[key.trim()] = valueParts.join('=').trim();
+      }
+    }
+  });
+}
 
 // Cloudflare D1 Config
-const cfAccountId = '5ac5e64f40ff9ab06d3ed64c951841b0';
-const cfDatabaseId = '21bc1280-e5b2-4c71-824a-714ef977f166';
-const cfApiToken = 'TDmqIO4-lXh2te9V01ej9GtQliHwjSV8lhd6D_k2';
+const cfAccountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+const cfDatabaseId = process.env.CLOUDFLARE_DATABASE_ID || '21bc1280-e5b2-4c71-824a-714ef977f166';
+const cfApiToken = process.env.CLOUDFLARE_API_TOKEN;
 
 // Turso Config
-const tursoUrl = 'libsql://forroflix-acssjr.aws-us-east-1.turso.io';
-const tursoToken = 'eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3ODIxNTIxMDEsImlkIjoiMDE5ZWYwOGEtZDcwMS03NjZlLWFhOWItNGM4MGY1OGY0Y2IxIiwicmlkIjoiMjhlYjA3NjUtNGMyZC00Y2JkLTgzYTktOTVkNTVhYjc0NmY5In0.ZbtGwhIDVC7BWp_pAAm4_SFtLHN9X9g8uKalBMC7lJ5HSxFtXEjEU9683zkouXi8x0265uKDc1PbRx4-0wODAA';
+const tursoUrl = process.env.TURSO_DATABASE_URL;
+const tursoToken = process.env.TURSO_AUTH_TOKEN;
+
+if (!cfAccountId || !cfApiToken || !tursoUrl || !tursoToken) {
+  console.error('Error: Missing required environment variables CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN, TURSO_DATABASE_URL, or TURSO_AUTH_TOKEN');
+  process.exit(1);
+}
 
 const tursoClient = createClient({
   url: tursoUrl,
@@ -65,7 +87,7 @@ async function runMigration() {
 
       // Buscar todos os registros do D1
       console.log(`Fetching rows from D1 for ${tableName}...`);
-      const rows = await queryD1(`SELECT * FROM ${tableName}`);
+      const rows = await queryD1(`SELECT * FROM "${tableName}"`);
       console.log(`Found ${rows.length} rows.`);
 
       if (rows.length > 0) {
@@ -73,7 +95,7 @@ async function runMigration() {
         const columns = Object.keys(rows[0]);
         const columnsStr = columns.map(c => `"${c}"`).join(', ');
         const placeholders = columns.map(() => '?').join(', ');
-        const insertSql = `INSERT OR REPLACE INTO ${tableName} (${columnsStr}) VALUES (${placeholders})`;
+        const insertSql = `INSERT OR REPLACE INTO "${tableName}" (${columnsStr}) VALUES (${placeholders})`;
 
         console.log(`Inserting ${rows.length} rows into Turso...`);
         

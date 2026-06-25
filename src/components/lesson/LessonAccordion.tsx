@@ -112,6 +112,7 @@ export function LessonAccordion({
 
   // Auto-expand active lesson's module in accordion and scroll to it
   useEffect(() => {
+    let timerId: NodeJS.Timeout | null = null;
     if (currentActiveLessonId) {
       const activeMod = localModules.find((m) =>
         m.lessons.some((l) => l.id === currentActiveLessonId)
@@ -123,7 +124,7 @@ export function LessonAccordion({
         });
 
         // Rolagem suave do elemento do módulo para o topo da barra lateral (deixando o título visível)
-        setTimeout(() => {
+        timerId = setTimeout(() => {
           if (sidebarRef.current) {
             const itemElement = sidebarRef.current.querySelector(
               `[data-module-id="${activeMod.id}"]`
@@ -138,6 +139,9 @@ export function LessonAccordion({
         }, 200);
       }
     }
+    return () => {
+      if (timerId) clearTimeout(timerId);
+    };
   }, [currentActiveLessonId, localModules]);
 
   const renderLessonLink = (les: Lesson) => {
@@ -147,15 +151,9 @@ export function LessonAccordion({
     const displayTitle = getDisplayTitle(les.title, les.submodule);
 
     return (
-      <Link
-        href={`/courses/${courseSlug}/${les.id}`}
+      <div
         key={les.id}
-        onClick={(e) => {
-          e.preventDefault();
-          onSelectLesson(les);
-        }}
-        style={{ textDecoration: 'none' }}
-        className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs transition-all duration-200 cursor-pointer !no-underline no-underline ${
+        className={`flex items-center justify-between gap-3 px-3 py-2 rounded-xl text-xs transition-all duration-200 group/row ${
           isActive
             ? 'bg-red-600/10 text-red-500 border border-red-600/20 font-bold'
             : isLesCompleted
@@ -163,37 +161,48 @@ export function LessonAccordion({
               : 'text-muted-foreground hover:bg-secondary hover:text-foreground border border-transparent'
         }`}
       >
-        {/* Miniatura do vídeo à esquerda */}
-        <div className="relative w-24 aspect-video rounded-lg overflow-hidden bg-secondary border border-border shrink-0">
-          {libraryId && les.video_id ? (
-            <img
-              src={`https://vz-${libraryId}.b-cdn.net/${les.video_id}/thumbnail.jpg`}
-              alt=""
-              className="w-full h-full object-cover relative z-10"
-              loading="lazy"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-              }}
-            />
-          ) : null}
-          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-tr from-card to-secondary text-muted-foreground">
-            <Play className="w-4 h-4 fill-current opacity-40" />
-          </div>
-          <div className="absolute bottom-1 right-1 bg-black/85 px-1 rounded text-[9px] font-mono font-medium text-white z-20">
-            {formatDuration(les.duration_seconds)}
-          </div>
-        </div>
-
-        {/* Título no centro */}
-        <span 
+        {/* Link wraps only thumbnail and title */}
+        <Link
+          href={`/courses/${courseSlug}/${les.id}`}
+          onClick={(e) => {
+            e.preventDefault();
+            onSelectLesson(les);
+          }}
           style={{ textDecoration: 'none' }}
-          className="line-clamp-2 flex-grow leading-snug !no-underline no-underline text-left"
+          className="flex items-center gap-3 flex-grow min-w-0 !no-underline no-underline cursor-pointer"
         >
-          {displayTitle}
-        </span>
+          {/* Miniatura do vídeo à esquerda */}
+          <div className="relative w-24 aspect-video rounded-lg overflow-hidden bg-secondary border border-border shrink-0">
+            {libraryId && les.video_id ? (
+              <img
+                src={`https://vz-${libraryId}.b-cdn.net/${les.video_id}/thumbnail.jpg`}
+                alt=""
+                className="w-full h-full object-cover relative z-10"
+                loading="lazy"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            ) : null}
+            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-tr from-card to-secondary text-muted-foreground">
+              <Play className="w-4 h-4 fill-current opacity-40" />
+            </div>
+            <div className="absolute bottom-1 right-1 bg-black/85 px-1 rounded text-[9px] font-mono font-medium text-white z-20">
+              {formatDuration(les.duration_seconds)}
+            </div>
+          </div>
 
-        {/* Botões Favorito e Conclusão no canto direito */}
-        <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+          {/* Título no centro */}
+          <span 
+            style={{ textDecoration: 'none' }}
+            className={`line-clamp-2 leading-snug !no-underline no-underline text-left ${isActive ? 'text-red-500' : 'text-foreground'}`}
+          >
+            {displayTitle}
+          </span>
+        </Link>
+
+        {/* Botões Favorito e Conclusão no canto direito (irmãos do Link, fora dele!) */}
+        <div className="flex items-center gap-1.5 shrink-0">
           {/* Favorito */}
           <button
             onClick={async (e) => {
@@ -201,7 +210,7 @@ export function LessonAccordion({
               e.preventDefault();
               onToggleLessonFavorite(e, les.id, isLesFavorited);
             }}
-            className="p-1.5 hover:bg-secondary rounded-lg transition-colors shrink-0"
+            className="p-1.5 hover:bg-secondary rounded-lg transition-colors shrink-0 cursor-pointer"
             title={isLesFavorited ? 'Remover dos Favoritos' : 'Favoritar Aula'}
           >
             <Star className={`w-3.5 h-3.5 transition-transform hover:scale-110 ${
@@ -214,7 +223,7 @@ export function LessonAccordion({
           {/* Checkbox redondo interativo */}
           <button
             onClick={(e) => onToggleLessonProgress(e, les.id, isLesCompleted)}
-            className="p-1 hover:bg-secondary rounded-lg transition-colors shrink-0"
+            className="p-1 hover:bg-secondary rounded-lg transition-colors shrink-0 cursor-pointer"
           >
             {isLesCompleted ? (
               <CheckCircle2 className="w-5 h-5 text-green-500 fill-green-500/10 shrink-0 hover:scale-110 transition-transform" />
@@ -223,7 +232,7 @@ export function LessonAccordion({
             )}
           </button>
         </div>
-      </Link>
+      </div>
     );
   };
 
