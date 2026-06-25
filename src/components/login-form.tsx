@@ -215,7 +215,7 @@ export function LoginForm() {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="João Silva"
-                className="w-full bg-[#07070c] border border-slate-900 rounded-xl px-4 py-3 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 text-sm"
+                className="w-full bg-[#07070c] border border-slate-700/80 rounded-xl px-4 py-3 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 text-sm"
               />
             </div>
 
@@ -231,7 +231,7 @@ export function LoginForm() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
                 placeholder="joaosilva"
-                className="w-full bg-[#07070c] border border-slate-900 rounded-xl px-4 py-3 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 text-sm"
+                className="w-full bg-[#07070c] border border-slate-700/80 rounded-xl px-4 py-3 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 text-sm"
               />
             </div>
 
@@ -248,10 +248,10 @@ export function LoginForm() {
                       key={index}
                       className={`relative w-14 h-14 rounded-full flex items-center justify-center transition-all duration-150 ${
                         isFilled 
-                          ? 'bg-red-950/20 border-red-600/50' 
+                          ? 'bg-red-950/30 border-red-600/80 shadow-[0_0_8px_rgba(220,38,38,0.25)]' 
                           : isFocused 
-                            ? 'bg-[#07070c] border-red-600 ring-2 ring-red-600/20' 
-                            : 'bg-[#07070c] border-slate-900'
+                            ? 'bg-[#0b0b14] border-red-600 ring-2 ring-red-600/35 shadow-[0_0_12px_rgba(220,38,38,0.15)]' 
+                            : 'bg-[#050508] border-slate-700 hover:border-slate-600'
                       } border`}
                     >
                       {digit && (
@@ -299,7 +299,7 @@ export function LoginForm() {
                     ? 'border-red-600 focus:border-red-600 focus:ring-1 focus:ring-red-600' 
                     : userFound
                       ? 'border-green-600 focus:border-green-600 focus:ring-1 focus:ring-green-600'
-                      : 'border-slate-900 focus:border-red-600 focus:ring-1 focus:ring-red-600'
+                      : 'border-slate-700/80 focus:border-red-600 focus:ring-1 focus:ring-red-600'
                 }`}
               />
 
@@ -337,10 +337,10 @@ export function LoginForm() {
                       key={index}
                       className={`relative w-14 h-14 rounded-full flex items-center justify-center transition-all duration-150 ${
                         isFilled 
-                          ? 'bg-red-950/20 border-red-600/50' 
+                          ? 'bg-red-950/30 border-red-600/80 shadow-[0_0_8px_rgba(220,38,38,0.25)]' 
                           : isFocused 
-                            ? 'bg-[#07070c] border-red-600 ring-2 ring-red-600/20' 
-                            : 'bg-[#07070c] border-slate-900'
+                            ? 'bg-[#0b0b14] border-red-600 ring-2 ring-red-600/35 shadow-[0_0_12px_rgba(220,38,38,0.15)]' 
+                            : 'bg-[#050508] border-slate-700 hover:border-slate-600'
                       } border`}
                     >
                       {digit && (
