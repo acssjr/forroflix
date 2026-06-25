@@ -177,7 +177,7 @@ class TursoDatabase implements D1Database {
     });
     const res = await this.client.batch(stmts, 'write');
     return res.map((r: any) => ({
-      results: (r.rows || []) as T[],
+      results: (r.rows || []).map((row: any) => ({ ...row })) as T[],
       success: true,
       meta: { changes: r.rowsAffected }
     }));
@@ -238,11 +238,22 @@ export function getDB(): D1Database {
             const executeInTransaction = sqliteDb.transaction((stmts: any[]) => {
               for (const s of stmts) {
                 const internal = s._internal || s;
-                const info = internal.stmt.run(...internal.getParams());
-                results.push({
-                  success: true,
-                  meta: { changes: info.changes, last_row_id: info.lastInsertRowid }
-                });
+                const isSelect = internal.query.trim().toUpperCase().startsWith('SELECT');
+                if (isSelect) {
+                  const rows = internal.stmt.all(...internal.getParams());
+                  results.push({
+                    success: true,
+                    results: (rows || []).map((row: any) => ({ ...row })),
+                    meta: {}
+                  });
+                } else {
+                  const info = internal.stmt.run(...internal.getParams());
+                  results.push({
+                    success: true,
+                    results: [],
+                    meta: { changes: info.changes, last_row_id: info.lastInsertRowid }
+                  });
+                }
               }
               return results;
             });
