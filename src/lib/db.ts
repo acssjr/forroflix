@@ -238,8 +238,8 @@ export function getDB(): D1Database {
             const executeInTransaction = sqliteDb.transaction((stmts: any[]) => {
               for (const s of stmts) {
                 const internal = s._internal || s;
-                const isSelect = internal.query.trim().toUpperCase().startsWith('SELECT');
-                if (isSelect) {
+                const isReader = internal.stmt.reader;
+                if (isReader) {
                   const rows = internal.stmt.all(...internal.getParams());
                   results.push({
                     success: true,
