@@ -124,7 +124,7 @@ class TursoPreparedStatement implements D1PreparedStatement {
   async first<T = any>(colName?: string): Promise<T | null> {
     const res = await this.client.execute({ sql: this.query, args: this.params });
     if (res.rows && res.rows.length > 0) {
-      const firstRow = res.rows[0] as any;
+      const firstRow = { ...res.rows[0] } as any;
       return colName ? firstRow[colName] : firstRow;
     }
     return null;
@@ -133,7 +133,7 @@ class TursoPreparedStatement implements D1PreparedStatement {
   async run<T = any>(): Promise<D1Result<T>> {
     const res = await this.client.execute({ sql: this.query, args: this.params });
     return {
-      results: (res.rows || []) as T[],
+      results: (res.rows || []).map((r: any) => ({ ...r })) as T[],
       success: true,
       meta: { changes: res.rowsAffected }
     };
@@ -142,7 +142,7 @@ class TursoPreparedStatement implements D1PreparedStatement {
   async all<T = any>(): Promise<D1Result<T>> {
     const res = await this.client.execute({ sql: this.query, args: this.params });
     return {
-      results: (res.rows || []) as T[],
+      results: (res.rows || []).map((r: any) => ({ ...r })) as T[],
       success: true,
       meta: { changes: res.rowsAffected }
     };

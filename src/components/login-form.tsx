@@ -23,6 +23,7 @@ export function LoginForm() {
 
   const lookupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lookupRequestRef = useRef(0);
+  const passwordInputRef = useRef<HTMLInputElement>(null);
 
   const checkUser = async (userVal: string, requestId: number) => {
     const cleanUsername = userVal.toLowerCase().trim();
@@ -55,6 +56,9 @@ export function LoginForm() {
         setUserNotFound(false);
         setUserInfo({ name: cleanUsername });
         setMessage(null);
+        setTimeout(() => {
+          passwordInputRef.current?.focus();
+        }, 50);
       } else {
         setUserFound(false);
         setUserNotFound(true);
@@ -94,15 +98,25 @@ export function LoginForm() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/\D/g, '');
+    setPassword(val);
+
+    if (val.length === 4 && !isSignUp && userFound) {
+      handleSubmit(undefined, val);
+    }
+  };
+
+  const handleSubmit = async (e?: React.FormEvent, overridePassword?: string) => {
+    if (e) e.preventDefault();
     setLoading(true);
     setMessage(null);
 
+    const activePassword = overridePassword !== undefined ? overridePassword : password;
     const url = isSignUp ? '/api/auth/register' : '/api/auth/login';
     const body = isSignUp 
-      ? { username, password, full_name: fullName } 
-      : { username, password };
+      ? { username, password: activePassword, full_name: fullName } 
+      : { username, password: activePassword };
 
     try {
       const response = await fetch(url, {
@@ -209,87 +223,71 @@ export function LoginForm() {
             </div>
           </div>
         ) : (
-          <div className="space-y-5">
-            {!userFound ? (
-              <div>
-                <label htmlFor="username" className="block text-xs font-semibold text-slate-400 mb-1.5">
-                  Usuário
-                </label>
-                <input
-                  id="username"
-                  name="username"
-                  type="text"
-                  required
-                  autoComplete="username"
-                  value={username}
-                  onChange={(e) => handleUsernameChange(e.target.value)}
-                  placeholder="seuusuario"
-                  className={`w-full bg-[#07070c] border rounded-xl px-4 py-3 text-slate-200 placeholder-slate-600 focus:outline-none text-sm transition-all duration-200 ${
-                    userNotFound 
-                      ? 'border-red-600 focus:border-red-600 focus:ring-1 focus:ring-red-600' 
+          <div className="space-y-5 animate-slide-in">
+            {/* Username Input */}
+            <div>
+              <label htmlFor="username" className="block text-xs font-semibold text-slate-400 mb-1.5">
+                Usuário
+              </label>
+              <input
+                id="username"
+                name="username"
+                type="text"
+                required
+                autoComplete="username"
+                value={username}
+                onChange={(e) => handleUsernameChange(e.target.value)}
+                placeholder="seuusuario"
+                className={`w-full bg-[#07070c] border rounded-xl px-4 py-3 text-slate-200 placeholder-slate-600 focus:outline-none text-sm transition-all duration-200 ${
+                  userNotFound 
+                    ? 'border-red-600 focus:border-red-600 focus:ring-1 focus:ring-red-600' 
+                    : userFound
+                      ? 'border-green-600 focus:border-green-600 focus:ring-1 focus:ring-green-600'
                       : 'border-slate-900 focus:border-red-600 focus:ring-1 focus:ring-red-600'
-                  }`}
-                />
+                }`}
+              />
 
-                <div className="mt-2 text-xs h-4">
-                  {checkingUser && (
-                    <span className="flex items-center gap-1.5 text-orange-500">
-                      <span className="w-3 h-3 border-2 border-orange-500/30 border-t-orange-500 rounded-full animate-spin inline-block" />
-                      Buscando usuário...
-                    </span>
-                  )}
-                  {userNotFound && (
-                    <span className="text-red-500 flex items-center gap-1 font-semibold">
-                      ⚠️ Usuário não cadastrado
-                    </span>
-                  )}
-                </div>
+              <div className="mt-2 text-xs h-4">
+                {checkingUser && (
+                  <span className="flex items-center gap-1.5 text-orange-500">
+                    <span className="w-3 h-3 border-2 border-orange-500/30 border-t-orange-500 rounded-full animate-spin inline-block" />
+                    Buscando usuário...
+                  </span>
+                )}
+                {userNotFound && (
+                  <span className="text-red-500 flex items-center gap-1 font-semibold">
+                    ⚠️ Usuário não cadastrado
+                  </span>
+                )}
+                {userFound && (
+                  <span className="text-green-500 flex items-center gap-1 font-semibold">
+                    ✓ Usuário encontrado
+                  </span>
+                )}
               </div>
-            ) : (
-              <div className="space-y-4 animate-slide-in">
-                <div className="bg-[#120507]/60 border border-red-950/80 rounded-2xl p-4 flex justify-between items-center shadow-inner">
-                  <div>
-                    <span className="text-[10px] uppercase tracking-wider text-slate-500 block">Acessando como</span>
-                    <span className="text-sm font-bold text-red-500">Olá, {userInfo?.name}!</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setUserFound(false);
-                      setUserInfo(null);
-                      setPassword('');
-                    }}
-                    className="text-xs text-slate-400 hover:text-red-500 underline font-semibold transition-colors duration-150"
-                  >
-                    Alterar
-                  </button>
-                </div>
+            </div>
 
-                <div>
-                  <label htmlFor="password" className="block text-xs font-semibold text-slate-400 mb-1.5">
-                    Senha (PIN de 4 dígitos)
-                  </label>
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    required
-                    autoFocus
-                    maxLength={4}
-                    pattern="\d*"
-                    inputMode="numeric"
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/\D/g, '');
-                      setPassword(val);
-                    }}
-                    placeholder="••••"
-                    className="w-full bg-[#07070c] border border-slate-900 rounded-xl px-4 py-3 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 text-center tracking-[1.2em] font-mono text-lg"
-                  />
-                </div>
-              </div>
-            )}
+            {/* Password Input */}
+            <div>
+              <label htmlFor="password" className="block text-xs font-semibold text-slate-400 mb-1.5">
+                Senha (PIN de 4 dígitos)
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                maxLength={4}
+                pattern="\d*"
+                inputMode="numeric"
+                autoComplete="current-password"
+                ref={passwordInputRef}
+                value={password}
+                onChange={handlePasswordChange}
+                placeholder="••••"
+                className="w-full bg-[#07070c] border border-slate-900 rounded-xl px-4 py-3 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 text-center tracking-[1.2em] font-mono text-lg"
+              />
+            </div>
           </div>
         )}
 
