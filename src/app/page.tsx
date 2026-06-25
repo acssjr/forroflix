@@ -86,9 +86,9 @@ export default async function Home({ searchParams }: PageProps) {
   try {
     const db = getDB();
     
-    // Buscar cursos, favoritos, progresso e última aula em paralelo
-    const [coursesRes, favoritesRes, courseProgressRes, lastLessonRes, defaultLessonRes] = await Promise.all([
-      db.prepare('SELECT * FROM courses ORDER BY created_at DESC').all<any>(),
+    // Buscar cursos, favoritos, progresso e última aula em um único lote (db.batch)
+    const batchRes = await db.batch<any>([
+      db.prepare('SELECT * FROM courses ORDER BY created_at DESC'),
       db.prepare(`
         SELECT DISTINCT
           l.id, 
@@ -106,7 +106,7 @@ export default async function Home({ searchParams }: PageProps) {
         JOIN courses c ON m.course_id = c.id
         WHERE ffl.user_id = ? AND ff.is_global = 1
         ORDER BY ffl.created_at DESC
-      `).bind(user.id).all<any>(),
+      `).bind(user.id),
       db.prepare(`
         SELECT 
           c.id, 
@@ -117,7 +117,7 @@ export default async function Home({ searchParams }: PageProps) {
         LEFT JOIN lessons l ON l.module_id = m.id
         LEFT JOIN progress p ON p.lesson_id = l.id AND p.user_id = ?
         GROUP BY c.id
-      `).bind(user.id).all<any>(),
+      `).bind(user.id),
       db.prepare(`
         SELECT 
           p.updated_at,
@@ -136,7 +136,7 @@ export default async function Home({ searchParams }: PageProps) {
         WHERE p.user_id = ?
         ORDER BY p.updated_at DESC
         LIMIT 1
-      `).bind(user.id).all<any>(),
+      `).bind(user.id),
       db.prepare(`
         SELECT 
           l.id as lesson_id,
@@ -151,8 +151,10 @@ export default async function Home({ searchParams }: PageProps) {
         JOIN lessons l ON l.module_id = m.id
         ORDER BY c.created_at DESC, m.position ASC, l.position ASC
         LIMIT 1
-      `).all<any>()
+      `)
     ]);
+
+    const [coursesRes, favoritesRes, courseProgressRes, lastLessonRes, defaultLessonRes] = batchRes;
 
     const results = coursesRes.results;
     favoritesList = favoritesRes.results || [];

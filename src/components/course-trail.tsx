@@ -222,7 +222,7 @@ export function CourseTrail({
   
           {/* Lado Direito: Poster Estético Vertical (Oculto em telas pequenas) */}
           <div className="shrink-0 hidden md:block relative z-10">
-            <div className={`relative w-64 aspect-[3/4.2] rounded-3xl overflow-hidden bg-gradient-to-b ${course.thumbnail_gradient} p-6 flex flex-col justify-between border border-border/15 shadow-2xl select-none`}>
+            <div className={`relative w-64 aspect-[3/4.2] rounded-3xl overflow-hidden bg-gradient-to-b ${course.thumbnail_gradient} p-6 flex flex-col justify-end border border-border/15 shadow-2xl select-none`}>
               {course.cover_vertical ? (
                 <>
                   <Image
@@ -233,20 +233,20 @@ export function CourseTrail({
                     className="absolute inset-0 object-cover z-0"
                     style={{ objectPosition: course.cover_vertical_position || '50% 50%' }}
                   />
-                  <div className="absolute inset-0 bg-black/35 z-10" />
+                  {/* Sutil gradiente para destacar o rodapé caso a imagem seja muito clara */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent z-10" />
                 </>
               ) : (
-                <div className="absolute inset-0 bg-black/10" />
+                <>
+                  <div className="absolute inset-0 bg-black/10 z-10" />
+                  <div className="flex-grow flex items-center justify-center text-center py-12 relative z-20">
+                    <h3 className="text-2xl font-black tracking-tight text-white leading-none uppercase drop-shadow-lg">
+                      {course.title.split(' - ')[0]}
+                    </h3>
+                  </div>
+                </>
               )}
-              <div className="absolute top-6 left-6 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-[9px] font-bold text-white tracking-widest uppercase border border-white/5 z-20">
-                Premium
-              </div>
-              <div className="flex-grow flex items-center justify-center text-center py-12 relative z-20">
-                <h3 className="text-2xl font-black tracking-tight text-white leading-none uppercase drop-shadow-lg">
-                  {course.title.split(' - ')[0]}
-                </h3>
-              </div>
-              <span className="text-[10px] font-bold text-white/50 tracking-wider uppercase z-20">
+              <span className="text-[10px] font-bold text-white/50 tracking-wider uppercase z-20 relative">
                 Forroflix Player
               </span>
             </div>
@@ -292,7 +292,7 @@ export function CourseTrail({
         {/* Conteúdo das Abas */}
         <div className="flex-grow min-h-[500px]">
           {activeTab === 'conteudos' ? (
-            <div className="space-y-6">
+            <div className="space-y-6 animate-slide-in">
               <div className="space-y-1">
                 <h2 className="text-xl font-extrabold text-foreground flex items-center gap-2">
                   <Layers className="w-5 h-5 text-primary" />
@@ -397,7 +397,7 @@ export function CourseTrail({
               )}
             </div>
           ) : activeTab === 'salvas' ? (
-            <div className="space-y-6">
+            <div className="space-y-6 animate-slide-in">
               <div className="space-y-1">
                 <h2 className="text-xl font-extrabold text-foreground flex items-center gap-2">
                   <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
@@ -537,7 +537,7 @@ export function CourseTrail({
               })()}
             </div>
           ) : (
-            <div className="max-w-3xl space-y-6">
+            <div className="max-w-3xl space-y-6 animate-slide-in">
               <div className="space-y-3">
                 <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
                   <BookOpen className="w-5 h-5 text-primary" />
