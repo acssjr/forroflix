@@ -10,7 +10,6 @@ export function LoginForm() {
   const router = useRouter();
   
   const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -21,9 +20,19 @@ export function LoginForm() {
   const [userNotFound, setUserNotFound] = useState(false);
   const [userInfo, setUserInfo] = useState<{ name: string } | null>(null);
 
+  // 4-digit PIN representation
+  const [pin, setPin] = useState<string[]>(['', '', '', '']);
+  const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
+
+  const pinRefs = [
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null)
+  ];
+
   const lookupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lookupRequestRef = useRef(0);
-  const passwordInputRef = useRef<HTMLInputElement>(null);
 
   const checkUser = async (userVal: string, requestId: number) => {
     const cleanUsername = userVal.toLowerCase().trim();
@@ -57,7 +66,7 @@ export function LoginForm() {
         setUserInfo({ name: cleanUsername });
         setMessage(null);
         setTimeout(() => {
-          passwordInputRef.current?.focus();
+          pinRefs[0].current?.focus();
         }, 50);
       } else {
         setUserFound(false);
@@ -98,12 +107,29 @@ export function LoginForm() {
     }
   };
 
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value.replace(/\D/g, '');
-    setPassword(val);
+  const handlePinChange = (index: number, value: string) => {
+    if (value && !/^\d$/.test(value)) return;
 
-    if (val.length === 4 && !isSignUp && userFound) {
-      handleSubmit(undefined, val);
+    const newPin = [...pin];
+    newPin[index] = value;
+    setPin(newPin);
+    setMessage(null);
+
+    // Focus next input if value was entered
+    if (value && index < 3) {
+      pinRefs[index + 1].current?.focus();
+    }
+
+    // Auto-submit if PIN is complete (4 digits) and logging in
+    if (value && index === 3 && !isSignUp && userFound) {
+      const fullPin = newPin.join('');
+      handleSubmit(undefined, fullPin);
+    }
+  };
+
+  const handlePinKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !pin[index] && index > 0) {
+      pinRefs[index - 1].current?.focus();
     }
   };
 
@@ -112,7 +138,7 @@ export function LoginForm() {
     setLoading(true);
     setMessage(null);
 
-    const activePassword = overridePassword !== undefined ? overridePassword : password;
+    const activePassword = overridePassword !== undefined ? overridePassword : pin.join('');
     const url = isSignUp ? '/api/auth/register' : '/api/auth/login';
     const body = isSignUp 
       ? { username, password: activePassword, full_name: fullName } 
@@ -142,8 +168,17 @@ export function LoginForm() {
         router.refresh();
       }
     } catch (err: any) {
-      console.error(err);
+      // Don't show scary red console errors with stack traces for expected invalid credentials
+      if (err.message !== 'Credenciais inválidas') {
+        console.error(err);
+      }
       setMessage(err.message || 'Erro ao processar autenticação.');
+      
+      // Clear PIN on error and focus first input
+      setPin(['', '', '', '']);
+      setTimeout(() => {
+        pinRefs[0].current?.focus();
+      }, 100);
     } finally {
       setLoading(false);
     }
@@ -165,7 +200,7 @@ export function LoginForm() {
         </p>
       </div>
 
-      <form className="space-y-5" onSubmit={handleSubmit}>
+      <form className="space-y-5" onSubmit={(e) => handleSubmit(e)}>
         {isSignUp ? (
           <div className="space-y-5">
             <div>
@@ -200,26 +235,47 @@ export function LoginForm() {
               />
             </div>
 
-            <div>
-              <label htmlFor="password" className="block text-xs font-semibold text-slate-400 mb-1.5">
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">
                 Senha (PIN de 4 dígitos)
               </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                maxLength={4}
-                pattern="\d*"
-                inputMode="numeric"
-                value={password}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/\D/g, '');
-                  setPassword(val);
-                }}
-                placeholder="••••"
-                className="w-full bg-[#07070c] border border-slate-900 rounded-xl px-4 py-3 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 text-center tracking-[1.2em] font-mono text-lg"
-              />
+              <div className="flex justify-center gap-4">
+                {pin.map((digit, index) => {
+                  const isFocused = focusedIndex === index;
+                  const isFilled = !!digit;
+                  return (
+                    <div
+                      key={index}
+                      className={`relative w-14 h-14 rounded-full flex items-center justify-center transition-all duration-150 ${
+                        isFilled 
+                          ? 'bg-red-950/20 border-red-600/50' 
+                          : isFocused 
+                            ? 'bg-[#07070c] border-red-600 ring-2 ring-red-600/20' 
+                            : 'bg-[#07070c] border-slate-900'
+                      } border`}
+                    >
+                      {digit && (
+                        <div className="w-2.5 h-2.5 rounded-full bg-red-600 animate-scale-in" />
+                      )}
+                      <input
+                        ref={pinRefs[index]}
+                        type="password"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={digit}
+                        aria-label={`Dígito ${index + 1} do PIN de Cadastro`}
+                        onChange={(e) => handlePinChange(index, e.target.value)}
+                        onKeyDown={(e) => handlePinKeyDown(index, e)}
+                        onFocus={() => setFocusedIndex(index)}
+                        onBlur={() => setFocusedIndex(null)}
+                        disabled={loading}
+                        style={{ color: 'transparent', caretColor: 'transparent' }}
+                        className="absolute inset-0 w-full h-full rounded-full bg-transparent border-none outline-none text-center text-[1px] cursor-pointer select-none"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         ) : (
@@ -267,26 +323,48 @@ export function LoginForm() {
               </div>
             </div>
 
-            {/* Password Input */}
-            <div>
-              <label htmlFor="password" className="block text-xs font-semibold text-slate-400 mb-1.5">
+            {/* Password PIN Inputs */}
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">
                 Senha (PIN de 4 dígitos)
               </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                maxLength={4}
-                pattern="\d*"
-                inputMode="numeric"
-                autoComplete="current-password"
-                ref={passwordInputRef}
-                value={password}
-                onChange={handlePasswordChange}
-                placeholder="••••"
-                className="w-full bg-[#07070c] border border-slate-900 rounded-xl px-4 py-3 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 text-center tracking-[1.2em] font-mono text-lg"
-              />
+              <div className="flex justify-center gap-4">
+                {pin.map((digit, index) => {
+                  const isFocused = focusedIndex === index;
+                  const isFilled = !!digit;
+                  return (
+                    <div
+                      key={index}
+                      className={`relative w-14 h-14 rounded-full flex items-center justify-center transition-all duration-150 ${
+                        isFilled 
+                          ? 'bg-red-950/20 border-red-600/50' 
+                          : isFocused 
+                            ? 'bg-[#07070c] border-red-600 ring-2 ring-red-600/20' 
+                            : 'bg-[#07070c] border-slate-900'
+                      } border`}
+                    >
+                      {digit && (
+                        <div className="w-2.5 h-2.5 rounded-full bg-red-600 animate-scale-in" />
+                      )}
+                      <input
+                        ref={pinRefs[index]}
+                        type="password"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={digit}
+                        aria-label={`Dígito ${index + 1} do PIN`}
+                        onChange={(e) => handlePinChange(index, e.target.value)}
+                        onKeyDown={(e) => handlePinKeyDown(index, e)}
+                        onFocus={() => setFocusedIndex(index)}
+                        onBlur={() => setFocusedIndex(null)}
+                        disabled={loading}
+                        style={{ color: 'transparent', caretColor: 'transparent' }}
+                        className="absolute inset-0 w-full h-full rounded-full bg-transparent border-none outline-none text-center text-[1px] cursor-pointer select-none"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
@@ -301,7 +379,7 @@ export function LoginForm() {
         <div className="space-y-3 pt-2">
           <Button
             type="submit"
-            disabled={loading || (!isSignUp && (!userFound || password.length < 4))}
+            disabled={loading || (!isSignUp && (!userFound || pin.some(d => !d)))}
             className="w-full bg-gradient-to-r from-red-600 to-red-600 hover:from-red-700 hover:to-red-700 text-white font-bold py-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2 disabled:opacity-40 transition-all duration-200"
           >
             <LogIn className="w-4 h-4" />
@@ -321,7 +399,7 @@ export function LoginForm() {
             setUserFound(false);
             setUserNotFound(false);
             setUserInfo(null);
-            setPassword('');
+            setPin(['', '', '', '']);
             setUsername('');
           }}
           className="text-red-500 hover:underline font-bold"
