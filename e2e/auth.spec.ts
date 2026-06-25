@@ -45,10 +45,21 @@ test.describe('Autenticação Forroflix E2E', () => {
     await page.goto('/login');
     await page.fill('input[id="username"]', 'aluno');
     
-    // Aguardar até que a etapa 2 (senha/PIN) apareça por conta do fetch de busca do usuário
-    await expect(page.locator('input[id="password"]')).toBeVisible({ timeout: 5000 });
-    await page.fill('input[id="password"]', '1234');
-    await page.click('button[type="submit"]');
+    // Aguardar até que a verificação encontre o usuário cadastrado (evitando race condition)
+    await expect(page.locator('text=Usuário encontrado')).toBeVisible({ timeout: 5000 });
+    
+    // Preencher os 4 dígitos do PIN
+    await page.locator('input[aria-label="Dígito 1 do PIN"]').fill('1');
+    await page.locator('input[aria-label="Dígito 2 do PIN"]').fill('2');
+    await page.locator('input[aria-label="Dígito 3 do PIN"]').fill('3');
+    await page.locator('input[aria-label="Dígito 4 do PIN"]').fill('4');
+    
+    // Opcionalmente clicar no botão se a navegação não iniciou automaticamente
+    try {
+      await page.click('button[type="submit"]', { timeout: 1000 });
+    } catch (e) {
+      // Ignorar se já iniciou a navegação pelo envio automático
+    }
 
     // Após o login com sucesso, deve redirecionar para a home
     await expect(page).toHaveURL(/.*\//);
