@@ -69,6 +69,19 @@ interface LessonViewerProps {
   libraryId: string;
 }
 
+function formatSeconds(sec: number): string {
+  const hours = Math.floor(sec / 3600);
+  const minutes = Math.floor((sec % 3600) / 60);
+  const seconds = Math.floor(sec % 60);
+  const parts = [];
+  if (hours > 0) {
+    parts.push(hours.toString().padStart(2, '0'));
+  }
+  parts.push(minutes.toString().padStart(2, '0'));
+  parts.push(seconds.toString().padStart(2, '0'));
+  return parts.join(':');
+}
+
 export function LessonViewer({
   courseId,
   courseTitle,
@@ -141,10 +154,13 @@ export function LessonViewer({
   const [autoCompletedLessons, setAutoCompletedLessons] = useState<string[]>([]);
   const autoCompletingLessonsRef = useRef<Set<string>>(new Set());
  
+  const [lessonNotes, setLessonNotes] = useState<any[]>([]);
+
   useEffect(() => {
     setCurrentActiveLesson(activeLesson);
     setAutoplayDisabled(false);
     setVideoProgress({ currentTime: 0, duration: 0 });
+    setLessonNotes([]);
   }, [activeLesson]);
 
   const showToast = (message: string, type: 'success' | 'info' | 'warning' | 'error' = 'success') => {
@@ -413,6 +429,56 @@ export function LessonViewer({
               )}
             </div>
 
+            {/* Linha do Tempo das Anotações Interativa */}
+            {videoProgress.duration > 0 && (
+              <div className="space-y-2 select-none bg-card border border-border p-4 rounded-2xl shadow-sm animate-fade-in text-left">
+                <div className="flex justify-between items-center text-[10px] text-muted-foreground font-semibold">
+                  <span>Marcadores de Anotação na Linha do Tempo</span>
+                  <span>{formatSeconds(videoProgress.currentTime)} / {formatSeconds(videoProgress.duration)}</span>
+                </div>
+                <div 
+                  className="w-full h-3 bg-secondary border border-border/60 rounded-full relative cursor-pointer group"
+                  onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const clickX = e.clientX - rect.left;
+                    const percentage = clickX / rect.width;
+                    const targetSeconds = Math.round(percentage * videoProgress.duration);
+                    setSeekTrigger({ seconds: targetSeconds, ts: Date.now() });
+                  }}
+                >
+                  {/* Barra de Progresso Real */}
+                  <div 
+                    className="h-full bg-primary/35 rounded-full transition-all" 
+                    style={{ width: `${(videoProgress.currentTime / videoProgress.duration) * 100}%` }} 
+                  />
+                  
+                  {/* Marcadores */}
+                  {lessonNotes.map((note) => {
+                    const pct = (note.watched_seconds / videoProgress.duration) * 100;
+                    return (
+                      <div
+                        key={note.id}
+                        className="absolute group/marker -translate-x-1/2 -top-0.5 z-20"
+                        style={{ left: `${pct}%` }}
+                        onClick={(e) => {
+                          e.stopPropagation(); // Evitar clique na barra
+                          setSeekTrigger({ seconds: note.watched_seconds, ts: Date.now() });
+                        }}
+                      >
+                        <div className="w-3.5 h-3.5 bg-primary hover:bg-primary/80 border-2 border-background rounded-full cursor-pointer hover:scale-125 transition-transform shadow-md" />
+                        
+                        {/* Tooltip */}
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-popover text-popover-foreground text-[10px] rounded-lg border border-border shadow-lg opacity-0 pointer-events-none group-hover/marker:opacity-100 transition-opacity z-50 text-center leading-normal">
+                          <span className="font-bold text-primary block mb-0.5">Tempo: {formatSeconds(note.watched_seconds)}</span>
+                          <span className="line-clamp-2">{note.content}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Lesson Info Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
               <div className="space-y-1">
@@ -489,12 +555,13 @@ export function LessonViewer({
               )}
             </div>
 
-            {/* Seção de Anotações do Vídeo */}
+             {/* Seção de Anotações do Vídeo */}
             <NotesSection
               lessonId={currentActiveLesson.id}
               currentTime={videoProgress.currentTime}
               isAdmin={isAdmin}
               onSeek={(seconds) => setSeekTrigger({ seconds, ts: Date.now() })}
+              onNotesLoaded={(notes) => setLessonNotes(notes)}
               showToast={showToast}
             />
 

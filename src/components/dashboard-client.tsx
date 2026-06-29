@@ -125,8 +125,10 @@ export function DashboardClient({
     }
   }, [toast]);
 
-  // Local state for courses
-  const [courses] = useState<CourseItem[]>(coursesList);
+  // Local state for courses (filtrando 'anlise-de-vdeos' do catálogo inicial)
+  const [courses] = useState<CourseItem[]>(() => 
+    coursesList.filter(c => c.slug !== 'anlise-de-vdeos')
+  );
 
   useEffect(() => {
     // Carregar preferências da barra lateral

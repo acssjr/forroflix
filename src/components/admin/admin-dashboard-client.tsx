@@ -6,7 +6,8 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { 
   LogOut, Play, BookOpen, Users, FolderPlus, ArrowLeft,
-  Settings, Loader2, Plus, Star, Pencil, Trash2
+  Settings, Loader2, Plus, Star, Pencil, Trash2,
+  ChevronLeft, ChevronRight, Sun, Moon
 } from 'lucide-react';
 import { UserManager } from './user-manager';
 
@@ -46,6 +47,63 @@ export function AdminDashboardClient({
 }: AdminDashboardClientProps) {
   const [activeTab, setActiveTab] = useState<'courses' | 'users'>('courses');
   const [courses, setCourses] = useState<CourseItem[]>(initialCourses);
+  const [theme, setTheme] = useState<'dark' | 'light'>('light');
+
+  // Carregar e aplicar o tema atual
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme') as 'dark' | 'light' | null;
+    const initialTheme = savedTheme || 'light';
+    setTheme(initialTheme);
+    const root = window.document.documentElement;
+    if (initialTheme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(nextTheme);
+    localStorage.setItem('theme', nextTheme);
+    const root = window.document.documentElement;
+    if (nextTheme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  };
+
+  const handleMoveCourse = async (index: number, direction: 'left' | 'right') => {
+    const newCourses = [...courses];
+    const targetIndex = direction === 'left' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= courses.length) return;
+    
+    // Trocar de posição no array
+    const temp = newCourses[index];
+    newCourses[index] = newCourses[targetIndex];
+    newCourses[targetIndex] = temp;
+    
+    setCourses(newCourses);
+    
+    try {
+      const res = await fetch('/api/admin/courses', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'reorder_courses',
+          courseIds: newCourses.map(c => c.id)
+        })
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Erro ao salvar reordenação dos cursos.');
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || 'Falha ao salvar a nova ordem dos cursos.');
+    }
+  };
   
   // States para criação de curso
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -241,21 +299,28 @@ export function AdminDashboardClient({
   };
 
   return (
-    <div className="min-h-screen bg-[#07070a] text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
       {/* Header Admin */}
-      <header className="border-b border-slate-900 bg-[#07070a]/90 backdrop-blur sticky top-0 z-40">
+      <header className="border-b border-border bg-card/90 backdrop-blur sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link href="/" className="flex items-center gap-2 group text-red-500 hover:text-red-400">
               <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
               <span className="text-sm font-semibold hidden md:inline">Voltar para Site</span>
             </Link>
-            <span className="text-slate-800">|</span>
-            <span className="font-extrabold text-base text-slate-200">Painel do Criador</span>
+            <span className="text-border">|</span>
+            <span className="font-extrabold text-base text-foreground">Painel do Criador</span>
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-xs text-slate-400 hidden sm:inline">Admin: {user.email}</span>
+            <span className="text-xs text-muted-foreground hidden sm:inline">Admin: {user.email}</span>
+            <button 
+              onClick={toggleTheme}
+              className="p-2 rounded-xl border border-border bg-card hover:bg-secondary text-muted-foreground hover:text-foreground transition-all cursor-pointer shadow-sm"
+              title={theme === 'dark' ? 'Tema Claro' : 'Tema Escuro'}
+            >
+              {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4 text-indigo-500" />}
+            </button>
             {activeTab === 'courses' && (
               <Button 
                 onClick={() => setShowCreateModal(true)}
@@ -273,13 +338,13 @@ export function AdminDashboardClient({
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow w-full space-y-6">
         
         {/* Sub-Tabs Selector */}
-        <div className="flex gap-2 p-1 bg-slate-900/40 border border-slate-900 rounded-2xl w-fit">
+        <div className="flex gap-2 p-1 bg-muted/40 border border-border rounded-2xl w-fit">
           <button
             onClick={() => setActiveTab('courses')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'courses'
                 ? 'bg-red-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
             }`}
           >
             <BookOpen className="w-4 h-4 inline mr-1.5" />
@@ -290,7 +355,7 @@ export function AdminDashboardClient({
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'users'
                 ? 'bg-red-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
             }`}
           >
             <Users className="w-4 h-4 inline mr-1.5" />
@@ -301,20 +366,20 @@ export function AdminDashboardClient({
         {activeTab === 'courses' ? (
           <div className="space-y-6">
             <div className="text-left space-y-1">
-              <h2 className="text-xl font-black text-white">Todos os Cursos</h2>
-              <p className="text-xs text-slate-400">
+              <h2 className="text-xl font-black text-foreground">Todos os Cursos</h2>
+              <p className="text-xs text-muted-foreground">
                 Selecione um curso para gerenciar os módulos, as vídeoaulas e as configurações de capap.
               </p>
             </div>
 
             {/* Grid de Cursos */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {courses.map((course) => (
+              {courses.map((course, idx) => (
                 <div 
                   key={course.id}
-                  className="bg-slate-950 border border-slate-900 rounded-3xl p-5 flex flex-col justify-between shadow-2xl relative group hover:border-red-650/30 transition-all duration-300"
+                  className="bg-card border border-border rounded-3xl p-5 flex flex-col justify-between shadow-sm relative group hover:border-primary/20 hover:shadow-md transition-all duration-300 animate-fade-in"
                 >
-                  <div className={`w-full aspect-[2.1/1] rounded-2xl bg-gradient-to-br ${course.thumbnail_gradient} p-4 flex flex-col justify-between mb-4 relative overflow-hidden border border-slate-900 shadow-inner`}>
+                  <div className={`w-full aspect-[2.1/1] rounded-2xl bg-gradient-to-br ${course.thumbnail_gradient} p-4 flex flex-col justify-between mb-4 relative overflow-hidden border border-border/40 shadow-inner`}>
                     {course.cover_horizontal ? (
                       <Image
                         src={course.cover_horizontal}
@@ -327,26 +392,47 @@ export function AdminDashboardClient({
                     ) : null}
                     <div className="absolute inset-0 bg-black/40 z-10" />
 
-                    {/* Destaque */}
+                    {/* Destaque & Reordenação */}
                     <div className="flex justify-between items-start w-full relative z-20">
-                      <button 
-                        onClick={() => handleToggleFeatured(course.id)}
-                        className={`p-1.5 rounded-lg border transition-all ${
-                          course.is_featured === 1 
-                            ? 'bg-yellow-500/20 border-yellow-500/30 text-yellow-400' 
-                            : 'bg-black/60 border-white/5 text-slate-400 hover:text-white'
-                        }`}
-                        title={course.is_featured === 1 ? 'Destaque Ativo' : 'Tornar Destaque'}
-                      >
-                        <Star className={`w-3.5 h-3.5 ${course.is_featured === 1 ? 'fill-yellow-400' : ''}`} />
-                      </button>
-                      <button 
-                        onClick={() => handleDeleteCourse(course.id)}
-                        className="p-1.5 rounded-lg bg-black/60 border border-white/5 text-slate-400 hover:text-red-500 transition-colors"
-                        title="Excluir Curso"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex gap-1 bg-black/60 p-1 rounded-xl border border-white/5 backdrop-blur-sm">
+                        <button
+                          onClick={() => handleMoveCourse(idx, 'left')}
+                          disabled={idx === 0}
+                          className="p-1 rounded text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+                          title="Mover para trás"
+                        >
+                          <ChevronLeft className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleMoveCourse(idx, 'right')}
+                          disabled={idx === courses.length - 1}
+                          className="p-1 rounded text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+                          title="Mover para frente"
+                        >
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      <div className="flex gap-1.5">
+                        <button 
+                          onClick={() => handleToggleFeatured(course.id)}
+                          className={`p-1.5 rounded-lg border transition-all ${
+                            course.is_featured === 1 
+                              ? 'bg-yellow-500/20 border-yellow-500/30 text-yellow-400' 
+                              : 'bg-black/60 border-white/5 text-slate-400 hover:text-white'
+                          }`}
+                          title={course.is_featured === 1 ? 'Destaque Ativo' : 'Tornar Destaque'}
+                        >
+                          <Star className={`w-3.5 h-3.5 ${course.is_featured === 1 ? 'fill-yellow-400' : ''}`} />
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteCourse(course.id)}
+                          className="p-1.5 rounded-lg bg-black/60 border border-white/5 text-slate-400 hover:text-red-500 transition-colors"
+                          title="Excluir Curso"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
 
                     <h3 className="text-base font-black text-white relative z-20 leading-tight select-none">
@@ -355,14 +441,14 @@ export function AdminDashboardClient({
                   </div>
 
                   <div className="flex-grow flex flex-col justify-between gap-4 text-left">
-                    <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed font-medium">
                       {course.description || 'Sem descrição cadastrada.'}
                     </p>
 
                     <div className="flex gap-2">
                       <Link 
                         href={`/admin/courses/${course.id}`} 
-                        className="flex-grow flex items-center justify-center w-full bg-slate-900 hover:bg-slate-900/80 hover:text-red-500 text-slate-300 font-bold border border-slate-800 text-xs py-2 rounded-xl cursor-pointer transition-colors"
+                        className="flex-grow flex items-center justify-center w-full bg-secondary hover:bg-secondary/80 hover:text-primary text-card-foreground font-bold border border-border text-xs py-2.5 rounded-xl cursor-pointer transition-colors"
                       >
                         Editar Aulas
                       </Link>

@@ -244,6 +244,25 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: true });
     }
 
+    // 2b. Reordenação de cursos (posição na tela inicial)
+    if (type === 'reorder_courses') {
+      const { courseIds } = body;
+      if (!courseIds || !Array.isArray(courseIds)) {
+        return NextResponse.json({ error: 'Lista de IDs de cursos inválida' }, { status: 400 });
+      }
+      const statements: any[] = [];
+      courseIds.forEach((courseId: string, idx: number) => {
+        statements.push(
+          db.prepare('UPDATE courses SET position = ? WHERE id = ?')
+            .bind(idx + 1, courseId)
+        );
+      });
+      if (statements.length > 0) {
+        await db.batch(statements);
+      }
+      return NextResponse.json({ success: true });
+    }
+
     // 3. Renomear Módulo
     if (type === 'module') {
       if (!title) {

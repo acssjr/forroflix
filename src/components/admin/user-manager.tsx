@@ -336,7 +336,7 @@ export function UserManager({ currentUserId, initialUsersList = [] }: UserManage
       )}
 
       {/* Barra de Ações & Busca */}
-      <div className="flex flex-col sm:flex-row items-center gap-4 bg-card/40 border border-border/40 p-4 rounded-3xl">
+      <div className="flex flex-col sm:flex-row items-center gap-4 bg-card border border-border p-4 rounded-3xl">
         <div className="relative w-full sm:max-w-xs flex items-center">
           <Search className="absolute left-3 w-4 h-4 text-muted-foreground" />
           <input
@@ -344,7 +344,7 @@ export function UserManager({ currentUserId, initialUsersList = [] }: UserManage
             placeholder="Buscar por nome, usuário ou email..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-slate-950 border border-border/60 rounded-xl text-xs font-medium text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 transition-colors"
+            className="w-full pl-9 pr-4 py-2 bg-background border border-border rounded-xl text-xs font-medium text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 transition-colors"
           />
         </div>
         <div className="text-xs text-muted-foreground sm:ml-auto select-none font-medium">
@@ -363,15 +363,15 @@ export function UserManager({ currentUserId, initialUsersList = [] }: UserManage
           <span className="text-xs text-muted-foreground font-medium">Carregando lista de usuários...</span>
         </div>
       ) : filteredUsers.length === 0 ? (
-        <div className="bg-card border border-border/60 rounded-3xl p-12 text-center text-muted-foreground text-xs font-medium">
+        <div className="bg-card border border-border rounded-3xl p-12 text-center text-muted-foreground text-xs font-medium">
           {searchQuery ? 'Nenhum usuário encontrado para esta busca.' : 'Nenhum usuário cadastrado na plataforma.'}
         </div>
       ) : (
-        <div className="bg-card border border-border/60 rounded-3xl overflow-hidden shadow-sm">
+        <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-border/40 bg-slate-900/30 text-[10px] font-black text-muted-foreground tracking-wider uppercase">
+                <tr className="border-b border-border bg-muted/40 text-[10px] font-black text-muted-foreground tracking-wider uppercase">
                   <th className="px-6 py-4">Usuário</th>
                   <th className="px-6 py-4 hidden md:table-cell">Cadastro</th>
                   <th className="px-6 py-4">Permissão</th>
@@ -391,7 +391,7 @@ export function UserManager({ currentUserId, initialUsersList = [] }: UserManage
                     : nameParts[0] ? nameParts[0][0].toUpperCase() : 'U';
 
                   return (
-                    <tr key={user.id} className="hover:bg-slate-900/10 transition-colors group">
+                    <tr key={user.id} className="hover:bg-muted/30 transition-colors group">
                       {/* Usuário info */}
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
@@ -434,7 +434,7 @@ export function UserManager({ currentUserId, initialUsersList = [] }: UserManage
                               value={user.role}
                               disabled={isUpdating}
                               onChange={(e) => handleUpdateUser(user.id, { role: e.target.value as 'student' | 'admin' })}
-                              className="bg-slate-950 border border-border/80 text-[11px] font-bold text-slate-200 rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-primary/50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="bg-background border border-border text-[11px] font-bold text-foreground rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-primary/50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               <option value="student">Aluno / Estudante</option>
                               <option value="admin">Administrador</option>
@@ -448,7 +448,7 @@ export function UserManager({ currentUserId, initialUsersList = [] }: UserManage
                       <td className="px-6 py-4 text-center">
                         <div className="flex items-center justify-center">
                           {isSelf ? (
-                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 bg-emerald-500/5 border border-emerald-500/10 px-2 rounded-lg select-none py-1">
+                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-500 bg-emerald-500/5 border border-emerald-500/10 px-2 rounded-lg select-none py-1">
                               <UserCheck className="w-3 h-3" />
                               <span>ACESSO VITALÍCIO</span>
                             </div>
@@ -462,7 +462,7 @@ export function UserManager({ currentUserId, initialUsersList = [] }: UserManage
                                   subscription_active: user.subscription_active === 1 ? 0 : 1 
                                 })}
                                 className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
-                                  user.subscription_active === 1 ? 'bg-primary animate-pulse-slow' : 'bg-slate-800'
+                                  user.subscription_active === 1 ? 'bg-primary' : 'bg-secondary'
                                 }`}
                               >
                                 <span
@@ -517,7 +517,7 @@ export function UserManager({ currentUserId, initialUsersList = [] }: UserManage
       {/* Modal para criar novo usuário */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0b0b11] border border-border/80 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-scale-in text-left">
+          <div className="bg-card border border-border rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-scale-in text-left">
             <div className="flex items-center justify-between p-6 border-b border-border/40">
               <h3 className="text-sm font-black text-foreground">Cadastrar Novo Usuário</h3>
               <button 
@@ -530,7 +530,7 @@ export function UserManager({ currentUserId, initialUsersList = [] }: UserManage
                   setNewRole('student');
                   setNewSubscriptionActive(1);
                 }}
-                className="text-muted-foreground hover:text-foreground p-1 rounded-lg hover:bg-slate-900 transition-colors cursor-pointer"
+                className="text-muted-foreground hover:text-foreground p-1 rounded-lg hover:bg-secondary transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -554,7 +554,7 @@ export function UserManager({ currentUserId, initialUsersList = [] }: UserManage
                   value={newFullName}
                   onChange={(e) => setNewFullName(e.target.value)}
                   placeholder="Nome do Aluno"
-                  className="w-full bg-slate-950 border border-border/60 rounded-xl px-3.5 py-2.5 text-xs font-medium text-foreground placeholder:text-muted-foreground/35 focus:outline-none focus:border-primary/50 transition-colors"
+                  className="w-full bg-background border border-border rounded-xl px-3.5 py-2.5 text-xs font-medium text-foreground placeholder:text-muted-foreground/35 focus:outline-none focus:border-primary/50 transition-colors"
                 />
               </div>
 
@@ -568,7 +568,7 @@ export function UserManager({ currentUserId, initialUsersList = [] }: UserManage
                   value={newUsername}
                   onChange={(e) => setNewUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
                   placeholder="username"
-                  className="w-full bg-slate-950 border border-border/60 rounded-xl px-3.5 py-2.5 text-xs font-medium text-foreground placeholder:text-muted-foreground/35 focus:outline-none focus:border-primary/50 transition-colors"
+                  className="w-full bg-background border border-border rounded-xl px-3.5 py-2.5 text-xs font-medium text-foreground placeholder:text-muted-foreground/35 focus:outline-none focus:border-primary/50 transition-colors"
                 />
               </div>
 
@@ -588,7 +588,7 @@ export function UserManager({ currentUserId, initialUsersList = [] }: UserManage
                     setNewPassword(val);
                   }}
                   placeholder="••••"
-                  className="w-full bg-slate-950 border border-border/60 rounded-xl px-3.5 py-2.5 text-xs font-mono text-center tracking-[1.2em] text-foreground placeholder:text-muted-foreground/35 focus:outline-none focus:border-primary/50 transition-colors"
+                  className="w-full bg-background border border-border rounded-xl px-3.5 py-2.5 text-xs font-mono text-center tracking-[1.2em] text-foreground placeholder:text-muted-foreground/35 focus:outline-none focus:border-primary/50 transition-colors"
                 />
               </div>
 
@@ -600,7 +600,7 @@ export function UserManager({ currentUserId, initialUsersList = [] }: UserManage
                   <select
                     value={newRole}
                     onChange={(e) => setNewRole(e.target.value as 'student' | 'admin')}
-                    className="w-full bg-slate-950 border border-border/60 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-200 focus:outline-none focus:border-primary/50 transition-colors cursor-pointer"
+                    className="w-full bg-background border border-border rounded-xl px-3 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary/50 transition-colors cursor-pointer"
                   >
                     <option value="student">Aluno</option>
                     <option value="admin">Admin</option>
@@ -614,7 +614,7 @@ export function UserManager({ currentUserId, initialUsersList = [] }: UserManage
                   <select
                     value={newSubscriptionActive}
                     onChange={(e) => setNewSubscriptionActive(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-border/60 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-200 focus:outline-none focus:border-primary/50 transition-colors cursor-pointer"
+                    className="w-full bg-background border border-border rounded-xl px-3 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary/50 transition-colors cursor-pointer"
                   >
                     <option value={1}>Ativa / Liberada</option>
                     <option value={0}>Inativa / Bloqueada</option>
@@ -629,7 +629,7 @@ export function UserManager({ currentUserId, initialUsersList = [] }: UserManage
                     setShowCreateModal(false);
                     setCreateError(null);
                   }}
-                  className="flex-1 py-3 border border-border hover:bg-slate-900 rounded-xl text-xs font-bold text-card-foreground transition-colors cursor-pointer text-center"
+                  className="flex-1 py-3 border border-border hover:bg-secondary rounded-xl text-xs font-bold text-card-foreground transition-colors cursor-pointer text-center"
                 >
                   Cancelar
                 </button>
@@ -656,7 +656,7 @@ export function UserManager({ currentUserId, initialUsersList = [] }: UserManage
       {/* Modal para editar usuário */}
       {editingUser && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0b0b11] border border-border/80 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-scale-in text-left">
+          <div className="bg-card border border-border rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-scale-in text-left">
             <div className="flex items-center justify-between p-6 border-b border-border/40">
               <h3 className="text-sm font-black text-foreground">Editar Membro</h3>
               <button 
@@ -664,7 +664,7 @@ export function UserManager({ currentUserId, initialUsersList = [] }: UserManage
                   setEditingUser(null);
                   setEditError(null);
                 }}
-                className="text-muted-foreground hover:text-foreground p-1 rounded-lg hover:bg-slate-900 transition-colors cursor-pointer"
+                className="text-muted-foreground hover:text-foreground p-1 rounded-lg hover:bg-secondary transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -688,7 +688,7 @@ export function UserManager({ currentUserId, initialUsersList = [] }: UserManage
                   value={editFullName}
                   onChange={(e) => setEditFullName(e.target.value)}
                   placeholder="Nome do Aluno"
-                  className="w-full bg-slate-950 border border-border/60 rounded-xl px-3.5 py-2.5 text-xs font-medium text-foreground placeholder:text-muted-foreground/35 focus:outline-none focus:border-primary/50 transition-colors"
+                  className="w-full bg-background border border-border rounded-xl px-3.5 py-2.5 text-xs font-medium text-foreground placeholder:text-muted-foreground/35 focus:outline-none focus:border-primary/50 transition-colors"
                 />
               </div>
 
@@ -702,7 +702,7 @@ export function UserManager({ currentUserId, initialUsersList = [] }: UserManage
                   value={editUsername}
                   onChange={(e) => setEditUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
                   placeholder="username"
-                  className="w-full bg-slate-950 border border-border/60 rounded-xl px-3.5 py-2.5 text-xs font-medium text-foreground placeholder:text-muted-foreground/35 focus:outline-none focus:border-primary/50 transition-colors"
+                  className="w-full bg-background border border-border rounded-xl px-3.5 py-2.5 text-xs font-medium text-foreground placeholder:text-muted-foreground/35 focus:outline-none focus:border-primary/50 transition-colors"
                 />
               </div>
 
@@ -721,7 +721,7 @@ export function UserManager({ currentUserId, initialUsersList = [] }: UserManage
                     setEditPassword(val);
                   }}
                   placeholder="Deixe em branco para manter a mesma"
-                  className="w-full bg-slate-950 border border-border/60 rounded-xl px-3.5 py-2.5 text-xs font-mono text-center tracking-[1.2em] text-foreground placeholder:text-muted-foreground/35 focus:outline-none focus:border-primary/50 transition-colors"
+                  className="w-full bg-background border border-border rounded-xl px-3.5 py-2.5 text-xs font-mono text-center tracking-[1.2em] text-foreground placeholder:text-muted-foreground/35 focus:outline-none focus:border-primary/50 transition-colors"
                 />
               </div>
 
@@ -734,7 +734,7 @@ export function UserManager({ currentUserId, initialUsersList = [] }: UserManage
                     <select
                       value={editRole}
                       onChange={(e) => setEditRole(e.target.value as 'student' | 'admin')}
-                      className="w-full bg-slate-950 border border-border/60 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-200 focus:outline-none focus:border-primary/50 transition-colors cursor-pointer"
+                      className="w-full bg-background border border-border rounded-xl px-3 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary/50 transition-colors cursor-pointer"
                     >
                       <option value="student">Aluno</option>
                       <option value="admin">Admin</option>
@@ -748,7 +748,7 @@ export function UserManager({ currentUserId, initialUsersList = [] }: UserManage
                     <select
                       value={editSubscriptionActive}
                       onChange={(e) => setEditSubscriptionActive(Number(e.target.value))}
-                      className="w-full bg-slate-950 border border-border/60 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-200 focus:outline-none focus:border-primary/50 transition-colors cursor-pointer"
+                      className="w-full bg-background border border-border rounded-xl px-3 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary/50 transition-colors cursor-pointer"
                     >
                       <option value={1}>Ativa / Liberada</option>
                       <option value={0}>Inativa / Bloqueada</option>
@@ -756,7 +756,7 @@ export function UserManager({ currentUserId, initialUsersList = [] }: UserManage
                   </div>
                 </div>
               ) : (
-                <div className="p-3 bg-slate-900/50 border border-border/40 rounded-xl text-[10px] text-muted-foreground font-semibold uppercase text-center">
+                <div className="p-3 bg-secondary/50 border border-border/60 rounded-xl text-[10px] text-muted-foreground font-semibold uppercase text-center">
                   Você não pode alterar suas próprias permissões ou status de assinatura.
                 </div>
               )}
@@ -768,7 +768,7 @@ export function UserManager({ currentUserId, initialUsersList = [] }: UserManage
                     setEditingUser(null);
                     setEditError(null);
                   }}
-                  className="flex-1 py-3 border border-border hover:bg-slate-900 rounded-xl text-xs font-bold text-card-foreground transition-colors cursor-pointer text-center"
+                  className="flex-1 py-3 border border-border hover:bg-secondary rounded-xl text-xs font-bold text-card-foreground transition-colors cursor-pointer text-center"
                 >
                   Cancelar
                 </button>
@@ -795,7 +795,7 @@ export function UserManager({ currentUserId, initialUsersList = [] }: UserManage
       {/* Modal para confirmação de exclusão */}
       {deletingUser && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0b0b11] border border-border/80 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-scale-in text-left">
+          <div className="bg-card border border-border rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-scale-in text-left">
             <div className="p-6 space-y-4">
               <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center text-red-500 mx-auto">
                 <ShieldAlert className="w-6 h-6" />
@@ -813,7 +813,7 @@ export function UserManager({ currentUserId, initialUsersList = [] }: UserManage
                   type="button"
                   disabled={deleteLoading}
                   onClick={() => setDeletingUser(null)}
-                  className="flex-1 py-3 border border-border hover:bg-slate-900 rounded-xl text-xs font-bold text-card-foreground transition-colors cursor-pointer text-center"
+                  className="flex-1 py-3 border border-border hover:bg-secondary rounded-xl text-xs font-bold text-card-foreground transition-colors cursor-pointer text-center"
                 >
                   Cancelar
                 </button>

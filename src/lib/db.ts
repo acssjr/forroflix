@@ -175,7 +175,17 @@ class TursoDatabase implements D1Database {
         args: internal.getParams()
       };
     });
-    const res = await this.client.batch(stmts, 'write');
+    const hasWrite = stmts.some(s => {
+      const sqlUpper = s.sql.trim().toUpperCase();
+      return sqlUpper.startsWith('INSERT') || 
+             sqlUpper.startsWith('UPDATE') || 
+             sqlUpper.startsWith('DELETE') || 
+             sqlUpper.startsWith('ALTER') || 
+             sqlUpper.startsWith('CREATE') || 
+             sqlUpper.startsWith('DROP');
+    });
+    const mode = hasWrite ? 'write' : 'read';
+    const res = await this.client.batch(stmts, mode);
     return res.map((r: any) => ({
       results: (r.rows || []).map((row: any) => ({ ...row })) as T[],
       success: true,
