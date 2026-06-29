@@ -391,7 +391,7 @@ export function DashboardClient({
 
           {/* VIEW: CATALOG (Catálogo Principal) */}
           {activeTab === 'catalog' && (
-            <>
+            <div className="space-y-8 animate-fade-in">
               {/* Curso em Destaque */}
               {coursesList.length > 0 && (
                 <section className="space-y-4">
@@ -648,12 +648,12 @@ export function DashboardClient({
                   </div>
                 </div>
               </section>
-            </>
+            </div>
           )}
 
           {/* VIEW: FAVORITES */}
           {activeTab === 'favorites' && (
-            <section className="space-y-6 text-left">
+            <section className="space-y-6 text-left animate-fade-in">
               <div className="space-y-1">
                 <h2 className="text-xl font-black text-foreground flex items-center gap-2">
                   <Star className="w-5 h-5 text-primary fill-primary" />
@@ -723,7 +723,7 @@ export function DashboardClient({
 
           {/* VIEW: PROGRESS */}
           {activeTab === 'progress' && (
-            <section className="space-y-6 text-left">
+            <section className="space-y-6 text-left animate-fade-in">
               <div className="space-y-1">
                 <h2 className="text-xl font-black text-foreground flex items-center gap-2">
                   <User className="w-5 h-5 text-primary" />
@@ -792,7 +792,7 @@ export function DashboardClient({
 
           {/* VIEW: VIDEO ANALYSIS */}
           {activeTab === 'video-analysis' && (
-            <section className="space-y-6 text-left">
+            <section className="space-y-6 text-left animate-fade-in">
               <div className="space-y-1">
                 <h2 className="text-xl font-black text-foreground flex items-center gap-2">
                   <Video className="w-5 h-5 text-primary" />
