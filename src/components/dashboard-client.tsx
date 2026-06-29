@@ -105,7 +105,7 @@ export function DashboardClient({
   isAdmin,
   pullZone,
   initialTab = 'catalog',
-  videoAnalysisLessons,
+  videoAnalysisLessons = [],
 }: DashboardClientProps) {
   const [activeTab, setActiveTab] = useState<'catalog' | 'favorites' | 'progress' | 'video-analysis'>(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
@@ -127,7 +127,7 @@ export function DashboardClient({
 
   // Local state for courses (filtrando 'anlise-de-vdeos' do catálogo inicial)
   const [courses] = useState<CourseItem[]>(() => 
-    coursesList.filter(c => c.slug !== 'anlise-de-vdeos')
+    (coursesList || []).filter(c => c && c.slug !== 'anlise-de-vdeos')
   );
 
   useEffect(() => {

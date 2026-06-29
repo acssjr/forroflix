@@ -304,10 +304,10 @@ export function AdminDashboardClient({
       <header className="border-b border-border bg-card/90 backdrop-blur sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link href="/" className="flex items-center gap-2 group text-red-500 hover:text-red-400">
+            <a href="/" className="flex items-center gap-2 group text-red-500 hover:text-red-400">
               <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
               <span className="text-sm font-semibold hidden md:inline">Voltar para Site</span>
-            </Link>
+            </a>
             <span className="text-border">|</span>
             <span className="font-extrabold text-base text-foreground">Painel do Criador</span>
           </div>
