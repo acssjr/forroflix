@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Clock, Globe, Lock, Play, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { createNoteAction, deleteNoteAction } from '@/app/actions';
@@ -54,10 +54,15 @@ export function NotesSection({
   const [noteIsPublic, setNoteIsPublic] = useState(true);
   const [loading, setLoading] = useState(false);
 
+  const onNotesLoadedRef = useRef(onNotesLoaded);
+  useEffect(() => {
+    onNotesLoadedRef.current = onNotesLoaded;
+  }, [onNotesLoaded]);
+
   // Report notes back to parent
   useEffect(() => {
-    onNotesLoaded?.(notes);
-  }, [notes, onNotesLoaded]);
+    onNotesLoadedRef.current?.(notes);
+  }, [notes]);
 
   // Load notes when active lesson changes
   useEffect(() => {

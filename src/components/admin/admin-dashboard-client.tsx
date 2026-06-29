@@ -79,6 +79,9 @@ export function AdminDashboardClient({
     const targetIndex = direction === 'left' ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= courses.length) return;
     
+    // Guardar estado anterior para rollback em caso de erro
+    const previousCourses = courses;
+    
     // Trocar de posição no array
     const temp = newCourses[index];
     newCourses[index] = newCourses[targetIndex];
@@ -101,7 +104,8 @@ export function AdminDashboardClient({
       }
     } catch (err: any) {
       console.error(err);
-      alert(err.message || 'Falha ao salvar a nova ordem dos cursos.');
+      setCourses(previousCourses);
+      alert(err.message || 'Falha ao salvar a nova ordem dos cursos. A ordem original foi restaurada.');
     }
   };
   
@@ -318,6 +322,8 @@ export function AdminDashboardClient({
               onClick={toggleTheme}
               className="p-2 rounded-xl border border-border bg-card hover:bg-secondary text-muted-foreground hover:text-foreground transition-all cursor-pointer shadow-sm"
               title={theme === 'dark' ? 'Tema Claro' : 'Tema Escuro'}
+              aria-label={theme === 'dark' ? 'Mudar para Tema Claro' : 'Mudar para Tema Escuro'}
+              aria-pressed={theme === 'dark'}
             >
               {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4 text-indigo-500" />}
             </button>
@@ -368,7 +374,7 @@ export function AdminDashboardClient({
             <div className="text-left space-y-1">
               <h2 className="text-xl font-black text-foreground">Todos os Cursos</h2>
               <p className="text-xs text-muted-foreground">
-                Selecione um curso para gerenciar os módulos, as vídeoaulas e as configurações de capap.
+                Selecione um curso para gerenciar os módulos, as vídeoaulas e as configurações de capa.
               </p>
             </div>
 
@@ -400,6 +406,7 @@ export function AdminDashboardClient({
                           disabled={idx === 0}
                           className="p-1 rounded text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
                           title="Mover para trás"
+                          aria-label={`Mover curso ${course.title} para trás`}
                         >
                           <ChevronLeft className="w-3.5 h-3.5" />
                         </button>
@@ -408,6 +415,7 @@ export function AdminDashboardClient({
                           disabled={idx === courses.length - 1}
                           className="p-1 rounded text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
                           title="Mover para frente"
+                          aria-label={`Mover curso ${course.title} para frente`}
                         >
                           <ChevronRight className="w-3.5 h-3.5" />
                         </button>
@@ -422,6 +430,8 @@ export function AdminDashboardClient({
                               : 'bg-black/60 border-white/5 text-slate-400 hover:text-white'
                           }`}
                           title={course.is_featured === 1 ? 'Destaque Ativo' : 'Tornar Destaque'}
+                          aria-label={course.is_featured === 1 ? `Destaque ativo para ${course.title}` : `Tornar curso ${course.title} em destaque`}
+                          aria-pressed={course.is_featured === 1}
                         >
                           <Star className={`w-3.5 h-3.5 ${course.is_featured === 1 ? 'fill-yellow-400' : ''}`} />
                         </button>
@@ -429,6 +439,7 @@ export function AdminDashboardClient({
                           onClick={() => handleDeleteCourse(course.id)}
                           className="p-1.5 rounded-lg bg-black/60 border border-white/5 text-slate-400 hover:text-red-500 transition-colors"
                           title="Excluir Curso"
+                          aria-label={`Excluir curso ${course.title}`}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>

@@ -133,7 +133,7 @@ export async function POST(request: Request) {
 
       statements.push(
         db
-          .prepare('INSERT INTO courses (id, title, description, slug, thumbnail_gradient, cover_vertical, cover_horizontal, is_featured) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+          .prepare('INSERT INTO courses (id, title, description, slug, thumbnail_gradient, cover_vertical, cover_horizontal, is_featured, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, (SELECT IFNULL(MAX(position), 0) + 1 FROM courses))')
           .bind(id, title, description || '', slug.toLowerCase().trim(), gradient, cover_vertical || null, cover_horizontal || null, featured)
       );
 
@@ -204,8 +204,8 @@ export async function PATCH(request: Request) {
 
     const db = getDB();
 
-    // Permite pular a verificação de 'id' somente para a operação de reordenação estrutural global
-    if (type !== 'reorder' && !id) {
+    // Permite pular a verificação de 'id' para operações de reordenação estrutural global
+    if (type !== 'reorder' && type !== 'reorder_courses' && !id) {
       return NextResponse.json({ error: 'ID é obrigatório' }, { status: 400 });
     }
 

@@ -868,13 +868,31 @@ export function DashboardClient({
                               <span>{formatSeconds(videoProgress.currentTime)} / {formatSeconds(videoProgress.duration)}</span>
                             </div>
                             <div 
-                              className="w-full h-3 bg-secondary border border-border/60 rounded-full relative cursor-pointer group"
+                              className="w-full h-3 bg-secondary border border-border/60 rounded-full relative cursor-pointer group focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50"
+                              tabIndex={0}
+                              role="slider"
+                              aria-label="Linha do tempo da vídeo-análise"
+                              aria-valuemin={0}
+                              aria-valuemax={videoProgress.duration}
+                              aria-valuenow={videoProgress.currentTime}
+                              aria-valuetext={`${formatSeconds(videoProgress.currentTime)} de ${formatSeconds(videoProgress.duration)}`}
                               onClick={(e) => {
                                 const rect = e.currentTarget.getBoundingClientRect();
                                 const clickX = e.clientX - rect.left;
                                 const percentage = clickX / rect.width;
                                 const targetSeconds = Math.round(percentage * videoProgress.duration);
                                 setSeekTrigger({ seconds: targetSeconds, ts: Date.now() });
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'ArrowRight') {
+                                  e.preventDefault();
+                                  const target = Math.min(videoProgress.duration, videoProgress.currentTime + 5);
+                                  setSeekTrigger({ seconds: target, ts: Date.now() });
+                                } else if (e.key === 'ArrowLeft') {
+                                  e.preventDefault();
+                                  const target = Math.max(0, videoProgress.currentTime - 5);
+                                  setSeekTrigger({ seconds: target, ts: Date.now() });
+                                }
                               }}
                             >
                               {/* Barra de Progresso Real */}
@@ -889,17 +907,27 @@ export function DashboardClient({
                                 return (
                                   <div
                                     key={note.id}
-                                    className="absolute group/marker -translate-x-1/2 -top-0.5 z-20"
+                                    className="absolute group/marker -translate-x-1/2 -top-0.5 z-20 focus:outline-none focus:scale-125 focus-within:scale-125 transition-transform"
                                     style={{ left: `${pct}%` }}
+                                    tabIndex={0}
+                                    role="button"
+                                    aria-label={`Anotação em ${formatSeconds(note.watched_seconds)}: ${note.content}`}
                                     onClick={(e) => {
                                       e.stopPropagation(); // Evitar clique na barra
                                       setSeekTrigger({ seconds: note.watched_seconds, ts: Date.now() });
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setSeekTrigger({ seconds: note.watched_seconds, ts: Date.now() });
+                                      }
                                     }}
                                   >
                                     <div className="w-3.5 h-3.5 bg-primary hover:bg-primary/80 border-2 border-background rounded-full cursor-pointer hover:scale-125 transition-transform shadow-md" />
                                     
                                     {/* Tooltip */}
-                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-popover text-popover-foreground text-[10px] rounded-lg border border-border shadow-lg opacity-0 pointer-events-none group-hover/marker:opacity-100 transition-opacity z-50 text-center leading-normal">
+                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-popover text-popover-foreground text-[10px] rounded-lg border border-border shadow-lg opacity-0 pointer-events-none group-hover/marker:opacity-100 group-focus/marker:opacity-100 group-focus-within/marker:opacity-100 transition-opacity z-50 text-center leading-normal">
                                       <span className="font-bold text-primary block mb-0.5">Tempo: {formatSeconds(note.watched_seconds)}</span>
                                       <span className="line-clamp-2">{note.content}</span>
                                     </div>
