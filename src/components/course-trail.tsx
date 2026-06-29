@@ -115,7 +115,7 @@ export function CourseTrail({
       {/* Header Premium do Topo */}
       <header className="border-b border-border bg-background/90 backdrop-blur sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <a href="/" className="flex items-center group">
+          <Link href="/" className="flex items-center group">
             <Image
               src="/logo.svg"
               alt="Forróflix"
@@ -124,14 +124,14 @@ export function CourseTrail({
               priority
               className="h-10 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
             />
-          </a>
+          </Link>
           <div className="flex items-center gap-4">
             <span className="text-xs text-muted-foreground hidden sm:inline">{userEmail}</span>
-            <a href="/">
+            <Link href="/">
               <Button variant="ghost" className="text-muted-foreground hover:text-foreground text-xs">
                 Voltar ao Catálogo
               </Button>
-            </a>
+            </Link>
           </div>
         </div>
       </header>
