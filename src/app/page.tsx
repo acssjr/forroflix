@@ -74,6 +74,7 @@ export default async function Home({ searchParams }: PageProps) {
     progress_percent: 0
   }));
   let favoritesList: any[] = [];
+  let videoAnalysisLessons: any[] = [];
   let lastLesson: any = null;
   let lastLessonProgressPercent = 0;
   let totalCompletedLessons = 0;
@@ -151,13 +152,21 @@ export default async function Home({ searchParams }: PageProps) {
         JOIN lessons l ON l.module_id = m.id
         ORDER BY c.created_at DESC, m.position ASC, l.position ASC
         LIMIT 1
+      `),
+      db.prepare(`
+        SELECT l.id, l.title, l.video_id, l.duration_seconds, m.title as module_title 
+        FROM lessons l
+        JOIN modules m ON l.module_id = m.id
+        WHERE m.course_id = (SELECT id FROM courses WHERE slug = 'anlise-de-vdeos')
+        ORDER BY l.position ASC
       `)
     ]);
 
-    const [coursesRes, favoritesRes, courseProgressRes, lastLessonRes, defaultLessonRes] = batchRes;
+    const [coursesRes, favoritesRes, courseProgressRes, lastLessonRes, defaultLessonRes, videoAnalysisRes] = batchRes;
 
     const results = coursesRes.results;
     favoritesList = favoritesRes.results || [];
+    videoAnalysisLessons = videoAnalysisRes?.results || [];
     
     // Mapeamento de progresso por ID do curso
     const progressMap = new Map(
@@ -238,6 +247,7 @@ export default async function Home({ searchParams }: PageProps) {
       isAdmin={isAdmin}
       pullZone={pullZone}
       initialTab={initialTab as any}
+      videoAnalysisLessons={videoAnalysisLessons}
     />
   );
 }

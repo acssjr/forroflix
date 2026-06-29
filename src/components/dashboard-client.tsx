@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import { 
   LogOut, Settings, Play, Home as HomeIcon, BookOpen, 
   User, Search, Star, CheckCircle, Activity, ChevronRight,
-  Sun, Moon
+  Sun, Moon, Menu, Video, ChevronLeft
 } from 'lucide-react';
+import { VideoPlayer } from '@/components/video-player';
 
 interface FavoriteLesson {
   id: string;
@@ -42,6 +43,14 @@ interface CourseItem {
   hide_title?: number;
 }
 
+interface VideoAnalysisLesson {
+  id: string;
+  title: string;
+  video_id: string;
+  duration_seconds: number;
+  module_title: string;
+}
+
 interface DashboardClientProps {
   user: {
     id: string;
@@ -66,7 +75,8 @@ interface DashboardClientProps {
   coursesCompleted: number;
   isAdmin: boolean;
   pullZone: string;
-  initialTab?: 'catalog' | 'favorites' | 'progress';
+  initialTab?: 'catalog' | 'favorites' | 'progress' | 'video-analysis';
+  videoAnalysisLessons: VideoAnalysisLesson[];
 }
 
 export function DashboardClient({
@@ -81,13 +91,36 @@ export function DashboardClient({
   isAdmin,
   pullZone,
   initialTab = 'catalog',
+  videoAnalysisLessons,
 }: DashboardClientProps) {
-  const [activeTab, setActiveTab] = useState<'catalog' | 'favorites' | 'progress'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'catalog' | 'favorites' | 'progress' | 'video-analysis'>(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
   const [theme, setTheme] = useState<'dark' | 'light'>('light');
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState<VideoAnalysisLesson | null>(null);
 
   // Local state for courses
   const [courses] = useState<CourseItem[]>(coursesList);
+
+  useEffect(() => {
+    // Carregar preferências da barra lateral
+    const savedSidebar = localStorage.getItem('sidebar_expanded');
+    if (savedSidebar === 'true') {
+      setIsSidebarExpanded(true);
+    }
+  }, []);
+
+  const toggleSidebar = () => {
+    const nextVal = !isSidebarExpanded;
+    setIsSidebarExpanded(nextVal);
+    localStorage.setItem('sidebar_expanded', String(nextVal));
+  };
+
+  useEffect(() => {
+    if (videoAnalysisLessons && videoAnalysisLessons.length > 0 && !selectedVideo) {
+      setSelectedVideo(videoAnalysisLessons[0]);
+    }
+  }, [videoAnalysisLessons, selectedVideo]);
 
   // Synchronous dark theme script loader
   useEffect(() => {
@@ -130,70 +163,146 @@ export function DashboardClient({
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col md:flex-row font-sans animate-page-enter">
-      
       {/* Sidebar de Navegação (Esquerda) */}
-      <aside className="w-20 hidden md:flex flex-col items-center py-8 bg-sidebar text-sidebar-foreground border-r border-sidebar-border sticky top-0 h-screen shrink-0 z-40 justify-between">
-        <div className="flex flex-col items-center gap-10 w-full">
-          {/* Logo compacta / Emblema F */}
-          <button onClick={() => setActiveTab('catalog')} className="group flex items-center justify-center cursor-pointer">
-            <span className="font-black text-3xl tracking-tighter text-red-600 transition-transform group-hover:scale-110 drop-shadow-[0_0_12px_rgba(229,9,20,0.4)]">
-              F
-            </span>
-          </button>
-
-          {/* Menus */}
-          <nav className="flex flex-col items-center gap-6 w-full">
+      <aside className={`hidden md:flex flex-col py-8 bg-sidebar text-sidebar-foreground border-r border-sidebar-border sticky top-0 h-screen shrink-0 z-40 justify-between transition-all duration-300 ${isSidebarExpanded ? 'w-60 px-4' : 'w-20 px-2'}`}>
+        <div className="flex flex-col gap-8 w-full">
+          {/* Top section: Logo & Toggle button */}
+          <div className={`flex items-center w-full ${isSidebarExpanded ? 'justify-between px-2' : 'justify-center'}`}>
             <button 
               onClick={() => setActiveTab('catalog')} 
-              className={`p-3 rounded-xl transition-all cursor-pointer ${activeTab === 'catalog' ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-primary hover:bg-sidebar-accent'}`} 
+              className="group flex items-center gap-2 cursor-pointer shrink-0"
+            >
+              <span className="font-black text-3xl tracking-tighter text-red-600 transition-transform group-hover:scale-110 drop-shadow-[0_0_12px_rgba(229,9,20,0.4)]">
+                F
+              </span>
+              {isSidebarExpanded && (
+                <span className="font-black text-lg tracking-tighter text-foreground animate-fade-in">
+                  ORRÓFLIX
+                </span>
+              )}
+            </button>
+            {isSidebarExpanded && (
+              <button 
+                onClick={toggleSidebar} 
+                className="p-1.5 rounded-lg hover:bg-sidebar-accent text-muted-foreground hover:text-primary transition-all cursor-pointer hidden md:block"
+                title="Recolher Menu"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Menus */}
+          <nav className="flex flex-col gap-3 w-full">
+            {/* If collapsed, show a Menu icon at the top to expand */}
+            {!isSidebarExpanded && (
+              <button 
+                onClick={toggleSidebar}
+                className="flex items-center justify-center p-3 rounded-xl text-muted-foreground hover:text-primary hover:bg-sidebar-accent cursor-pointer transition-all mb-2"
+                title="Expandir Menu"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+            )}
+
+            <button 
+              onClick={() => setActiveTab('catalog')} 
+              className={`flex items-center gap-3.5 p-3 rounded-xl transition-all cursor-pointer ${isSidebarExpanded ? 'w-full justify-start' : 'justify-center'} ${activeTab === 'catalog' ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-primary hover:bg-sidebar-accent'}`} 
               title="Catálogo"
             >
-              <HomeIcon className="w-5 h-5" />
+              <HomeIcon className="w-5 h-5 shrink-0" />
+              {isSidebarExpanded && (
+                <span className="text-xs font-bold whitespace-nowrap animate-fade-in">
+                  Catálogo
+                </span>
+              )}
             </button>
-            
+
+            <button 
+              onClick={() => setActiveTab('video-analysis')} 
+              className={`flex items-center gap-3.5 p-3 rounded-xl transition-all cursor-pointer ${isSidebarExpanded ? 'w-full justify-start' : 'justify-center'} ${activeTab === 'video-analysis' ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-primary hover:bg-sidebar-accent'}`} 
+              title="Análise de Vídeos"
+            >
+              <Video className="w-5 h-5 shrink-0" />
+              {isSidebarExpanded && (
+                <span className="text-xs font-bold whitespace-nowrap animate-fade-in">
+                  Análise de Vídeos
+                </span>
+              )}
+            </button>
+
             <button 
               onClick={() => setActiveTab('favorites')} 
-              className={`p-3 rounded-xl transition-all cursor-pointer ${activeTab === 'favorites' ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-primary hover:bg-sidebar-accent'}`} 
+              className={`flex items-center gap-3.5 p-3 rounded-xl transition-all cursor-pointer ${isSidebarExpanded ? 'w-full justify-start' : 'justify-center'} ${activeTab === 'favorites' ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-primary hover:bg-sidebar-accent'}`} 
               title="Aulas Salvas"
             >
-              <BookOpen className="w-5 h-5" />
+              <BookOpen className="w-5 h-5 shrink-0" />
+              {isSidebarExpanded && (
+                <span className="text-xs font-bold whitespace-nowrap animate-fade-in">
+                  Aulas Salvas
+                </span>
+              )}
             </button>
 
             <button 
               onClick={() => setActiveTab('progress')} 
-              className={`p-3 rounded-xl transition-all cursor-pointer ${activeTab === 'progress' ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-primary hover:bg-sidebar-accent'}`} 
+              className={`flex items-center gap-3.5 p-3 rounded-xl transition-all cursor-pointer ${isSidebarExpanded ? 'w-full justify-start' : 'justify-center'} ${activeTab === 'progress' ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-primary hover:bg-sidebar-accent'}`} 
               title="Meu Progresso"
             >
-              <User className="w-5 h-5" />
+              <User className="w-5 h-5 shrink-0" />
+              {isSidebarExpanded && (
+                <span className="text-xs font-bold whitespace-nowrap animate-fade-in">
+                  Meu Progresso
+                </span>
+              )}
             </button>
 
             {isAdmin && (
               <Link 
                 href="/admin" 
-                className="p-3 rounded-xl transition-all text-muted-foreground hover:text-primary hover:bg-sidebar-accent"
+                className={`flex items-center gap-3.5 p-3 rounded-xl transition-all ${isSidebarExpanded ? 'w-full justify-start' : 'justify-center'} text-muted-foreground hover:text-primary hover:bg-sidebar-accent`}
                 title="Painel Admin"
               >
-                <Settings className="w-5 h-5" />
+                <Settings className="w-5 h-5 shrink-0" />
+                {isSidebarExpanded && (
+                  <span className="text-xs font-bold whitespace-nowrap animate-fade-in">
+                    Painel Admin
+                  </span>
+                )}
               </Link>
             )}
           </nav>
         </div>
 
         {/* Base da Sidebar: Theme Toggle & Logout */}
-        <div className="flex flex-col items-center gap-4 w-full">
+        <div className="flex flex-col gap-3 w-full">
           {/* Botão de Alternar Tema */}
           <button 
             onClick={toggleTheme} 
-            className="p-3 text-sidebar-foreground/70 hover:text-primary hover:bg-sidebar-accent rounded-xl transition-all cursor-pointer"
+            className={`flex items-center gap-3.5 p-3 rounded-xl transition-all cursor-pointer ${isSidebarExpanded ? 'w-full justify-start' : 'justify-center'} text-sidebar-foreground/70 hover:text-primary hover:bg-sidebar-accent`}
             title={theme === 'dark' ? 'Mudar para Tema Claro' : 'Mudar para Tema Escuro'}
           >
-            {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            {theme === 'dark' ? <Sun className="w-5 h-5 shrink-0" /> : <Moon className="w-5 h-5 shrink-0" />}
+            {isSidebarExpanded && (
+              <span className="text-xs font-bold whitespace-nowrap animate-fade-in">
+                {theme === 'dark' ? 'Tema Claro' : 'Tema Escuro'}
+              </span>
+            )}
           </button>
 
           {/* Logout */}
-          <form action="/api/auth/logout" method="POST" className="w-full flex justify-center">
-            <button type="submit" className="p-3 text-sidebar-foreground/70 hover:text-primary hover:bg-primary/10 rounded-xl transition-all cursor-pointer" title="Sair">
-              <LogOut className="w-5 h-5" />
+          <form action="/api/auth/logout" method="POST" className="w-full">
+            <button 
+              type="submit" 
+              className={`w-full flex items-center gap-3.5 p-3 rounded-xl transition-all cursor-pointer ${isSidebarExpanded ? 'justify-start' : 'justify-center'} text-sidebar-foreground/70 hover:text-primary hover:bg-primary/10`} 
+              title="Sair"
+            >
+              <LogOut className="w-5 h-5 shrink-0" />
+              {isSidebarExpanded && (
+                <span className="text-xs font-bold whitespace-nowrap animate-fade-in">
+                  Sair
+                </span>
+              )}
             </button>
           </form>
         </div>
@@ -218,18 +327,28 @@ export function DashboardClient({
             <button 
               onClick={toggleTheme}
               className="p-2 text-sidebar-foreground/70 hover:text-primary"
+              title={theme === 'dark' ? 'Tema Claro' : 'Tema Escuro'}
             >
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
             <button 
+              onClick={() => setActiveTab('video-analysis')}
+              className={`p-2 rounded-xl transition-all ${activeTab === 'video-analysis' ? 'text-primary bg-primary/10' : 'text-sidebar-foreground/70 hover:text-primary'}`}
+              title="Análise de Vídeos"
+            >
+              <Video className="w-4 h-4" />
+            </button>
+            <button 
               onClick={() => setActiveTab('favorites')}
               className={`p-2 rounded-xl transition-all ${activeTab === 'favorites' ? 'text-primary bg-primary/10' : 'text-sidebar-foreground/70 hover:text-primary'}`}
+              title="Aulas Salvas"
             >
               <BookOpen className="w-4 h-4" />
             </button>
             <button 
               onClick={() => setActiveTab('progress')}
               className={`p-2 rounded-xl transition-all ${activeTab === 'progress' ? 'text-primary bg-primary/10' : 'text-sidebar-foreground/70 hover:text-primary'}`}
+              title="Meu Progresso"
             >
               <User className="w-4 h-4" />
             </button>
@@ -668,6 +787,100 @@ export function DashboardClient({
                   </div>
                 ))}
               </div>
+            </section>
+          )}
+
+          {/* VIEW: VIDEO ANALYSIS */}
+          {activeTab === 'video-analysis' && (
+            <section className="space-y-6 text-left">
+              <div className="space-y-1">
+                <h2 className="text-xl font-black text-foreground flex items-center gap-2">
+                  <Video className="w-5 h-5 text-primary" />
+                  Análise de Vídeos
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Assista a análises técnicas detalhadas de passos, movimentações e musicalidade no forró.
+                </p>
+              </div>
+
+              {videoAnalysisLessons.length > 0 ? (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  {/* Player Principal (Esquerda - 2/3) */}
+                  <div className="lg:col-span-2 space-y-4">
+                    {selectedVideo ? (
+                      <div className="space-y-4">
+                        <VideoPlayer
+                          videoId={selectedVideo.video_id}
+                          userEmail={user.email}
+                          courseTitle="Análise de Vídeos"
+                          moduleTitle={selectedVideo.module_title}
+                          lessonTitle={selectedVideo.title}
+                        />
+                        <div className="bg-card border border-border rounded-3xl p-5 md:p-6 space-y-2.5 text-left shadow-sm">
+                          <span className="text-[10px] font-bold text-primary uppercase tracking-widest block">
+                            {selectedVideo.module_title}
+                          </span>
+                          <h3 className="text-lg font-black text-foreground leading-tight">
+                            {selectedVideo.title}
+                          </h3>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            Vídeo-análise detalhada para estudo técnico e melhoria da sua dança. Acompanhe a postura, tempo e variações de passos demonstradas passo a passo.
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="aspect-video bg-muted rounded-3xl flex items-center justify-center border border-border">
+                        <p className="text-xs text-muted-foreground">Selecione uma análise para reproduzir</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Playlist / Lista Lateral (Direita - 1/3) */}
+                  <div className="space-y-3.5">
+                    <h3 className="text-[10px] font-bold text-muted-foreground/75 tracking-wider uppercase">
+                      Vídeos Disponíveis ({videoAnalysisLessons.length})
+                    </h3>
+                    <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                      {videoAnalysisLessons.map((les) => {
+                        const isSelected = selectedVideo?.id === les.id;
+                        return (
+                          <button
+                            key={les.id}
+                            onClick={() => setSelectedVideo(les)}
+                            className={`w-full text-left p-4 rounded-2xl border transition-all duration-200 cursor-pointer flex gap-3.5 items-start ${
+                              isSelected 
+                                ? 'bg-primary/5 border-primary/30 shadow-sm' 
+                                : 'bg-card border-border hover:border-primary/20 hover:bg-sidebar-accent/50'
+                            }`}
+                          >
+                            <div className={`p-2 rounded-xl shrink-0 ${isSelected ? 'bg-primary text-white' : 'bg-secondary text-muted-foreground'} flex items-center justify-center`}>
+                              <Play className="w-3.5 h-3.5 fill-current" />
+                            </div>
+                            <div className="min-w-0">
+                              <span className="text-[9px] font-bold text-primary uppercase tracking-wider block">
+                                {les.module_title}
+                              </span>
+                              <h4 className={`text-xs font-bold leading-tight block truncate ${isSelected ? 'text-primary' : 'text-card-foreground'}`}>
+                                {les.title}
+                              </h4>
+                              {les.duration_seconds > 0 && (
+                                <span className="text-[9px] text-muted-foreground font-medium mt-1 block">
+                                  {Math.floor(les.duration_seconds / 60)} min e {les.duration_seconds % 60} seg
+                                </span>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="col-span-full py-16 text-center bg-card border border-border rounded-3xl shadow-sm">
+                  <Video className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-xs text-muted-foreground">Nenhuma vídeo-análise disponível no momento.</p>
+                </div>
+              )}
             </section>
           )}
 
