@@ -25,6 +25,7 @@ interface NotesSectionProps {
   isAdmin: boolean;
   onSeek: (seconds: number) => void;
   showToast: (message: string, type: 'success' | 'info' | 'warning' | 'error') => void;
+  onNotesLoaded?: (notes: Note[]) => void;
 }
 
 function formatSeconds(sec: number): string {
@@ -46,11 +47,17 @@ export function NotesSection({
   isAdmin,
   onSeek,
   showToast,
+  onNotesLoaded,
 }: NotesSectionProps) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [noteContent, setNoteContent] = useState('');
   const [noteIsPublic, setNoteIsPublic] = useState(true);
   const [loading, setLoading] = useState(false);
+
+  // Report notes back to parent
+  useEffect(() => {
+    onNotesLoaded?.(notes);
+  }, [notes, onNotesLoaded]);
 
   // Load notes when active lesson changes
   useEffect(() => {
