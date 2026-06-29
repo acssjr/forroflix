@@ -40,7 +40,7 @@ interface PageProps {
 
 export default async function Home({ searchParams }: PageProps) {
   const params = await searchParams;
-  const allowedTabs = ['catalog', 'favorites', 'progress'];
+  const allowedTabs = ['catalog', 'favorites', 'progress', 'video-analysis'];
   const initialTab = (params.tab && allowedTabs.includes(params.tab)) ? params.tab : 'catalog';
 
   // 1. Verificar autenticação via cookie JWT
@@ -158,7 +158,10 @@ export default async function Home({ searchParams }: PageProps) {
         FROM lessons l
         JOIN modules m ON l.module_id = m.id
         WHERE m.course_id = (SELECT id FROM courses WHERE slug = 'anlise-de-vdeos')
-        ORDER BY l.position ASC
+          AND l.video_id IS NOT NULL 
+          AND l.video_id != ''
+          AND l.upload_status = 'completed'
+        ORDER BY m.position ASC, l.position ASC
       `)
     ]);
 
