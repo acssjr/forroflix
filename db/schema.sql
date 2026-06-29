@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS courses (
     cover_background_position TEXT DEFAULT '50% 50%',
     is_featured INTEGER DEFAULT 0,
     hide_title INTEGER DEFAULT 0,
+    position INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

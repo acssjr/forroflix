@@ -89,7 +89,7 @@ export default async function Home({ searchParams }: PageProps) {
     
     // Buscar cursos, favoritos, progresso e última aula em um único lote (db.batch)
     const batchRes = await db.batch<any>([
-      db.prepare('SELECT * FROM courses ORDER BY created_at DESC'),
+      db.prepare('SELECT * FROM courses ORDER BY position ASC, created_at DESC'),
       db.prepare(`
         SELECT DISTINCT
           l.id, 
