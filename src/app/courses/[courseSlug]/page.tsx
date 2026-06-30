@@ -48,6 +48,7 @@ interface Lesson {
   duration_seconds: number;
   position: number;
   submodule?: string | null;
+  description?: string;
 }
  
 interface Module {
@@ -94,7 +95,7 @@ export default async function CoursePage({ params }: PageProps) {
       db.prepare('SELECT lesson_id FROM favorites WHERE user_id = ?').bind(sessionUser.id),
       db.prepare('SELECT * FROM modules WHERE course_id = (SELECT id FROM courses WHERE slug = ?) ORDER BY position ASC').bind(courseSlug),
       db.prepare(`
-        SELECT l.id, l.title, l.video_id, l.duration_seconds, l.position, l.module_id, l.submodule 
+        SELECT l.id, l.title, l.video_id, l.duration_seconds, l.position, l.module_id, l.submodule, l.description 
         FROM lessons l
         JOIN modules m ON l.module_id = m.id
         WHERE m.course_id = (SELECT id FROM courses WHERE slug = ?)
@@ -139,6 +140,7 @@ export default async function CoursePage({ params }: PageProps) {
           duration_seconds: les.duration_seconds || 0,
           position: les.position,
           submodule: les.submodule || null,
+          description: les.description || undefined,
         });
       }
  
