@@ -509,10 +509,15 @@ export function LessonViewer({
 
             {/* Lesson Info Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
-              <div className="space-y-1">
-                <h1 className="text-2xl md:text-3xl font-black text-foreground tracking-tight">
+              <div className="space-y-2 max-w-2xl text-left">
+                <h1 className="text-2xl md:text-3xl font-black text-foreground tracking-tight leading-tight">
                   {currentActiveLesson.title}
                 </h1>
+                {currentActiveLesson.description && (
+                  <p className="text-sm text-muted-foreground leading-relaxed mt-1 font-medium select-text">
+                    {currentActiveLesson.description}
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center gap-3">
