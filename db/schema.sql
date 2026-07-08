@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
     full_name TEXT,
     role TEXT CHECK(role IN ('student', 'admin')) DEFAULT 'student',
     subscription_active INTEGER DEFAULT 0, -- 0 = Inativo, 1 = Ativo
+    avatar_url TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

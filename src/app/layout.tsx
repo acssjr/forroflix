@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -31,8 +32,11 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://iframe.mediadelivery.net" />
         <link rel="preconnect" href="https://vz-f9c6bcce-051.b-cdn.net" />
-        <script
-          suppressHydrationWarning
+      </head>
+      <body className="min-h-full flex flex-col bg-background text-foreground">
+        <Script
+          id="theme-initializer"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               try {
@@ -46,8 +50,8 @@ export default function RootLayout({
             `
           }}
         />
-      </head>
-      <body className="min-h-full flex flex-col bg-background text-foreground">{children}</body>
+        {children}
+      </body>
     </html>
   );
 }
