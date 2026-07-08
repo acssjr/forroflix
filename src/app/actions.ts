@@ -226,3 +226,25 @@ export async function deleteNoteAction(noteId: string) {
     return { error: 'Erro interno no servidor' };
   }
 }
+
+// 5. Action to update user profile
+export async function updateProfileAction(fullName: string, avatarUrl: string | null) {
+  try {
+    const sessionUser = await getSessionUser();
+    if (!sessionUser) {
+      return { error: 'Usuário não autenticado' };
+    }
+
+    const db = getDB();
+
+    await db
+      .prepare('UPDATE users SET full_name = ?, avatar_url = ? WHERE id = ?')
+      .bind(fullName.trim() || null, avatarUrl || null, sessionUser.id)
+      .run();
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Erro na action updateProfileAction:', error);
+    return { error: 'Erro interno no servidor' };
+  }
+}

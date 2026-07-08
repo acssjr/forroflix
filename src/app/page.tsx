@@ -46,7 +46,23 @@ export default async function Home({ searchParams }: PageProps) {
   // 1. Verificar autenticação via cookie JWT
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get('session')?.value;
-  const user = sessionToken ? (await verifyJWT(sessionToken)) as any : null;
+  const decoded = sessionToken ? (await verifyJWT(sessionToken)) as any : null;
+  
+  let user = null;
+  if (decoded) {
+    try {
+      const db = getDB();
+      const dbUser = await db.prepare('SELECT id, email, username, full_name, role, subscription_active, avatar_url FROM users WHERE id = ?').bind(decoded.id).first<any>();
+      if (dbUser) {
+        user = dbUser;
+      } else {
+        user = decoded;
+      }
+    } catch (err) {
+      console.warn('Erro ao obter usuário do banco, utilizando decodificação JWT.', err);
+      user = decoded;
+    }
+  }
 
   // Se NÃO estiver logado, exibe a tela de login estilizada com fundo estético de catálogo
   if (!user) {

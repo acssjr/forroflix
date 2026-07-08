@@ -8,10 +8,21 @@ export default async function AdminPage() {
   // 1. Validar autenticação e se o usuário é administrador
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get('session')?.value;
-  const sessionUser = sessionToken ? (await verifyJWT(sessionToken)) as any : null;
+  const decoded = sessionToken ? (await verifyJWT(sessionToken)) as any : null;
 
-  if (!sessionUser) {
+  if (!decoded) {
     redirect('/login');
+  }
+
+  let sessionUser = decoded;
+  try {
+    const db = getDB();
+    const dbUser = await db.prepare('SELECT id, email, username, full_name, role, subscription_active, avatar_url FROM users WHERE id = ?').bind(decoded.id).first<any>();
+    if (dbUser) {
+      sessionUser = dbUser;
+    }
+  } catch (err) {
+    console.error('Erro ao buscar dados do usuário administrador:', err);
   }
 
   if (sessionUser.role !== 'admin') {
@@ -53,7 +64,8 @@ export default async function AdminPage() {
         id: sessionUser.id,
         email: sessionUser.email,
         full_name: sessionUser.full_name || '',
-        role: sessionUser.role
+        role: sessionUser.role,
+        avatar_url: sessionUser.avatar_url || ''
       }}
       initialCourses={courses}
       initialUsersList={usersList}

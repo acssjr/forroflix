@@ -148,6 +148,13 @@ try {
     // A coluna já existe
   }
 
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN avatar_url TEXT;`);
+    console.log('Coluna avatar_url adicionada à tabela users no SQLite local.');
+  } catch (e) {
+    // A coluna já existe
+  }
+
   // 1. Backfill de usernames antes de criar o índice único para evitar conflitos de restrição
   db.exec(`
     UPDATE users 

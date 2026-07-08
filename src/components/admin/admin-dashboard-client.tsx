@@ -33,6 +33,7 @@ interface AdminDashboardClientProps {
     email: string;
     full_name: string;
     role: string;
+    avatar_url?: string | null;
   };
   initialCourses: CourseItem[];
   initialUsersList: any[];
@@ -647,40 +648,436 @@ export function AdminDashboardClient({
                 </div>
               </div>
 
-              <div className="space-y-3 p-3.5 bg-slate-900/30 rounded-2xl border border-slate-900">
-                <h4 className="text-[10px] font-bold text-red-500 uppercase tracking-widest">Imagens de Capa (URLs)</h4>
+              <div className="space-y-4 p-4 bg-slate-900/30 rounded-2xl border border-slate-900">
+                <h4 className="text-[10px] font-bold text-red-500 uppercase tracking-widest text-left">Imagens de Capa</h4>
                 
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 mb-1">Capa Vertical (Poster)</label>
-                    <input 
-                      type="text" 
-                      value={editCoverVertical}
-                      onChange={(e) => setEditCoverVertical(e.target.value)}
-                      placeholder="/covers/course-vertical.jpg"
-                      className="w-full bg-[#0d0d14] border border-slate-900 rounded-xl px-4 py-2 text-slate-250 focus:outline-none focus:border-red-650 focus:ring-1 focus:ring-red-650 text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 mb-1">Capa Horizontal (Destaque Admin)</label>
-                    <input 
-                      type="text" 
-                      value={editCoverHorizontal}
-                      onChange={(e) => setEditCoverHorizontal(e.target.value)}
-                      placeholder="/covers/course-horizontal.jpg"
-                      className="w-full bg-[#0d0d14] border border-slate-900 rounded-xl px-4 py-2 text-slate-250 focus:outline-none focus:border-red-650 focus:ring-1 focus:ring-red-650 text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 mb-1">Fundo do Banner (Desfocado)</label>
-                    <input 
-                      type="text" 
-                      value={editCoverBackground}
-                      onChange={(e) => setEditCoverBackground(e.target.value)}
-                      placeholder="/covers/course-banner.jpg"
-                      className="w-full bg-[#0d0d14] border border-slate-900 rounded-xl px-4 py-2 text-slate-250 focus:outline-none focus:border-red-650 focus:ring-1 focus:ring-red-650 text-xs"
-                    />
-                  </div>
+                {/* Capa Vertical (4:5) */}
+                <div className="space-y-2 text-left">
+                  <label className="block text-xs font-semibold text-slate-400">Capa Vertical (Poster - Proporção 4:5)</label>
+                  
+                  {editCoverVertical ? (
+                    <div className="space-y-2">
+                      <div className="space-y-1.5">
+                        <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Ajuste de Enquadramento (Arrastar Imagem)</span>
+                        <div 
+                          className="relative w-full max-w-[130px] aspect-[4/5] mx-auto rounded-2xl overflow-hidden border border-slate-800 bg-[#0d0d14] shadow-inner select-none cursor-move group"
+                          onMouseDown={(e) => {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const initialX = e.clientX;
+                            const initialY = e.clientY;
+                            const currentPos = editCoverVerticalPosition || '50% 50%';
+                            const [currXPct, currYPct] = currentPos.split(' ').map(val => parseFloat(val) || 50);
+  
+                            const handleMouseMove = (moveEvent: MouseEvent) => {
+                              const deltaX = moveEvent.clientX - initialX;
+                              const deltaY = moveEvent.clientY - initialY;
+                              const newX = Math.max(0, Math.min(100, currXPct - (deltaX / rect.width) * 100));
+                              const newY = Math.max(0, Math.min(100, currYPct - (deltaY / rect.height) * 100));
+                              setEditCoverVerticalPosition(`${newX.toFixed(1)}% ${newY.toFixed(1)}%`);
+                            };
+  
+                            const handleMouseUp = () => {
+                              window.removeEventListener('mousemove', handleMouseMove);
+                              window.removeEventListener('mouseup', handleMouseUp);
+                            };
+  
+                            window.addEventListener('mousemove', handleMouseMove);
+                            window.addEventListener('mouseup', handleMouseUp);
+                          }}
+                          onTouchStart={(e) => {
+                            const touch = e.touches[0];
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const initialX = touch.clientX;
+                            const initialY = touch.clientY;
+                            const currentPos = editCoverVerticalPosition || '50% 50%';
+                            const [currXPct, currYPct] = currentPos.split(' ').map(val => parseFloat(val) || 50);
+  
+                            const handleTouchMove = (moveEvent: TouchEvent) => {
+                              const moveTouch = moveEvent.touches[0];
+                              const deltaX = moveTouch.clientX - initialX;
+                              const deltaY = moveTouch.clientY - initialY;
+                              const newX = Math.max(0, Math.min(100, currXPct - (deltaX / rect.width) * 100));
+                              const newY = Math.max(0, Math.min(100, currYPct - (deltaY / rect.height) * 100));
+                              setEditCoverVerticalPosition(`${newX.toFixed(1)}% ${newY.toFixed(1)}%`);
+                            };
+  
+                            const handleTouchEnd = () => {
+                              window.removeEventListener('touchmove', handleTouchMove);
+                              window.removeEventListener('touchend', handleTouchEnd);
+                            };
+  
+                            window.addEventListener('touchmove', handleTouchMove, { passive: true });
+                            window.addEventListener('touchend', handleTouchEnd);
+                          }}
+                        >
+                          <img 
+                            src={editCoverVertical} 
+                            alt="" 
+                            className="w-full h-full object-cover pointer-events-none"
+                            style={{ objectPosition: editCoverVerticalPosition || '50% 50%' }}
+                          />
+                          <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[9px] font-black pointer-events-none p-3 text-center leading-tight">
+                            <span>Arraste a imagem para enquadrar</span>
+                            <span className="text-[8px] text-white/75 mt-1 font-semibold">{editCoverVerticalPosition || '50% 50%'}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex justify-center gap-2">
+                        <label className="text-[10px] bg-slate-900 border border-slate-800 text-slate-350 hover:bg-slate-800 hover:text-white font-bold px-3 py-1.5 rounded-lg cursor-pointer transition-all">
+                          Alterar Foto
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            className="hidden" 
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onload = (event) => {
+                                  setEditCoverVertical(event.target?.result as string);
+                                  setEditCoverVerticalPosition('50% 50%');
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                          />
+                        </label>
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            setEditCoverVertical('');
+                            setEditCoverVerticalPosition('50% 50%');
+                          }}
+                          className="text-[10px] bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white font-bold px-3 py-1.5 rounded-lg cursor-pointer transition-all"
+                        >
+                          Remover
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <label 
+                      className="flex flex-col items-center justify-center border-2 border-dashed border-slate-800 hover:border-red-500/40 rounded-2xl p-4 cursor-pointer bg-[#0d0d14]/40 hover:bg-red-500/5 transition-all group select-none max-w-[200px] mx-auto"
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const file = e.dataTransfer.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            setEditCoverVertical(event.target?.result as string);
+                            setEditCoverVerticalPosition('50% 50%');
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    >
+                      <Plus className="w-6 h-6 text-slate-500 group-hover:text-red-550 transition-colors mb-2" />
+                      <span className="text-[11px] font-bold text-slate-400 group-hover:text-red-550 transition-colors">Enviar Capa Vertical (4:5)</span>
+                      <span className="text-[9px] text-slate-500 mt-1">Clique para buscar ou arraste o arquivo aqui</span>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              setEditCoverVertical(event.target?.result as string);
+                              setEditCoverVerticalPosition('50% 50%');
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </label>
+                  )}
+                </div>
+  
+                {/* Capa Horizontal (7:2) */}
+                <div className="space-y-2 text-left">
+                  <label className="block text-xs font-semibold text-slate-400">Capa Horizontal (Widescreen - Destaque 7:2)</label>
+                  
+                  {editCoverHorizontal ? (
+                    <div className="space-y-2">
+                      <div className="space-y-1.5">
+                        <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Ajuste de Enquadramento (Arrastar Imagem)</span>
+                        <div 
+                          className="relative w-full max-w-[320px] aspect-[7/2] mx-auto rounded-2xl overflow-hidden border border-slate-800 bg-[#0d0d14] shadow-inner select-none cursor-move group"
+                          onMouseDown={(e) => {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const initialX = e.clientX;
+                            const initialY = e.clientY;
+                            const currentPos = editCoverHorizontalPosition || '50% 50%';
+                            const [currXPct, currYPct] = currentPos.split(' ').map(val => parseFloat(val) || 50);
+  
+                            const handleMouseMove = (moveEvent: MouseEvent) => {
+                              const deltaX = moveEvent.clientX - initialX;
+                              const deltaY = moveEvent.clientY - initialY;
+                              const newX = Math.max(0, Math.min(100, currXPct - (deltaX / rect.width) * 100));
+                              const newY = Math.max(0, Math.min(100, currYPct - (deltaY / rect.height) * 100));
+                              setEditCoverHorizontalPosition(`${newX.toFixed(1)}% ${newY.toFixed(1)}%`);
+                            };
+  
+                            const handleMouseUp = () => {
+                              window.removeEventListener('mousemove', handleMouseMove);
+                              window.removeEventListener('mouseup', handleMouseUp);
+                            };
+  
+                            window.addEventListener('mousemove', handleMouseMove);
+                            window.addEventListener('mouseup', handleMouseUp);
+                          }}
+                          onTouchStart={(e) => {
+                            const touch = e.touches[0];
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const initialX = touch.clientX;
+                            const initialY = touch.clientY;
+                            const currentPos = editCoverHorizontalPosition || '50% 50%';
+                            const [currXPct, currYPct] = currentPos.split(' ').map(val => parseFloat(val) || 50);
+  
+                            const handleTouchMove = (moveEvent: TouchEvent) => {
+                              const moveTouch = moveEvent.touches[0];
+                              const deltaX = moveTouch.clientX - initialX;
+                              const deltaY = moveTouch.clientY - initialY;
+                              const newX = Math.max(0, Math.min(100, currXPct - (deltaX / rect.width) * 100));
+                              const newY = Math.max(0, Math.min(100, currYPct - (deltaY / rect.height) * 100));
+                              setEditCoverHorizontalPosition(`${newX.toFixed(1)}% ${newY.toFixed(1)}%`);
+                            };
+  
+                            const handleTouchEnd = () => {
+                              window.removeEventListener('touchmove', handleTouchMove);
+                              window.removeEventListener('touchend', handleTouchEnd);
+                            };
+  
+                            window.addEventListener('touchmove', handleTouchMove, { passive: true });
+                            window.addEventListener('touchend', handleTouchEnd);
+                          }}
+                        >
+                          <img 
+                            src={editCoverHorizontal} 
+                            alt="" 
+                            className="w-full h-full object-cover pointer-events-none"
+                            style={{ objectPosition: editCoverHorizontalPosition || '50% 50%' }}
+                          />
+                          <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[9px] font-black pointer-events-none p-3 text-center leading-tight">
+                            <span>Arraste a imagem para enquadrar</span>
+                            <span className="text-[8px] text-white/75 mt-1 font-semibold">{editCoverHorizontalPosition || '50% 50%'}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex justify-center gap-2">
+                        <label className="text-[10px] bg-slate-900 border border-slate-800 text-slate-350 hover:bg-slate-800 hover:text-white font-bold px-3 py-1.5 rounded-lg cursor-pointer transition-all">
+                          Alterar Foto
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            className="hidden" 
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onload = (event) => {
+                                  setEditCoverHorizontal(event.target?.result as string);
+                                  setEditCoverHorizontalPosition('50% 50%');
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                          />
+                        </label>
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            setEditCoverHorizontal('');
+                            setEditCoverHorizontalPosition('50% 50%');
+                          }}
+                          className="text-[10px] bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white font-bold px-3 py-1.5 rounded-lg cursor-pointer transition-all"
+                        >
+                          Remover
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <label 
+                      className="flex flex-col items-center justify-center border-2 border-dashed border-slate-800 hover:border-red-500/40 rounded-2xl p-4 cursor-pointer bg-[#0d0d14]/40 hover:bg-red-500/5 transition-all group select-none max-w-[320px] mx-auto"
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const file = e.dataTransfer.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            setEditCoverHorizontal(event.target?.result as string);
+                            setEditCoverHorizontalPosition('50% 50%');
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    >
+                      <Plus className="w-6 h-6 text-slate-500 group-hover:text-red-550 transition-colors mb-2" />
+                      <span className="text-[11px] font-bold text-slate-400 group-hover:text-red-550 transition-colors">Enviar Capa Horizontal (7:2)</span>
+                      <span className="text-[9px] text-slate-500 mt-1">Clique para buscar ou arraste o arquivo aqui</span>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              setEditCoverHorizontal(event.target?.result as string);
+                              setEditCoverHorizontalPosition('50% 50%');
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </label>
+                  )}
+                </div>
+  
+                {/* Fundo do Banner (Desfocado) */}
+                <div className="space-y-2 text-left">
+                  <label className="block text-xs font-semibold text-slate-400">Fundo do Banner (Desfocado)</label>
+                  
+                  {editCoverBackground ? (
+                    <div className="space-y-2">
+                      <div className="space-y-1.5">
+                        <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Ajuste de Enquadramento (Arrastar Imagem)</span>
+                        <div 
+                          className="relative w-full max-w-[320px] aspect-[7/2] mx-auto rounded-2xl overflow-hidden border border-slate-800 bg-[#0d0d14] shadow-inner select-none cursor-move group"
+                          onMouseDown={(e) => {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const initialX = e.clientX;
+                            const initialY = e.clientY;
+                            const currentPos = editCoverBackgroundPosition || '50% 50%';
+                            const [currXPct, currYPct] = currentPos.split(' ').map(val => parseFloat(val) || 50);
+  
+                            const handleMouseMove = (moveEvent: MouseEvent) => {
+                              const deltaX = moveEvent.clientX - initialX;
+                              const deltaY = moveEvent.clientY - initialY;
+                              const newX = Math.max(0, Math.min(100, currXPct - (deltaX / rect.width) * 100));
+                              const newY = Math.max(0, Math.min(100, currYPct - (deltaY / rect.height) * 100));
+                              setEditCoverBackgroundPosition(`${newX.toFixed(1)}% ${newY.toFixed(1)}%`);
+                            };
+  
+                            const handleMouseUp = () => {
+                              window.removeEventListener('mousemove', handleMouseMove);
+                              window.removeEventListener('mouseup', handleMouseUp);
+                            };
+  
+                            window.addEventListener('mousemove', handleMouseMove);
+                            window.addEventListener('mouseup', handleMouseUp);
+                          }}
+                          onTouchStart={(e) => {
+                            const touch = e.touches[0];
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const initialX = touch.clientX;
+                            const initialY = touch.clientY;
+                            const currentPos = editCoverBackgroundPosition || '50% 50%';
+                            const [currXPct, currYPct] = currentPos.split(' ').map(val => parseFloat(val) || 50);
+  
+                            const handleTouchMove = (moveEvent: TouchEvent) => {
+                              const moveTouch = moveEvent.touches[0];
+                              const deltaX = moveTouch.clientX - initialX;
+                              const deltaY = moveTouch.clientY - initialY;
+                              const newX = Math.max(0, Math.min(100, currXPct - (deltaX / rect.width) * 100));
+                              const newY = Math.max(0, Math.min(100, currYPct - (deltaY / rect.height) * 100));
+                              setEditCoverBackgroundPosition(`${newX.toFixed(1)}% ${newY.toFixed(1)}%`);
+                            };
+  
+                            const handleTouchEnd = () => {
+                              window.removeEventListener('touchmove', handleTouchMove);
+                              window.removeEventListener('touchend', handleTouchEnd);
+                            };
+  
+                            window.addEventListener('touchmove', handleTouchMove, { passive: true });
+                            window.addEventListener('touchend', handleTouchEnd);
+                          }}
+                        >
+                          <img 
+                            src={editCoverBackground} 
+                            alt="" 
+                            className="w-full h-full object-cover pointer-events-none"
+                            style={{ objectPosition: editCoverBackgroundPosition || '50% 50%' }}
+                          />
+                          <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[9px] font-black pointer-events-none p-3 text-center leading-tight">
+                            <span>Arraste a imagem para enquadrar</span>
+                            <span className="text-[8px] text-white/75 mt-1 font-semibold">{editCoverBackgroundPosition || '50% 50%'}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex justify-center gap-2">
+                        <label className="text-[10px] bg-slate-900 border border-slate-800 text-slate-350 hover:bg-slate-800 hover:text-white font-bold px-3 py-1.5 rounded-lg cursor-pointer transition-all">
+                          Alterar Foto
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            className="hidden" 
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onload = (event) => {
+                                  setEditCoverBackground(event.target?.result as string);
+                                  setEditCoverBackgroundPosition('50% 50%');
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                          />
+                        </label>
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            setEditCoverBackground('');
+                            setEditCoverBackgroundPosition('50% 50%');
+                          }}
+                          className="text-[10px] bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white font-bold px-3 py-1.5 rounded-lg cursor-pointer transition-all"
+                        >
+                          Remover
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <label 
+                      className="flex flex-col items-center justify-center border-2 border-dashed border-slate-800 hover:border-red-500/40 rounded-2xl p-4 cursor-pointer bg-[#0d0d14]/40 hover:bg-red-500/5 transition-all group select-none max-w-[320px] mx-auto"
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const file = e.dataTransfer.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            setEditCoverBackground(event.target?.result as string);
+                            setEditCoverBackgroundPosition('50% 50%');
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    >
+                      <Plus className="w-6 h-6 text-slate-500 group-hover:text-red-550 transition-colors mb-2" />
+                      <span className="text-[11px] font-bold text-slate-400 group-hover:text-red-550 transition-colors">Enviar Fundo do Banner</span>
+                      <span className="text-[9px] text-slate-500 mt-1">Clique para buscar ou arraste o arquivo aqui</span>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              setEditCoverBackground(event.target?.result as string);
+                              setEditCoverBackgroundPosition('50% 50%');
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </label>
+                  )}
                 </div>
               </div>
 

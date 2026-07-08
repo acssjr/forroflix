@@ -111,6 +111,7 @@ async function runMigration() {
     { name: "lessons.submodule", sql: `ALTER TABLE lessons ADD COLUMN submodule TEXT;` },
     // 5. Adicionar nova coluna username em users
     { name: "users.username", sql: `ALTER TABLE users ADD COLUMN username TEXT;` },
+    { name: "users.avatar_url", sql: `ALTER TABLE users ADD COLUMN avatar_url TEXT;` },
     // 6. Migrar dados nulos de username de forma retroativa (deve rodar ANTES do índice único para evitar colisões na migração)
     { name: "users.username_migration_email", sql: `UPDATE users SET username = LOWER(SUBSTR(email, 1, INSTR(email, '@') - 1)) WHERE username IS NULL AND email LIKE '%@%';` },
     { name: "users.username_migration_id", sql: `UPDATE users SET username = LOWER(id) WHERE username IS NULL;` },
