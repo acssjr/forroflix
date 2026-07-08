@@ -26,6 +26,7 @@ interface Lesson {
   duration_seconds: number;
   position: number;
   submodule?: string | null;
+  description?: string;
 }
 
 interface Module {
@@ -128,7 +129,7 @@ export function CourseViewer({
         activeLesson={{
           id: activeLesson.id,
           title: activeLesson.title,
-          description: '', // Descrição da lição pode ser nula ou mock
+          description: activeLesson.description || '',
           video_id: activeLesson.video_id || '',
           duration_seconds: activeLesson.duration_seconds || 0,
         }}
