@@ -53,6 +53,7 @@ export function NotesSection({
   const [noteContent, setNoteContent] = useState('');
   const [noteIsPublic, setNoteIsPublic] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [typingStartTime, setTypingStartTime] = useState<number | null>(null);
 
   const onNotesLoadedRef = useRef(onNotesLoaded);
   useEffect(() => {
@@ -69,6 +70,7 @@ export function NotesSection({
     const controller = new AbortController();
     setNotes([]);
     setLoading(true);
+    setTypingStartTime(null);
 
     const fetchNotes = async () => {
       let aborted = false;
@@ -102,12 +104,14 @@ export function NotesSection({
     };
   }, [lessonId]);
 
+  const activeTime = typingStartTime !== null ? typingStartTime : currentTime;
+
   const handleAddNote = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!noteContent.trim()) return;
 
     try {
-      const res = await createNoteAction(lessonId, noteContent.trim(), currentTime, noteIsPublic);
+      const res = await createNoteAction(lessonId, noteContent.trim(), activeTime, noteIsPublic);
 
       if (res.note) {
         setNotes((prev) => {
@@ -115,6 +119,7 @@ export function NotesSection({
           return updated.sort((a, b) => a.watched_seconds - b.watched_seconds);
         });
         setNoteContent('');
+        setTypingStartTime(null);
         showToast('Anotação adicionada com sucesso!', 'success');
       } else if (res.error) {
         showToast(res.error, 'warning');
@@ -162,7 +167,17 @@ export function NotesSection({
         <div className="relative">
           <textarea
             value={noteContent}
-            onChange={(e) => setNoteContent(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              setNoteContent(val);
+              if (val.trim().length > 0) {
+                if (typingStartTime === null) {
+                  setTypingStartTime(currentTime);
+                }
+              } else {
+                setTypingStartTime(null);
+              }
+            }}
             placeholder="Escreva sua anotação ou observação para este momento do vídeo..."
             className="w-full min-h-[90px] bg-background border border-border rounded-xl p-4 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-red-650 focus:border-red-650 transition-all placeholder:text-muted-foreground/60 resize-y"
             maxLength={1000}
@@ -206,7 +221,7 @@ export function NotesSection({
             className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl flex items-center gap-2 h-9 cursor-pointer"
           >
             <Clock className="w-3.5 h-3.5" />
-            Anotar em {formatSeconds(currentTime)}
+            Anotar em {formatSeconds(activeTime)}
           </Button>
         </div>
       </form>

@@ -86,6 +86,7 @@ export default async function LessonPage({ params }: PageProps) {
               video_id: l.video_id || '',
               position: l.position,
               submodule: l.submodule || null,
+              description: l.description || '',
             })),
           };
         });
