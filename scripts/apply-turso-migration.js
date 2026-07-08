@@ -49,10 +49,15 @@ async function run() {
       console.log('[INFO] Coluna avatar_url já existe no Turso.');
     } else {
       console.error('[ERRO] Falha ao adicionar avatar_url:', err.message);
+      client.close();
+      process.exit(1);
     }
   } finally {
     client.close();
   }
 }
 
-run();
+run().catch((err) => {
+  console.error('[ERRO FATAL] Migração Turso falhou:', err.message);
+  process.exit(1);
+});

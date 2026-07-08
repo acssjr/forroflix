@@ -11,6 +11,58 @@ import {
 } from 'lucide-react';
 import { UserManager } from './user-manager';
 
+// Shared helper: validates an image file and returns a compressed JPEG data-URL.
+// Returns null and calls onError with a message if the file is invalid.
+async function compressCoverImage(
+  file: File,
+  maxWidth: number,
+  maxHeight: number,
+  quality = 0.85,
+  onError?: (msg: string) => void
+): Promise<string | null> {
+  if (!file.type.startsWith('image/')) {
+    onError?.('O arquivo selecionado não é uma imagem válida.');
+    return null;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    onError?.('A imagem é muito grande. O limite é 5 MB.');
+    return null;
+  }
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (ev) => {
+      const img = new window.Image();
+      img.src = ev.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let w = img.width;
+        let h = img.height;
+        if (w > h) {
+          if (w > maxWidth) { h = Math.round((h * maxWidth) / w); w = maxWidth; }
+        } else {
+          if (h > maxHeight) { w = Math.round((w * maxHeight) / h); h = maxHeight; }
+        }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { reject(new Error('Canvas not available')); return; }
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => reject(new Error('Failed to load image'));
+    };
+    reader.onerror = () => reject(new Error('Failed to read file'));
+  });
+}
+
+// Helper to safely parse a percentage value, returning 50 only when the string is actually absent.
+function parsePct(val: string | undefined | null, fallback = 50): number {
+  if (val === undefined || val === null || val === '') return fallback;
+  const n = parseFloat(val);
+  return isNaN(n) ? fallback : n;
+}
+
 interface CourseItem {
   id: string;
   title: string;
@@ -690,9 +742,12 @@ export function AdminDashboardClient({
                             const initialX = touch.clientX;
                             const initialY = touch.clientY;
                             const currentPos = editCoverVerticalPosition || '50% 50%';
-                            const [currXPct, currYPct] = currentPos.split(' ').map(val => parseFloat(val) || 50);
+                            const parts = currentPos.split(' ');
+                            const currXPct = parsePct(parts[0]);
+                            const currYPct = parsePct(parts[1]);
   
                             const handleTouchMove = (moveEvent: TouchEvent) => {
+                              moveEvent.preventDefault();
                               const moveTouch = moveEvent.touches[0];
                               const deltaX = moveTouch.clientX - initialX;
                               const deltaY = moveTouch.clientY - initialY;
@@ -706,7 +761,7 @@ export function AdminDashboardClient({
                               window.removeEventListener('touchend', handleTouchEnd);
                             };
   
-                            window.addEventListener('touchmove', handleTouchMove, { passive: true });
+                            window.addEventListener('touchmove', handleTouchMove, { passive: false });
                             window.addEventListener('touchend', handleTouchEnd);
                           }}
                         >
@@ -729,15 +784,14 @@ export function AdminDashboardClient({
                             type="file" 
                             accept="image/*" 
                             className="hidden" 
-                            onChange={(e) => {
+                            onChange={async (e) => {
                               const file = e.target.files?.[0];
                               if (file) {
-                                const reader = new FileReader();
-                                reader.onload = (event) => {
-                                  setEditCoverVertical(event.target?.result as string);
+                                const dataUrl = await compressCoverImage(file, 1200, 1500, 0.85, (msg) => alert(msg));
+                                if (dataUrl) {
+                                  setEditCoverVertical(dataUrl);
                                   setEditCoverVerticalPosition('50% 50%');
-                                };
-                                reader.readAsDataURL(file);
+                                }
                               }
                             }}
                           />
@@ -758,18 +812,17 @@ export function AdminDashboardClient({
                     <label 
                       className="flex flex-col items-center justify-center border-2 border-dashed border-slate-800 hover:border-red-500/40 rounded-2xl p-4 cursor-pointer bg-[#0d0d14]/40 hover:bg-red-500/5 transition-all group select-none max-w-[200px] mx-auto"
                       onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        const file = e.dataTransfer.files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onload = (event) => {
-                            setEditCoverVertical(event.target?.result as string);
-                            setEditCoverVerticalPosition('50% 50%');
-                          };
-                          reader.readAsDataURL(file);
-                        }
-                      }}
+                        onDrop={async (e) => {
+                          e.preventDefault();
+                          const file = e.dataTransfer.files?.[0];
+                          if (file) {
+                            const dataUrl = await compressCoverImage(file, 1200, 1500, 0.85, (msg) => alert(msg));
+                            if (dataUrl) {
+                              setEditCoverVertical(dataUrl);
+                              setEditCoverVerticalPosition('50% 50%');
+                            }
+                          }
+                        }}
                     >
                       <Plus className="w-6 h-6 text-slate-500 group-hover:text-red-550 transition-colors mb-2" />
                       <span className="text-[11px] font-bold text-slate-400 group-hover:text-red-550 transition-colors">Enviar Capa Vertical (4:5)</span>
@@ -778,15 +831,14 @@ export function AdminDashboardClient({
                         type="file" 
                         accept="image/*" 
                         className="hidden" 
-                        onChange={(e) => {
+                        onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (file) {
-                            const reader = new FileReader();
-                            reader.onload = (event) => {
-                              setEditCoverVertical(event.target?.result as string);
+                            const dataUrl = await compressCoverImage(file, 1200, 1500, 0.85, (msg) => alert(msg));
+                            if (dataUrl) {
+                              setEditCoverVertical(dataUrl);
                               setEditCoverVerticalPosition('50% 50%');
-                            };
-                            reader.readAsDataURL(file);
+                            }
                           }
                         }}
                       />
@@ -833,9 +885,12 @@ export function AdminDashboardClient({
                             const initialX = touch.clientX;
                             const initialY = touch.clientY;
                             const currentPos = editCoverHorizontalPosition || '50% 50%';
-                            const [currXPct, currYPct] = currentPos.split(' ').map(val => parseFloat(val) || 50);
+                            const parts = currentPos.split(' ');
+                            const currXPct = parseFloat(parts[0]) || 50;
+                            const currYPct = parseFloat(parts[1]) || 50;
   
                             const handleTouchMove = (moveEvent: TouchEvent) => {
+                              moveEvent.preventDefault();
                               const moveTouch = moveEvent.touches[0];
                               const deltaX = moveTouch.clientX - initialX;
                               const deltaY = moveTouch.clientY - initialY;
@@ -849,7 +904,7 @@ export function AdminDashboardClient({
                               window.removeEventListener('touchend', handleTouchEnd);
                             };
   
-                            window.addEventListener('touchmove', handleTouchMove, { passive: true });
+                            window.addEventListener('touchmove', handleTouchMove, { passive: false });
                             window.addEventListener('touchend', handleTouchEnd);
                           }}
                         >
@@ -872,15 +927,14 @@ export function AdminDashboardClient({
                             type="file" 
                             accept="image/*" 
                             className="hidden" 
-                            onChange={(e) => {
+                            onChange={async (e) => {
                               const file = e.target.files?.[0];
                               if (file) {
-                                const reader = new FileReader();
-                                reader.onload = (event) => {
-                                  setEditCoverHorizontal(event.target?.result as string);
+                                const dataUrl = await compressCoverImage(file, 1800, 600, 0.85, (msg) => alert(msg));
+                                if (dataUrl) {
+                                  setEditCoverHorizontal(dataUrl);
                                   setEditCoverHorizontalPosition('50% 50%');
-                                };
-                                reader.readAsDataURL(file);
+                                }
                               }
                             }}
                           />
@@ -901,18 +955,17 @@ export function AdminDashboardClient({
                     <label 
                       className="flex flex-col items-center justify-center border-2 border-dashed border-slate-800 hover:border-red-500/40 rounded-2xl p-4 cursor-pointer bg-[#0d0d14]/40 hover:bg-red-500/5 transition-all group select-none max-w-[320px] mx-auto"
                       onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        const file = e.dataTransfer.files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onload = (event) => {
-                            setEditCoverHorizontal(event.target?.result as string);
-                            setEditCoverHorizontalPosition('50% 50%');
-                          };
-                          reader.readAsDataURL(file);
-                        }
-                      }}
+                        onDrop={async (e) => {
+                          e.preventDefault();
+                          const file = e.dataTransfer.files?.[0];
+                          if (file) {
+                            const dataUrl = await compressCoverImage(file, 1800, 600, 0.85, (msg) => alert(msg));
+                            if (dataUrl) {
+                              setEditCoverHorizontal(dataUrl);
+                              setEditCoverHorizontalPosition('50% 50%');
+                            }
+                          }
+                        }}
                     >
                       <Plus className="w-6 h-6 text-slate-500 group-hover:text-red-550 transition-colors mb-2" />
                       <span className="text-[11px] font-bold text-slate-400 group-hover:text-red-550 transition-colors">Enviar Capa Horizontal (7:2)</span>
@@ -921,15 +974,14 @@ export function AdminDashboardClient({
                         type="file" 
                         accept="image/*" 
                         className="hidden" 
-                        onChange={(e) => {
+                        onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (file) {
-                            const reader = new FileReader();
-                            reader.onload = (event) => {
-                              setEditCoverHorizontal(event.target?.result as string);
+                            const dataUrl = await compressCoverImage(file, 1800, 600, 0.85, (msg) => alert(msg));
+                            if (dataUrl) {
+                              setEditCoverHorizontal(dataUrl);
                               setEditCoverHorizontalPosition('50% 50%');
-                            };
-                            reader.readAsDataURL(file);
+                            }
                           }
                         }}
                       />
@@ -976,9 +1028,12 @@ export function AdminDashboardClient({
                             const initialX = touch.clientX;
                             const initialY = touch.clientY;
                             const currentPos = editCoverBackgroundPosition || '50% 50%';
-                            const [currXPct, currYPct] = currentPos.split(' ').map(val => parseFloat(val) || 50);
+                            const parts = currentPos.split(' ');
+                            const currXPct = parsePct(parts[0]);
+                            const currYPct = parsePct(parts[1]);
   
                             const handleTouchMove = (moveEvent: TouchEvent) => {
+                              moveEvent.preventDefault();
                               const moveTouch = moveEvent.touches[0];
                               const deltaX = moveTouch.clientX - initialX;
                               const deltaY = moveTouch.clientY - initialY;
@@ -992,7 +1047,7 @@ export function AdminDashboardClient({
                               window.removeEventListener('touchend', handleTouchEnd);
                             };
   
-                            window.addEventListener('touchmove', handleTouchMove, { passive: true });
+                            window.addEventListener('touchmove', handleTouchMove, { passive: false });
                             window.addEventListener('touchend', handleTouchEnd);
                           }}
                         >
@@ -1015,15 +1070,14 @@ export function AdminDashboardClient({
                             type="file" 
                             accept="image/*" 
                             className="hidden" 
-                            onChange={(e) => {
+                            onChange={async (e) => {
                               const file = e.target.files?.[0];
                               if (file) {
-                                const reader = new FileReader();
-                                reader.onload = (event) => {
-                                  setEditCoverBackground(event.target?.result as string);
+                                const dataUrl = await compressCoverImage(file, 1800, 600, 0.85, (msg) => alert(msg));
+                                if (dataUrl) {
+                                  setEditCoverBackground(dataUrl);
                                   setEditCoverBackgroundPosition('50% 50%');
-                                };
-                                reader.readAsDataURL(file);
+                                }
                               }
                             }}
                           />
@@ -1044,18 +1098,17 @@ export function AdminDashboardClient({
                     <label 
                       className="flex flex-col items-center justify-center border-2 border-dashed border-slate-800 hover:border-red-500/40 rounded-2xl p-4 cursor-pointer bg-[#0d0d14]/40 hover:bg-red-500/5 transition-all group select-none max-w-[320px] mx-auto"
                       onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        const file = e.dataTransfer.files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onload = (event) => {
-                            setEditCoverBackground(event.target?.result as string);
-                            setEditCoverBackgroundPosition('50% 50%');
-                          };
-                          reader.readAsDataURL(file);
-                        }
-                      }}
+                        onDrop={async (e) => {
+                          e.preventDefault();
+                          const file = e.dataTransfer.files?.[0];
+                          if (file) {
+                            const dataUrl = await compressCoverImage(file, 1800, 600, 0.85, (msg) => alert(msg));
+                            if (dataUrl) {
+                              setEditCoverBackground(dataUrl);
+                              setEditCoverBackgroundPosition('50% 50%');
+                            }
+                          }
+                        }}
                     >
                       <Plus className="w-6 h-6 text-slate-500 group-hover:text-red-550 transition-colors mb-2" />
                       <span className="text-[11px] font-bold text-slate-400 group-hover:text-red-550 transition-colors">Enviar Fundo do Banner</span>

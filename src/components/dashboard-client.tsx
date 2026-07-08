@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -181,6 +181,16 @@ export function DashboardClient({
     setEditProfileFullName(user.full_name || '');
     setEditProfileAvatarUrl(user.avatar_url || '');
   }, [user]);
+
+  // Close profile modal on Escape or click-outside
+  useEffect(() => {
+    if (!showProfileModal) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowProfileModal(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showProfileModal]);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1181,17 +1191,27 @@ export function DashboardClient({
 
       {/* Modal: Editar Perfil */}
       {showProfileModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-card text-card-foreground border border-border w-full max-w-md rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+          role="presentation"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowProfileModal(false); }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="profile-modal-title"
+            className="bg-card text-card-foreground border border-border w-full max-w-md rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200"
+          >
             <div className="p-6 border-b border-border flex justify-between items-center">
-              <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+              <h3 id="profile-modal-title" className="text-sm font-bold text-foreground flex items-center gap-2">
                 <User className="w-5 h-5 text-primary" />
                 Editar Seu Perfil
               </h3>
               <button 
                 onClick={() => setShowProfileModal(false)}
+                autoFocus
                 className="text-muted-foreground hover:text-foreground text-xs font-semibold cursor-pointer border-0 bg-transparent p-1 transition-colors"
-                title="Fechar"
+                aria-label="Fechar modal de perfil"
               >
                 <X className="w-4 h-4" />
               </button>

@@ -235,11 +235,34 @@ export async function updateProfileAction(fullName: string, avatarUrl: string | 
       return { error: 'Usuário não autenticado' };
     }
 
+    // --- Server-side validation ---
+    const trimmedName = (fullName || '').trim();
+    if (!trimmedName) {
+      return { error: 'O nome completo não pode estar vazio.' };
+    }
+    if (trimmedName.length > 120) {
+      return { error: 'O nome completo não pode ultrapassar 120 caracteres.' };
+    }
+
+    if (avatarUrl !== null && avatarUrl !== '') {
+      // Must be a data-URL with an allowed image MIME type
+      const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+      const dataUrlMatch = avatarUrl.match(/^data:(image\/[a-z+]+);base64,/);
+      if (!dataUrlMatch || !allowedMimes.includes(dataUrlMatch[1])) {
+        return { error: 'Formato de imagem inválido. Use JPEG, PNG, WebP ou GIF.' };
+      }
+      // base64 payload size check (~5 MB decoded ≈ 6.9 MB base64 chars, using 7 MB as ceiling)
+      const base64Data = avatarUrl.split(',')[1] || '';
+      if (base64Data.length > 7 * 1024 * 1024) {
+        return { error: 'A imagem é muito grande. O limite é 5 MB.' };
+      }
+    }
+
     const db = getDB();
 
     await db
       .prepare('UPDATE users SET full_name = ?, avatar_url = ? WHERE id = ?')
-      .bind(fullName.trim() || null, avatarUrl || null, sessionUser.id)
+      .bind(trimmedName || null, avatarUrl || null, sessionUser.id)
       .run();
 
     return { success: true };

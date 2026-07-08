@@ -58,102 +58,80 @@ try {
   console.log('Tabela favorite_folder_lessons criada ou já existente.');
 
   // 4. Adicionar novas colunas em courses se não existirem (para retrocompatibilidade)
+  const ignoreDuplicateColumn = (e, colName) => {
+    if (e && e.message && (e.message.includes('duplicate column name') || e.message.includes('already exists'))) {
+      // A coluna já existe — comportamento esperado
+    } else {
+      console.error(`Erro fatal ao adicionar coluna ${colName}:`, e);
+      throw e;
+    }
+  };
+
   try {
     db.exec(`ALTER TABLE courses ADD COLUMN cover_vertical TEXT;`);
     console.log('Coluna cover_vertical adicionada ao SQLite local.');
-  } catch (e) {
-    // A coluna já existe
-  }
+  } catch (e) { ignoreDuplicateColumn(e, 'courses.cover_vertical'); }
 
   try {
     db.exec(`ALTER TABLE courses ADD COLUMN cover_horizontal TEXT;`);
     console.log('Coluna cover_horizontal adicionada ao SQLite local.');
-  } catch (e) {
-    // A coluna já existe
-  }
+  } catch (e) { ignoreDuplicateColumn(e, 'courses.cover_horizontal'); }
 
   try {
     db.exec(`ALTER TABLE courses ADD COLUMN is_featured INTEGER DEFAULT 0;`);
     console.log('Coluna is_featured adicionada ao SQLite local.');
-  } catch (e) {
-    // A coluna já existe
-  }
+  } catch (e) { ignoreDuplicateColumn(e, 'courses.is_featured'); }
 
   try {
     db.exec(`ALTER TABLE courses ADD COLUMN cover_vertical_position TEXT DEFAULT '50% 50%';`);
     console.log('Coluna cover_vertical_position adicionada ao SQLite local.');
-  } catch (e) {
-    // A coluna já existe
-  }
+  } catch (e) { ignoreDuplicateColumn(e, 'courses.cover_vertical_position'); }
 
   try {
     db.exec(`ALTER TABLE courses ADD COLUMN cover_horizontal_position TEXT DEFAULT '50% 50%';`);
     console.log('Coluna cover_horizontal_position adicionada ao SQLite local.');
-  } catch (e) {
-    // A coluna já existe
-  }
+  } catch (e) { ignoreDuplicateColumn(e, 'courses.cover_horizontal_position'); }
 
   try {
     db.exec(`ALTER TABLE courses ADD COLUMN hide_title INTEGER DEFAULT 0;`);
     console.log('Coluna hide_title adicionada ao SQLite local.');
-  } catch (e) {
-    // A coluna já existe
-  }
+  } catch (e) { ignoreDuplicateColumn(e, 'courses.hide_title'); }
 
   try {
     db.exec(`ALTER TABLE courses ADD COLUMN cover_background TEXT;`);
     console.log('Coluna cover_background adicionada ao SQLite local.');
-  } catch (e) {
-    // A coluna já existe
-  }
+  } catch (e) { ignoreDuplicateColumn(e, 'courses.cover_background'); }
 
   try {
     db.exec(`ALTER TABLE courses ADD COLUMN cover_background_position TEXT DEFAULT '50% 50%';`);
     console.log('Coluna cover_background_position adicionada ao SQLite local.');
-  } catch (e) {
-    // A coluna já existe
-  }
+  } catch (e) { ignoreDuplicateColumn(e, 'courses.cover_background_position'); }
 
   try {
     db.exec(`ALTER TABLE modules ADD COLUMN cover_vertical TEXT;`);
     console.log('Coluna cover_vertical adicionada à tabela modules no SQLite local.');
-  } catch (e) {
-    // A coluna já existe
-  }
+  } catch (e) { ignoreDuplicateColumn(e, 'modules.cover_vertical'); }
 
   try {
     db.exec(`ALTER TABLE modules ADD COLUMN cover_vertical_position TEXT DEFAULT '50% 50%';`);
     console.log('Coluna cover_vertical_position adicionada à tabela modules no SQLite local.');
-  } catch (e) {
-    // A coluna já existe
-  }
+  } catch (e) { ignoreDuplicateColumn(e, 'modules.cover_vertical_position'); }
 
   try {
     db.exec(`ALTER TABLE lessons ADD COLUMN submodule TEXT;`);
     console.log('Coluna submodule adicionada à tabela lessons no SQLite local.');
-  } catch (e) {
-    if (e && e.message && (e.message.includes('duplicate column name') || e.message.includes('already exists'))) {
-      // A coluna já existe
-    } else {
-      console.error('Erro fatal ao adicionar coluna submodule:', e);
-      throw e;
-    }
-  }
+  } catch (e) { ignoreDuplicateColumn(e, 'lessons.submodule'); }
 
   // Adicionar coluna username e fazer migração de dados retroativa
   try {
     db.exec(`ALTER TABLE users ADD COLUMN username TEXT;`);
     console.log('Coluna username adicionada à tabela users no SQLite local.');
-  } catch (e) {
-    // A coluna já existe
-  }
+  } catch (e) { ignoreDuplicateColumn(e, 'users.username'); }
 
   try {
     db.exec(`ALTER TABLE users ADD COLUMN avatar_url TEXT;`);
     console.log('Coluna avatar_url adicionada à tabela users no SQLite local.');
-  } catch (e) {
-    // A coluna já existe
-  }
+  } catch (e) { ignoreDuplicateColumn(e, 'users.avatar_url'); }
 
   // 1. Backfill de usernames antes de criar o índice único para evitar conflitos de restrição
   db.exec(`
