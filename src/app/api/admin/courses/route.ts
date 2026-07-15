@@ -163,7 +163,7 @@ export async function POST(request: Request) {
 
     // 4. Inserir Aula
     if (type === 'lesson') {
-      const { moduleId, title, description, position, videoId, durationSeconds, submodule } = body;
+      const { moduleId, title, description, position, videoId, durationSeconds, submodule, uploadStatus } = body;
 
       if (!moduleId || !title) {
         return NextResponse.json({ error: 'moduleId e título são obrigatórios' }, { status: 400 });
@@ -172,10 +172,11 @@ export async function POST(request: Request) {
       const id = crypto.randomUUID();
       const pos = position || 0;
       const duration = durationSeconds || 0;
+      const statusVal = uploadStatus || (videoId ? 'completed' : 'pending');
 
       await db
-        .prepare('INSERT INTO lessons (id, module_id, title, description, position, video_id, duration_seconds, submodule) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-        .bind(id, moduleId, title, description || '', pos, videoId || null, duration, submodule || null)
+        .prepare('INSERT INTO lessons (id, module_id, title, description, position, video_id, duration_seconds, submodule, upload_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+        .bind(id, moduleId, title, description || '', pos, videoId || null, duration, submodule || null, statusVal)
         .run();
 
       return NextResponse.json({ success: true, id });
