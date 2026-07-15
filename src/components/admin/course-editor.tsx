@@ -953,6 +953,7 @@ export function CourseEditor({ courseId, courseTitle, courseSlug, initialModules
           description: lessonDescription,
           position,
           videoId,
+          uploadStatus: 'completed',
           submodule: lessonSubmodule || null
         })
       });
