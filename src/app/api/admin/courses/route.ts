@@ -169,10 +169,20 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'moduleId e título são obrigatórios' }, { status: 400 });
       }
 
+      // Validação do status de upload
+      const validStatuses = ['pending', 'uploading', 'completed', 'failed'];
+      if (uploadStatus !== undefined && !validStatuses.includes(uploadStatus)) {
+        return NextResponse.json({ error: 'Status de upload inválido' }, { status: 400 });
+      }
+
+      const statusVal = uploadStatus || (videoId ? 'completed' : 'pending');
+      if (statusVal === 'completed' && (!videoId || videoId.trim() === '')) {
+        return NextResponse.json({ error: 'Não é possível definir o status como completed sem um videoId' }, { status: 400 });
+      }
+
       const id = crypto.randomUUID();
       const pos = position || 0;
       const duration = durationSeconds || 0;
-      const statusVal = uploadStatus || (videoId ? 'completed' : 'pending');
 
       await db
         .prepare('INSERT INTO lessons (id, module_id, title, description, position, video_id, duration_seconds, submodule, upload_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
@@ -293,9 +303,30 @@ export async function PATCH(request: Request) {
 
     // 4. Editar Aula (Título, Descrição, Submódulo e/ou uploadStatus)
     if (type === 'lesson') {
-      const { description, uploadStatus, submodule } = body;
+      const { description, uploadStatus, submodule, videoId } = body;
       if (title === undefined && description === undefined && uploadStatus === undefined && submodule === undefined) {
         return NextResponse.json({ error: 'Nenhum campo para atualizar informado' }, { status: 400 });
+      }
+
+      if (uploadStatus !== undefined) {
+        const validStatuses = ['pending', 'uploading', 'completed', 'failed'];
+        if (!validStatuses.includes(uploadStatus)) {
+          return NextResponse.json({ error: 'Status de upload inválido' }, { status: 400 });
+        }
+
+        if (uploadStatus === 'completed') {
+          // Precisamos verificar se existe video_id para esta aula
+          // Pode vir no body (como videoId), ou já existir no banco de dados
+          const existingLesson = await db
+            .prepare('SELECT video_id FROM lessons WHERE id = ?')
+            .bind(id)
+            .get() as { video_id: string | null } | undefined;
+          
+          const currentVideoId = videoId || (existingLesson ? existingLesson.video_id : null);
+          if (!currentVideoId || currentVideoId.trim() === '') {
+            return NextResponse.json({ error: 'Não é possível definir o status como completed sem um videoId' }, { status: 400 });
+          }
+        }
       }
 
       const updates: string[] = [];
