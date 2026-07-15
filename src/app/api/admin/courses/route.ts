@@ -320,7 +320,7 @@ export async function PATCH(request: Request) {
           const existingLesson = await db
             .prepare('SELECT video_id FROM lessons WHERE id = ?')
             .bind(id)
-            .get() as { video_id: string | null } | undefined;
+            .first() as { video_id: string | null } | undefined;
           
           const currentVideoId = videoId || (existingLesson ? existingLesson.video_id : null);
           if (!currentVideoId || currentVideoId.trim() === '') {
